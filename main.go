@@ -30,6 +30,10 @@ func main() {
 	r.Use(gin.Recovery())
 	r.MaxMultipartMemory = maxFileSize
 
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(404, gin.H{"code": "PAGE_NO_FOUND", "message" : "Page not found"})
+	})
+
 	// Routes
 	r.GET("/", index)
 	r.POST("/upload", uploadFile)

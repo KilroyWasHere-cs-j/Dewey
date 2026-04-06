@@ -44,9 +44,26 @@ func getFile(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 		return
 	}
-
 	// Serve the file
 	c.File(filePath)
+}
+
+/*
+	Returns a list of all files stored
+*/
+func listFiles(c *gin.Context) {
+	file, err := os.ReadDir(uploadDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error" : "Unable to read form file directory"})
+		return
+	}
+
+	var filenames []string
+	for _, f := range file {
+		filenames = append(filenames, f.Name())
+	}
+
+	c.JSON(http.StatusOK, gin.H{"found files" : filenames})
 }
 
 // uploadFile handles file uploads
@@ -107,7 +124,7 @@ func uploadFile(c *gin.Context) {
 	// Stream file into hash (no full read into memory)
 	if _, err := io.Copy(hasher, realFile); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to read file",
+		"error": "Failed to read file",
 		})
 		return
 	}
@@ -135,30 +152,12 @@ func uploadFile(c *gin.Context) {
 	})
 }
 
-// listFiles returns list of all uploaded files
-func listFiles(c *gin.Context) {
-	files, err := os.ReadDir(uploadDir)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploads directory"})
-		return
-	}
-
-	var fileList []gin.H
-	for _, f := range files {
-		if !f.IsDir() {
-			fileList = append(fileList, gin.H{
-				"filename": f.Name(),
-				"url":      "/files/" + f.Name(),
-			})
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"files": fileList,
-	})
-}
-
+/*
+	Delete a file from storage based on file name
+*/
 func deleteFile(c *gin.Context) {
+	filename := c.Param("filename")
+
 	file, err := os.ReadDir(uploadDir)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploads directory"})
@@ -166,10 +165,12 @@ func deleteFile(c *gin.Context) {
 	}
 	for _, f := range file {
 		if !f.IsDir() {
-			err := os.Remove(filepath.Join(uploadDir, f.Name()))
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete requested file"})
-				return
+			if f.Name() == filename {
+				err := os.Remove(filepath.Join(uploadDir, f.Name()))
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete requested file"})
+					return
+				}
 			}
 		}
 	}
