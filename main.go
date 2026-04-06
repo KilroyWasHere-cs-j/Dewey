@@ -17,7 +17,6 @@ const uploadDir = "./uploads"
 const maxFileSize = 50 << 2
 
 func main() {
-	Testing()
 	// Create uploads directory if it doesn't exist
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		panic("Failed to create uploads directory: " + err.Error())
