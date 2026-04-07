@@ -1,9 +1,3 @@
-[2026-04-07 13:56:26] [DEBUG] Server is running at port: 
-[2026-04-07 13:57:06] [DEBUG] Server is running at port: 
-[2026-04-07 13:58:06] [DEBUG] Server is running at port: 8080
-[2026-04-07 13:58:14] [DEBUG] Server is running at port: 8080
-[2026-04-07 14:02:27] [DEBUG] Server is running at port: 8080
-[2026-04-07 14:04:34] [DEBUG] Server is running at port: 8080
-[2026-04-07 14:05:06] [DEBUG] Server is running at port: 8080
-[2026-04-07 14:08:22] [DEBUG] Server is running at port: 8080
-[2026-04-07 14:08:54] [DEBUG] Server is running at port: 8080
+
+[2026-04-07 14:18:17] [DEBUG] Server start
+[2026-04-07 14:18:17] [DEBUG] Server is running at port: 8080

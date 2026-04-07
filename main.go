@@ -30,6 +30,7 @@ func main() {
 		os.Exit(3)
 	}
 
+	Debug("Server start")
 	r := gin.Default()
 
 	// Middleware to log requests

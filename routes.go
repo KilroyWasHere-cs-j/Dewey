@@ -89,6 +89,8 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
+
+	// I NEED TO MAKE SURE THAT THIS WORKS WITH RENAMED FILES. LIKE AN EXE RENAMED TO A PNG
 	// Validate file extension (optional but recommended)
 	ext := filepath.Ext(file.Filename)
 	allowedExts := map[string]bool{

@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"image/png"
-	// "log"
 	"os"
 
 	"github.com/makiuchi-d/gozxing"
@@ -24,6 +23,7 @@ func createBarCode(text string, width int, height int) (*gozxing.BitMatrix, erro
 
 	// Ensure the barcode will be longer(wider) than it is tall(height), adding in 10 as a "square prevention buffer"
 	if width + 10 <= height {
+		Warn("Barcode dimensions miss-match")
 		return nil, errors.New("Dimensions miss-match")
 	}
 
@@ -36,6 +36,7 @@ func createBarCode(text string, width int, height int) (*gozxing.BitMatrix, erro
 	)
 
 	if err != nil {
+		Warn(err.Error())
 		return nil, err
 	}
 
@@ -53,6 +54,7 @@ func createBarCode(text string, width int, height int) (*gozxing.BitMatrix, erro
 func createImage(filename string, img *gozxing.BitMatrix) error {
 	file, err := os.Create(filename + ".png")
 	if err != nil {
+		Warn(err.Error())
 		return err
 	}
 	defer file.Close()
