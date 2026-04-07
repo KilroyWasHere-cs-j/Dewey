@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"image/png"
 	// "log"
 	"os"
@@ -9,16 +10,31 @@ import (
 	"github.com/makiuchi-d/gozxing/oned"
 )
 
-func createBarCode() (*gozxing.BitMatrix, error) {
+/*
+	Creates a barcode
+	# Arguments
+	- text (string)
+	- width (int)
+	- height (int)
+	# Returns 
+	- barcode (gozxing.BitMatrix, error)
+*/
+func createBarCode(text string, width int, height int) (*gozxing.BitMatrix, error) {
 	enc := oned.NewCode128Writer()
 
+	// Ensure the barcode will be longer(wider) than it is tall(height), adding in 10 as a "square prevention buffer"
+	if width + 10 <= height {
+		return nil, errors.New("Dimensions miss-match")
+	}
+
 	img, err := enc.Encode(
-		"Hello, World!",
+		text,
 		gozxing.BarcodeFormat_CODE_128,
-		250,
-		50,
+		width,
+		height,
 		nil,
 	)
+
 	if err != nil {
 		return nil, err
 	}
@@ -26,6 +42,14 @@ func createBarCode() (*gozxing.BitMatrix, error) {
 	return img, nil
 }
 
+/*
+	Creates a barcode image from a gozxing.BitMatrix
+	# Arguments
+	- filename (string)
+	- img (gozxing.BitMatrix)
+	# Returns
+	- error
+*/
 func createImage(filename string, img *gozxing.BitMatrix) error {
 	file, err := os.Create(filename + ".png")
 	if err != nil {
@@ -35,14 +59,4 @@ func createImage(filename string, img *gozxing.BitMatrix) error {
 
 	return png.Encode(file, img)
 }
-//
-// func main() {
-// 	img, err := createBarCode()
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-//
-// 	if err := createImage("barcode", img); err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
+

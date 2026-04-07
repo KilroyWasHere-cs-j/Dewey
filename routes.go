@@ -14,6 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+/*
+	Default route, gives users a server alive message and a Unix timestamp
+*/
 func index(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "Server alive",
@@ -21,7 +24,9 @@ func index(c *gin.Context) {
 	})
 }
 
-// getFile serves the uploaded file
+/*
+	Retrives a file and it's assicated metadata if meta flag is set
+*/
 func getFile(c *gin.Context) {
 	filename := c.Param("filename")
 	meta := c.Param("meta")

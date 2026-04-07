@@ -13,9 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const uploadDir = "./uploads"
-const maxFileSize = 50 << 2
-
 func main() {
 	// Create uploads directory if it doesn't exist
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
@@ -41,7 +38,7 @@ func main() {
 	r.GET("/files/delete/:filename", deleteFile)
 
 	fmt.Println("\n File API running on http://localhost:8080")
-	err := r.Run(":8080")
+	err := r.Run(":" + portNumber)
 	if err != nil {
 		fmt.Println("An error has occurred when attempting to launch the server. Although you probably guessed that", err)
 		return
