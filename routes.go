@@ -18,6 +18,7 @@ import (
 	Default route, gives users a server alive message and a Unix timestamp
 */
 func index(c *gin.Context) {
+	Debug("index")
 	c.JSON(http.StatusOK, gin.H{
 		"message":   "Server alive",
 		"timestamp": time.Now().Unix(),
@@ -28,6 +29,7 @@ func index(c *gin.Context) {
 	Retrives a file and it's assicated metadata if meta flag is set
 */
 func getFile(c *gin.Context) {
+	Debug("getFile")
 	filename := c.Param("filename")
 	meta := c.Param("meta")
 
@@ -46,6 +48,7 @@ func getFile(c *gin.Context) {
 
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		Warn(err.Error())
 		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 		return
 	}
@@ -57,8 +60,10 @@ func getFile(c *gin.Context) {
 	Returns a list of all files stored
 */
 func listFiles(c *gin.Context) {
+	Debug("listFiles")
 	file, err := os.ReadDir(uploadDir)
 	if err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error" : "Unable to read form file directory"})
 		return
 	}
@@ -73,9 +78,11 @@ func listFiles(c *gin.Context) {
 
 // uploadFile handles file uploads
 func uploadFile(c *gin.Context) {
+	Debug("uploadFile")
 	// Get the file from form
 	file, err := c.FormFile("file")
 	if err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "No file uploaded or 'file' field missing",
 		})
@@ -99,6 +106,7 @@ func uploadFile(c *gin.Context) {
 	}
 
 	if !allowedExts[ext] {
+		Warn("Invalid file type: " + ext)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid file type. Valid types: \n PDF \n TXT \n DOC/DOCX \n XLS/XLSX \n CSV",
 		})
@@ -107,6 +115,7 @@ func uploadFile(c *gin.Context) {
 
 	realFile, err := file.Open()
 	if err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to open file",
 		})
@@ -115,7 +124,8 @@ func uploadFile(c *gin.Context) {
 	defer func(realFile multipart.File) {
 		err := realFile.Close()
 		if err != nil {
-			panic(err)
+			Fatal(err.Error())
+			os.Exit(5)
 		}
 	}(realFile)
 
@@ -128,6 +138,7 @@ func uploadFile(c *gin.Context) {
 
 	// Stream file into hash (no full read into memory)
 	if _, err := io.Copy(hasher, realFile); err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 		"error": "Failed to read file",
 		})
@@ -142,6 +153,7 @@ func uploadFile(c *gin.Context) {
 	// Save the file
 	dst := filepath.Join(uploadDir, safeFilename)
 	if err := c.SaveUploadedFile(file, dst); err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to save file",
 		})
@@ -161,10 +173,12 @@ func uploadFile(c *gin.Context) {
 	Delete a file from storage based on file name
 */
 func deleteFile(c *gin.Context) {
+	Debug("deleteFile")
 	filename := c.Param("filename")
 
 	file, err := os.ReadDir(uploadDir)
 	if err != nil {
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploads directory"})
 		return
 	}
@@ -173,6 +187,7 @@ func deleteFile(c *gin.Context) {
 			if f.Name() == filename {
 				err := os.Remove(filepath.Join(uploadDir, f.Name()))
 				if err != nil {
+					Warn(err.Error())
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete requested file"})
 					return
 				}

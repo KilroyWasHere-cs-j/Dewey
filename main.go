@@ -6,17 +6,28 @@ curl retrieve testing command: curl http://localhost:8080/files/test.txt
 curl retrieve stored files command: curl http://localhost:8080/files
 */
 
+
+/*
+	Error code index
+	0 = clean exit no error
+	3 = directory error
+	5 = server error
+*/
+
 import (
-	"fmt"
 	"os"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	InitLogger("logs", "app")
+	defer logger.Close()
+
 	// Create uploads directory if it doesn't exist
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		panic("Failed to create uploads directory: " + err.Error())
+		Fatal(err.Error())
+		os.Exit(3)
 	}
 
 	r := gin.Default()
@@ -37,10 +48,10 @@ func main() {
 	r.GET("/files/listfiles", listFiles)
 	r.GET("/files/delete/:filename", deleteFile)
 
-	fmt.Println("\n File API running on http://localhost:8080")
+	Debug("Server is running at port: " + portNumber)	
 	err := r.Run(":" + portNumber)
 	if err != nil {
-		fmt.Println("An error has occurred when attempting to launch the server. Although you probably guessed that", err)
-		return
+		Fatal(err.Error())	
+		os.Exit(5)
 	}
 }
