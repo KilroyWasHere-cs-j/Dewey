@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/binary"
-	// "fmt"
-	// "os"
 	"io"
 )
 
+/*
+	Checks if a file is Portable Executable
+*/
 func IsPEFile(f io.ReadSeeker) (bool, error) {
 	mz_found := false
 	pe_found := false
@@ -50,6 +51,9 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 	return false, nil
 }
 
+/*
+	Check if a file is ELF binary
+*/
 func IsELFFile(f io.ReadSeeker) (bool, error) {
 	// Read first 8 bytes (ELF header is at least this long(least the part we care about))
 	header := make([]byte, 8)
@@ -59,16 +63,16 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 	}
 
 	if header[0] == 0x7F &&
-  	header[1] == 'E' &&
-  	header[2] == 'L' &&
-  	header[3] == 'F' {
-  	return true, nil
+		header[1] == 'E' &&
+		header[2] == 'L' &&
+		header[3] == 'F' {
+		return true, nil
 	}
 	return false, nil
 }
 
 /*
- Used as a clean up function to zeroize the bytes in an array
+	Used as a clean up function to zeroize the bytes in an array
 */
 func zeroize(b []byte) {
     for i := range b {
