@@ -108,6 +108,7 @@ func uploadFile(c *gin.Context) {
 		".jpeg": true,
 	}
 
+	// Ensure the uploaded file isn't part of a list of banded formats
 	if !allowedExts[ext] {
 		Warn("Invalid file type: " + ext)
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -116,6 +117,7 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
+	// Open file for reading and preform some file type checks
 	realFile, err := file.Open()
 
 	if err != nil {
@@ -126,19 +128,33 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
-	ok, err := IsPEFile(realFile)
+	// TODO Gabe you should probably clean this uploaded
+	// INFO check the file type isn't an exe or dll
+	exe, err := IsPEFile(realFile)
 	if err != nil {
 		Warn(err.Error())
 	}
-
-
-	if ok == true {
+	if exe == true {
 		Warn("exe detected")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error" : "PE detected, shot down in selfprotect",
 		})
 		return 
-	} 
+	}
+	
+	elf, err := IsELFFile(realFile)
+	if err != nil {
+		Warn(err.Error())
+	}
+	if elf == true {
+		Warn("elf detected")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error" : "ELF detected, shot down in selfprotect",
+		})
+		return
+	}
+
+
 
 	defer func(realFile multipart.File) {
 		err := realFile.Close()

@@ -10,6 +10,7 @@ import (
 func IsPEFile(f io.ReadSeeker) (bool, error) {
 	mz_found := false
 	pe_found := false
+
 	// Read first 64 bytes (DOS header is at least this long)
 	header := make([]byte, 64)
 	if _, err := f.Read(header); err != nil {
@@ -45,6 +46,23 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 	zeroize(header)
 	if mz_found && pe_found {
 		return true, nil
+	}
+	return false, nil
+}
+
+func IsELFFile(f io.ReadSeeker) (bool, error) {
+	// Read first 8 bytes (ELF header is at least this long(least the part we care about))
+	header := make([]byte, 8)
+	if _, err := f.Read(header); err != nil {
+		zeroize(header)
+		return false, err
+	}
+
+	if header[0] == 0x7F &&
+  	header[1] == 'E' &&
+  	header[2] == 'L' &&
+  	header[3] == 'F' {
+  	return true, nil
 	}
 	return false, nil
 }
