@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	//"strconv"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -116,6 +117,7 @@ func uploadFile(c *gin.Context) {
 	}
 
 	realFile, err := file.Open()
+
 	if err != nil {
 		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -123,6 +125,21 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
+
+	ok, err := IsPEFile(realFile)
+	if err != nil {
+		Warn(err.Error())
+	}
+
+
+	if ok == true {
+		Warn("exe detected")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error" : "PE detected, shot down in selfprotect",
+		})
+		return 
+	} 
+
 	defer func(realFile multipart.File) {
 		err := realFile.Close()
 		if err != nil {

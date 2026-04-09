@@ -1,0 +1,105 @@
+[2026-04-09 14:28:31] [DEBUG] Server start
+[2026-04-09 14:28:31] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:31:40] [DEBUG] Server start
+[2026-04-09 14:31:40] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:34:34] [DEBUG] Server start
+[2026-04-09 14:34:34] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:34:35] [DEBUG] uploadFile
+[2026-04-09 14:34:35] [WARN] open test.exe: no such file or directory
+[2026-04-09 14:35:46] [DEBUG] uploadFile
+[2026-04-09 14:35:47] [WARN] open test.exe: no such file or directory
+[2026-04-09 14:40:04] [DEBUG] Server start
+[2026-04-09 14:40:04] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:40:07] [DEBUG] uploadFile
+[2026-04-09 14:42:09] [DEBUG] Server start
+[2026-04-09 14:42:09] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:42:11] [DEBUG] uploadFile
+[2026-04-09 14:42:11] [DEBUG] true
+[2026-04-09 14:45:53] [DEBUG] Server start
+[2026-04-09 14:45:53] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:45:56] [DEBUG] uploadFile
+[2026-04-09 14:45:56] [DEBUG] true
+[2026-04-09 14:46:12] [DEBUG] uploadFile
+[2026-04-09 14:46:12] [DEBUG] false
+[2026-04-09 14:46:12] [WARN] EOF
+[2026-04-09 14:46:23] [DEBUG] uploadFile
+[2026-04-09 14:46:23] [DEBUG] false
+[2026-04-09 14:46:23] [WARN] EOF
+[2026-04-09 14:46:25] [DEBUG] uploadFile
+[2026-04-09 14:46:25] [DEBUG] false
+[2026-04-09 14:46:25] [WARN] EOF
+[2026-04-09 14:46:34] [DEBUG] uploadFile
+[2026-04-09 14:46:34] [DEBUG] false
+[2026-04-09 14:46:34] [WARN] EOF
+[2026-04-09 14:47:20] [DEBUG] Server start
+[2026-04-09 14:47:20] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:47:22] [DEBUG] uploadFile
+[2026-04-09 14:47:22] [DEBUG] false
+[2026-04-09 14:47:22] [WARN] EOF
+[2026-04-09 14:47:25] [DEBUG] uploadFile
+[2026-04-09 14:47:25] [DEBUG] false
+[2026-04-09 14:47:25] [WARN] EOF
+[2026-04-09 14:47:33] [DEBUG] uploadFile
+[2026-04-09 14:47:33] [DEBUG] true
+[2026-04-09 14:47:33] [WARN] That is malware
+[2026-04-09 14:47:38] [DEBUG] uploadFile
+[2026-04-09 14:47:38] [DEBUG] true
+[2026-04-09 14:47:38] [WARN] That is malware
+[2026-04-09 14:47:43] [DEBUG] uploadFile
+[2026-04-09 14:47:43] [DEBUG] false
+[2026-04-09 14:47:43] [WARN] EOF
+[2026-04-09 14:47:46] [DEBUG] uploadFile
+[2026-04-09 14:47:46] [DEBUG] false
+[2026-04-09 14:47:46] [WARN] EOF
+[2026-04-09 14:48:49] [DEBUG] Server start
+[2026-04-09 14:48:49] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:48:52] [DEBUG] uploadFile
+[2026-04-09 14:48:52] [WARN] EOF
+[2026-04-09 14:49:48] [DEBUG] uploadFile
+[2026-04-09 14:49:48] [WARN] That is malware
+[2026-04-09 14:49:51] [DEBUG] uploadFile
+[2026-04-09 14:49:51] [WARN] That is malware
+[2026-04-09 14:49:52] [DEBUG] uploadFile
+[2026-04-09 14:49:52] [WARN] That is malware
+[2026-04-09 14:49:52] [DEBUG] uploadFile
+[2026-04-09 14:49:52] [WARN] That is malware
+[2026-04-09 14:51:56] [DEBUG] Server start
+[2026-04-09 14:51:56] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:51:59] [DEBUG] uploadFile
+[2026-04-09 14:51:59] [WARN] exe detected
+[2026-04-09 14:52:02] [DEBUG] uploadFile
+[2026-04-09 14:52:02] [WARN] EOF
+[2026-04-09 14:52:02] [WARN] EOF
+[2026-04-09 14:52:12] [DEBUG] uploadFile
+[2026-04-09 14:52:12] [WARN] EOF
+[2026-04-09 14:52:12] [WARN] EOF
+[2026-04-09 14:53:01] [DEBUG] Server start
+[2026-04-09 14:53:01] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:53:03] [DEBUG] uploadFile
+[2026-04-09 14:53:03] [WARN] EOF
+[2026-04-09 14:53:03] [WARN] EOF
+[2026-04-09 14:53:36] [DEBUG] uploadFile
+[2026-04-09 14:53:36] [WARN] EOF
+[2026-04-09 14:53:36] [WARN] EOF
+[2026-04-09 14:54:01] [DEBUG] Server start
+[2026-04-09 14:54:01] [DEBUG] Server is running at port: 8080
+[2026-04-09 14:54:02] [DEBUG] uploadFile
+[2026-04-09 14:54:02] [WARN] EOF
+[2026-04-09 14:54:08] [DEBUG] uploadFile
+[2026-04-09 14:54:08] [WARN] exe detected
+[2026-04-09 14:59:26] [DEBUG] Server start
+[2026-04-09 14:59:26] [DEBUG] Server is running at port: 8080
+[2026-04-09 15:00:35] [DEBUG] Server start
+[2026-04-09 15:00:35] [DEBUG] Server is running at port: 8080
+[2026-04-09 15:02:31] [DEBUG] Server start
+[2026-04-09 15:02:31] [DEBUG] Server is running at port: 8080
+[2026-04-09 15:06:01] [DEBUG] Server start
+[2026-04-09 15:06:01] [DEBUG] Server is running at port: 8080
+[2026-04-09 15:06:04] [DEBUG] uploadFile
+[2026-04-09 15:06:04] [WARN] exe detected
+[2026-04-09 15:06:07] [DEBUG] uploadFile
+[2026-04-09 15:06:07] [WARN] EOF
+[2026-04-09 15:06:09] [DEBUG] uploadFile
+[2026-04-09 15:06:09] [WARN] EOF
+[2026-04-09 15:06:27] [DEBUG] uploadFile
+[2026-04-09 15:06:27] [WARN] exe detected
