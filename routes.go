@@ -91,6 +91,7 @@ func uploadFile(c *gin.Context) {
 	}
 
 
+	Debug("checking formats")
 	// I NEED TO MAKE SURE THAT THIS WORKS WITH RENAMED FILES. LIKE AN EXE RENAMED TO A PNG
 	// Validate file extension (optional but recommended)
 	ext := filepath.Ext(file.Filename)
@@ -141,7 +142,7 @@ func uploadFile(c *gin.Context) {
 		})
 		return 
 	}
-	
+
 	elf, err := IsELFFile(realFile)
 	if err != nil {
 		Warn(err.Error())
@@ -153,8 +154,6 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
-
-
 
 	defer func(realFile multipart.File) {
 		err := realFile.Close()
