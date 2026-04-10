@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	//"strconv"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -92,8 +91,7 @@ func uploadFile(c *gin.Context) {
 
 
 	Debug("checking formats")
-	// I NEED TO MAKE SURE THAT THIS WORKS WITH RENAMED FILES. LIKE AN EXE RENAMED TO A PNG
-	// Validate file extension (optional but recommended)
+
 	ext := filepath.Ext(file.Filename)
 	allowedExts := map[string]bool{
 		".pdf":  true,
@@ -129,8 +127,6 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
-	// TODO Gabe you should probably clean this uploaded
-	// INFO check the file type isn't an exe or dll
 	exe, err := IsPEFile(realFile)
 	if err != nil {
 		Warn(err.Error())

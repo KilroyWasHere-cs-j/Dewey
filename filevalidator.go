@@ -1,5 +1,12 @@
 package main
 
+
+/*
+	A collection of functions used to validate the uploaded files
+	Author: Gabriel Tower
+	Last update: 4/10/26
+*/
+
 import (
 	"encoding/binary"
 	"io"
@@ -87,4 +94,5 @@ func zeroize(b []byte) {
         b[i] = 0
     }
 }
+
 
