@@ -16,6 +16,7 @@ import (
 
 /*
 	Default route, gives users a server alive message and a Unix timestamp
+	Adding this in so default isn't a dead route
 */
 func index(c *gin.Context) {
 	Debug("index")
@@ -30,6 +31,7 @@ func index(c *gin.Context) {
 */
 func getFile(c *gin.Context) {
 	Debug("getFile")
+
 	filename := c.Param("filename")
 	meta := c.Param("meta")
 
