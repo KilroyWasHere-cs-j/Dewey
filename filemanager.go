@@ -2,8 +2,9 @@ package main
 
 import (
 	"os"
-	// "fmt"
+	"fmt"
 	"encoding/json"
+	"path/filepath"
 )
 
 // PDF files should be treated as seperate files for each page with there own records
@@ -68,10 +69,30 @@ func idAndSort(path string){
 	// Store file bytes and dn entry route
 }
 
-func searchAndReturn(name string){
-	// Check cache first
-	// Search for a given file by name or other metadata
-	// Return file and metadata if needed
+func searchAndReturn(filePath string) (string, error) {
+	// Check if file exists
+	info, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("file does not exist: %s", filePath)
+		}
+		return "", fmt.Errorf("error checking file: %w", err)
+	}
+
+	// Optional: ensure it's not a directory
+	if info.IsDir() {
+		return "", fmt.Errorf("path is a directory, not a file")
+	}
+
+	// Resolve absolute path
+	filePathABS, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
+	}
+
+	Debug("Resolved absolute path: " + filePathABS)
+
+	return filePathABS, nil
 }
 
 func changeMeta(){

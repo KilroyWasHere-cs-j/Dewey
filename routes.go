@@ -37,25 +37,25 @@ func getFile(c *gin.Context) {
 
 	if meta == "true" {
 		// User is requesting metadata to be in file return
-		fmt.Println("Getting meta data")
+		Debug("Metadata will be pulled")
+	} else {
+		Debug("No metadata will be pulled")
 	}
 
-	// Security: prevent directory traversal
 	if filepath.IsAbs(filename) || filepath.Base(filename) != filename {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filename"})
 		return
 	}
-
 	filePath := filepath.Join(uploadDir, filename)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	fileLocation, err := searchAndReturn(filePath)
+	if err != nil {
 		Warn(err.Error())
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
 		return
 	}
+
 	// Serve the file
-	c.File(filePath)
+	c.File(fileLocation)
 }
 
 /*
@@ -90,7 +90,6 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
-
 
 	Debug("checking formats")
 
