@@ -16,6 +16,7 @@ curl retrieve stored files command: curl http://localhost:8080/files
 
 import (
 	"os"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,8 +43,15 @@ func main() {
 		c.JSON(404, gin.H{"code": "PAGE_NO_FOUND", "message" : "Page not found"})
 	})
 
+	r.LoadHTMLGlob("templates/*")
 	// Routes
 	r.GET("/", index)
+	r.GET("/admin", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "adminportal.html", nil)
+	})
+	r.GET("/settings", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "settings.html", nil)
+	})
 	r.POST("/upload", uploadFile)
 	r.GET("/files/get_files/:filename/:meta", getFile)
 	r.GET("/files/listfiles", listFiles)

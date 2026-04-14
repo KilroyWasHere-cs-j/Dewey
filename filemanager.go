@@ -1,4 +1,4 @@
-package go
+package main
 
 // PDF files should be treated as seperate files for each page with there own records
 
@@ -20,7 +20,7 @@ func changeMeta(){
 	// Update records according to the uploaded meta
 }
 
-func deleteFile(){
+func setFileStatus(){
 	// Search up file retrive it's path
 	// Flip the deleted flag
 }
