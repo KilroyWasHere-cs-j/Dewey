@@ -1,6 +1,5 @@
 package main
 
-
 /*
 	A collection of functions used to validate the uploaded files
 	Author: Gabriel Tower
