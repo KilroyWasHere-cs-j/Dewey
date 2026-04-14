@@ -192,12 +192,12 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
+	idAndSort(safeFilename)
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "File uploaded successfully",
+		"message":  "File cached, in sorting que",
 		"filename": safeFilename,
 		"original": file.Filename,
 		"size":     file.Size,
-		"path":     "/files/" + safeFilename,
 	})
 }
 

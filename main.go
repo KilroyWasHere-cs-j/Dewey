@@ -25,11 +25,7 @@ func main() {
 	InitLogger("logs", "app")
 	defer logger.Close()
 
-	// Create uploads directory if it doesn't exist
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		Fatal(err.Error())
-		os.Exit(3)
-	}
+	fileSystemInit()
 
 	Debug("Server start")
 	r := gin.Default()
@@ -43,7 +39,7 @@ func main() {
 		c.JSON(404, gin.H{"code": "PAGE_NO_FOUND", "message" : "Page not found"})
 	})
 
-	r.LoadHTMLGlob("templates/*")
+	r.LoadHTMLGlob(htmlTemplatesDir + "/*")
 	// Routes
 	r.GET("/", index)
 	r.GET("/admin", func(c *gin.Context) {

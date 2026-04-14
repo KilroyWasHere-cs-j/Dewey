@@ -8,7 +8,7 @@ import (
 	"image"
 	"image/png"
 	"os"
-	"fmt"
+	// "fmt"
 
 	"github.com/makiuchi-d/gozxing"
 	"github.com/makiuchi-d/gozxing/oned"
@@ -68,31 +68,31 @@ func createImage(filename string, img *gozxing.BitMatrix) error {
 	return png.Encode(file, img)
 }
 
-func scanBarCode(path string) {
+func scanBarCode(path string) string {
 	// open and decode image file
 	file, err := os.Open(path)
 	if err != nil {
 		Warn(err.Error())
-		return
+		return ""
 	}
 	img, _, err := image.Decode(file)
 	if err != nil {
 		Warn(err.Error())
-		return
+		return ""
 	}
 
 	// prepare BinaryBitmap
 	bmp, err := gozxing.NewBinaryBitmapFromImage(img)
 	if err != nil {
 		Warn(err.Error())
-		return
+		return ""
 	}
 
 	// decode image
 	qrReader := qrcode.NewQRCodeReader()
 	result, _ := qrReader.Decode(bmp, nil)
 
-	fmt.Println(result)
+	return result.GetText()
 }
 
 // Below is some GPTChat code for handling PDFs still need to test
