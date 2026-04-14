@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	// "mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
