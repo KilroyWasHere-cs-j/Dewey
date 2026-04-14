@@ -11,6 +11,8 @@ const htmlTemplatesDir = "./templates"
 // Server specific constants
 const maxFileSize = 50 << 2
 const portNumber = "8080"
+const allowedIP = "127.0.0.1"
+const loopback = "::1"
 
 // Database specific constants
 const dbConnectionString = ""

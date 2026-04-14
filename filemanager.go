@@ -26,12 +26,23 @@ type Meta struct {
 	Tag1 string `json:"tag1"`
 }
 
-func loadFilters() (*Config) {
-	Debug("Attempting to load filters")
+// loadFilters loads the master filter configuration from disk.
+//
+// Behavior:
+//   - Reads rulesDir/master.json
+//   - Strictly decodes JSON (no unknown fields allowed)
+//   - Panics (Fatal) if config cannot be loaded
+//
+// Returns:
+//   - *Config: parsed filter configuration
+func loadFilters() *Config {
+	Debug("attempting to load filters")
 
-	file, err := os.Open(rulesDir + "/master.json")
+	path := filepath.Join(rulesDir, "master.json")
+
+	file, err := os.Open(path)
 	if err != nil {
-		Fatal(err.Error())
+		Fatal("failed to open config: " + err.Error())
 	}
 	defer file.Close()
 
@@ -41,24 +52,33 @@ func loadFilters() (*Config) {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&cfg); err != nil {
-		Fatal(err.Error())
+		Fatal("invalid config JSON: " + err.Error())
 	}
-	Debug("Loading filters successful")
+
+	Debug("filter configuration loaded successfully")
+
 	return &cfg
 }
 
+// fileSystemInit ensures required filesystem directories exist before server start.
+//
+// Behavior:
+//   - Creates upload directory
+//   - Creates base storage directory
+//   - Fails fast if any directory cannot be created
 func fileSystemInit() {
-	// Create caching directory if it doesn't exist
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		Fatal(err.Error())
-		os.Exit(3)
+	dirs := []string{
+		uploadDir,
+		fileSystemBaseDir,
 	}
 
-	// Create store directory if it doesn't exist
-	if err := os.MkdirAll(fileSystemBaseDir , 0755); err != nil {
-		Fatal(err.Error())
-		os.Exit(3)
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			Fatal("failed to create directory " + dir + ": " + err.Error())
+		}
 	}
+
+	Debug("filesystem initialization complete")
 }
 
 func idAndSort(path string){
@@ -69,30 +89,41 @@ func idAndSort(path string){
 	// Store file bytes and dn entry route
 }
 
+// searchAndReturn validates that a file exists and returns its absolute path.
+//
+// Behavior:
+//   - Ensures the path exists
+//   - Ensures it is not a directory
+//   - Converts to absolute path
+//
+// Security note:
+//   - Does NOT currently enforce uploadDir containment (important)
+//
+// Returns:
+//   - string: absolute file path
+//   - error: if file does not exist or path is invalid
 func searchAndReturn(filePath string) (string, error) {
-	// Check if file exists
-	info, err := os.Stat(filePath)
+	// Normalize to absolute early (helps prevent traversal ambiguity)
+	absInput, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve input path: %w", err)
+	}
+
+	info, err := os.Stat(absInput)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", fmt.Errorf("file does not exist: %s", filePath)
+			return "", fmt.Errorf("file does not exist: %s", absInput)
 		}
 		return "", fmt.Errorf("error checking file: %w", err)
 	}
 
-	// Optional: ensure it's not a directory
 	if info.IsDir() {
 		return "", fmt.Errorf("path is a directory, not a file")
 	}
 
-	// Resolve absolute path
-	filePathABS, err := filepath.Abs(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve absolute path: %w", err)
-	}
+	Debug("resolved absolute path: " + absInput)
 
-	Debug("Resolved absolute path: " + filePathABS)
-
-	return filePathABS, nil
+	return absInput, nil
 }
 
 func changeMeta(){

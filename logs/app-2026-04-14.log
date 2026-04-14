@@ -175,3 +175,66 @@
 [2026-04-14 14:37:11] [DEBUG] No metadata will be pulled
 [2026-04-14 14:37:11] [DEBUG] Resolved absolute path: /home/gabrielt/Documents/git/CrossDocTool/cache/1776186170_g.txt
 [2026-04-14 14:41:01] [DEBUG] index
+[2026-04-14 15:29:19] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:29:19] [DEBUG] Attempting to load filters
+[2026-04-14 15:29:19] [DEBUG] Loading filters successful
+[2026-04-14 15:29:19] [DEBUG] Server start
+[2026-04-14 15:29:19] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:37:12] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:37:12] [DEBUG] Attempting to load filters
+[2026-04-14 15:37:12] [DEBUG] Loading filters successful
+[2026-04-14 15:37:12] [DEBUG] Server start
+[2026-04-14 15:37:12] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:37:26] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:37:26] [DEBUG] Attempting to load filters
+[2026-04-14 15:37:26] [DEBUG] Loading filters successful
+[2026-04-14 15:37:26] [DEBUG] Server start
+[2026-04-14 15:37:26] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:38:15] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:38:15] [DEBUG] Attempting to load filters
+[2026-04-14 15:38:15] [DEBUG] Loading filters successful
+[2026-04-14 15:38:15] [DEBUG] Server start
+[2026-04-14 15:38:15] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:38:17] [WARN] Blocked IP ::1
+[2026-04-14 15:38:23] [WARN] Blocked IP ::1
+[2026-04-14 15:39:59] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:39:59] [DEBUG] Attempting to load filters
+[2026-04-14 15:39:59] [DEBUG] Loading filters successful
+[2026-04-14 15:39:59] [DEBUG] Server start
+[2026-04-14 15:39:59] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:40:02] [WARN] Blocked IP ::1
+[2026-04-14 15:40:04] [WARN] Blocked IP ::1
+[2026-04-14 15:40:44] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:40:44] [DEBUG] Attempting to load filters
+[2026-04-14 15:40:44] [DEBUG] Loading filters successful
+[2026-04-14 15:40:44] [DEBUG] Server start
+[2026-04-14 15:40:44] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:40:46] [DEBUG] getFile
+[2026-04-14 15:40:46] [DEBUG] No metadata will be pulled
+[2026-04-14 15:40:46] [DEBUG] Resolved absolute path: /home/gabrielt/Documents/git/CrossDocTool/cache/1776186170_g.txt
+[2026-04-14 15:42:24] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:42:24] [DEBUG] Attempting to load filters
+[2026-04-14 15:42:24] [DEBUG] Loading filters successful
+[2026-04-14 15:42:24] [DEBUG] Server start
+[2026-04-14 15:42:24] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:43:03] [DEBUG] listFiles
+[2026-04-14 15:43:41] [DEBUG] listFiles
+[2026-04-14 15:44:41] [DEBUG] getFile
+[2026-04-14 15:44:41] [DEBUG] No metadata will be pulled
+[2026-04-14 15:44:41] [DEBUG] Resolved absolute path: /home/gabrielt/Documents/git/CrossDocTool/cache/1776186170_g.txt
+[2026-04-14 15:46:40] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:46:40] [DEBUG] Attempting to load filters
+[2026-04-14 15:46:40] [DEBUG] Loading filters successful
+[2026-04-14 15:46:40] [DEBUG] Server start
+[2026-04-14 15:46:40] [DEBUG] Server is running at port: 8080
+[2026-04-14 15:50:45] [DEBUG] Starting cache clear daemon
+[2026-04-14 15:50:45] [DEBUG] Attempting to load filters
+[2026-04-14 15:50:45] [DEBUG] Loading filters successful
+[2026-04-14 15:50:45] [DEBUG] Server start
+[2026-04-14 15:50:45] [DEBUG] Server is running at port: 8080
+[2026-04-14 16:06:55] [DEBUG] starting cache clear daemon
+[2026-04-14 16:06:55] [DEBUG] attempting to load filters
+[2026-04-14 16:06:55] [DEBUG] filter configuration loaded successfully
+[2026-04-14 16:06:55] [DEBUG] filesystem initialization complete
+[2026-04-14 16:06:55] [DEBUG] server starting
+[2026-04-14 16:06:55] [DEBUG] server running on port 8080

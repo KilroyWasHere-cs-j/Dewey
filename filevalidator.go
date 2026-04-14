@@ -12,86 +12,97 @@ import (
 	"io"
 )
 
-/*
-	Checks if a file is Portable Executable
-*/
+// IsPEFile checks whether the provided file is a Windows Portable Executable (PE).
+//
+// It validates:
+//   - DOS header signature ("MZ")
+//   - PE header signature ("PE\0\0")
+//
+// Args:
+//   - f: seekable file reader (io.ReadSeeker)
+//
+// Returns:
+//   - bool: true if file is a valid PE binary
+//   - error: I/O or parsing error
 func IsPEFile(f io.ReadSeeker) (bool, error) {
-	mz_found := false
-	pe_found := false
-
-	if _, err := f.Seek(0, 0); err != nil {
+	// Reset file pointer
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
 	}
 
-	// Read first 64 bytes (DOS header is at least this long)
+	// Read DOS header
 	header := make([]byte, 64)
-	if _, err := f.Read(header); err != nil {
-		zeroize(header)
+	if _, err := io.ReadFull(f, header); err != nil {
 		return false, err
 	}
 
-	// Check for "MZ" signature
-	if header[0] == 'M' && header[1] == 'Z' {
-		mz_found = true
+	// Check "MZ" signature
+	if header[0] != 'M' || header[1] != 'Z' {
+		return false, nil
 	}
 
-	// e_lfanew is at offset 0x3C (60), gives PE header offset
+	// PE header offset (e_lfanew at 0x3C)
 	peOffset := binary.LittleEndian.Uint32(header[0x3C:0x40])
+
+	// Basic sanity check (prevents crazy offsets)
+	if peOffset < 64 {
+		return false, nil
+	}
 
 	// Seek to PE header
 	if _, err := f.Seek(int64(peOffset), io.SeekStart); err != nil {
-		zeroize(header)
 		return false, err
 	}
 
-	// Read PE signature (4 bytes)
-	peSig := make([]byte, 4)
-	if _, err := f.Read(peSig); err != nil {
-		zeroize(header)
+	// Read PE signature
+	var peSig [4]byte
+	if _, err := io.ReadFull(f, peSig[:]); err != nil {
 		return false, err
 	}
 
-	// Check for "PE\0\0"
-	if peSig[0] == 'P' && peSig[1] == 'E' && peSig[2] == 0 && peSig[3] == 0 {
-		pe_found = true
+	// Validate "PE\0\0"
+	if peSig != [4]byte{'P', 'E', 0, 0} {
+		return false, nil
 	}
-	zeroize(header)
-	if mz_found && pe_found {
-		return true, nil
-	}
-	return false, nil
+
+	return true, nil
 }
 
-/*
-	Check if a file is ELF binary
-*/
+// IsELFFile checks whether the provided file is a Linux ELF binary.
+//
+// It validates the ELF magic number:
+//
+//   0x7F 'E' 'L' 'F'
+//
+// Args:
+//   - f: seekable file reader (io.ReadSeeker)
+//
+// Returns:
+//   - bool: true if file is an ELF binary
+//   - error: I/O or read error
 func IsELFFile(f io.ReadSeeker) (bool, error) {
-	if _, err := f.Seek(0, 0); err != nil {
-		return false, err
-	}
-	// Read first 8 bytes (ELF header is at least this long(least the part we care about))
-	header := make([]byte, 8)
-	if _, err := f.Read(header); err != nil {
-		zeroize(header)
+	// Reset reader
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
 	}
 
+	// ELF magic number is 4 bytes, no need for 8
+	var header [4]byte
 
-	if header[0] == 0x7F &&
-		header[1] == 0x45 &&
-		header[2] == 0x4C &&
-		header[3] == 0x46 {
-		return true, nil
+	if _, err := io.ReadFull(f, header[:]); err != nil {
+		return false, err
 	}
-	return false, nil
+
+	return header == [4]byte{0x7F, 'E', 'L', 'F'}, nil
 }
 
-/*
-	Used as a clean up function to zeroize the bytes in an array
-*/
+// zeroize overwrites a byte slice with zeros.
+//
+// Note:
+//   - Intended for sensitive in-memory data cleanup (best-effort)
+//   - Not guaranteed against compiler optimizations in all cases
 func zeroize(b []byte) {
-    for i := range b {
-        b[i] = 0
-    }
+	for i := range b {
+		b[i] = 0
+	}
 }
-
