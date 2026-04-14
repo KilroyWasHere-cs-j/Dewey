@@ -1,0 +1,46 @@
+ {
+  "version": "0.1",
+  "level": "0",
+  "rules": [
+    {
+      "name_match": ".*\\.txt$",
+      "action": "move_to_directory",
+      "target_directory": "/documents/text_files",
+      "meta": [
+        {
+          "tag1": "text" 
+        }
+      ]
+    },
+    {
+      "name_match": ".*\\.(jpg|png|gif)$",
+      "action": "move_to_directory",
+      "target_directory": "/documents/images",
+      "meta": [
+        {
+          "tag1": "image"
+        } 
+      ]
+    },
+    {
+      "name_match": ".*\\.(pdf|docx)$",
+      "action": "move_to_directory",
+      "target_directory": "/documents/archives",
+      "meta": [
+        {
+          "tag1": "document"
+        }
+      ]
+    },
+    {
+      "name_match": ".*",
+      "action": "ignore",
+      "target_directory": "",
+      "meta": [
+        {
+          "tag1": "catch_all"
+        }
+      ]
+    }
+  ]
+}

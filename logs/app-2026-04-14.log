@@ -14,3 +14,42 @@
 [2026-04-14 10:11:50] [DEBUG] Server is running at port: 8080
 [2026-04-14 10:15:55] [DEBUG] Server start
 [2026-04-14 10:15:55] [DEBUG] Server is running at port: 8080
+[2026-04-14 10:34:52] [DEBUG] Server start
+[2026-04-14 10:34:52] [DEBUG] Server is running at port: 8080
+[2026-04-14 10:46:31] [DEBUG] Server start
+[2026-04-14 10:46:31] [DEBUG] Server is running at port: 8080
+[2026-04-14 10:47:10] [DEBUG] master.json
+[2026-04-14 10:47:10] [DEBUG] Server start
+[2026-04-14 10:47:10] [DEBUG] Server is running at port: 8080
+[2026-04-14 10:47:28] [DEBUG] master.json
+[2026-04-14 10:47:28] [DEBUG] Server start
+[2026-04-14 10:47:28] [DEBUG] Server is running at port: 8080
+[2026-04-14 10:48:44] [DEBUG] Attempting to load filters
+[2026-04-14 10:48:44] [DEBUG] Found filter(s)
+[2026-04-14 10:48:44] [DEBUG] master.json
+[2026-04-14 10:48:44] [DEBUG] Successfully loaded filters
+[2026-04-14 10:48:44] [DEBUG] Server start
+[2026-04-14 10:48:44] [DEBUG] Server is running at port: 8080
+[2026-04-14 11:19:01] [DEBUG] Attempting to load filters
+[2026-04-14 11:19:01] [DEBUG] Found filter(s)
+[2026-04-14 11:19:01] [DEBUG] master.json
+[2026-04-14 11:19:01] [DEBUG] Successfully loaded filters
+[2026-04-14 11:19:01] [DEBUG] Server start
+[2026-04-14 11:19:01] [DEBUG] Server is running at port: 8080
+[2026-04-14 11:27:51] [DEBUG] Attempting to load filters
+[2026-04-14 11:27:51] [FATAL] read ./rules: is a directory
+[2026-04-14 11:29:03] [DEBUG] Attempting to load filters
+[2026-04-14 11:29:03] [DEBUG] Server start
+[2026-04-14 11:29:03] [DEBUG] Server is running at port: 8080
+[2026-04-14 11:29:39] [DEBUG] Attempting to load filters
+[2026-04-14 11:29:39] [DEBUG] Loading filters successful
+[2026-04-14 11:29:39] [DEBUG] Server start
+[2026-04-14 11:29:39] [DEBUG] Server is running at port: 8080
+[2026-04-14 11:37:49] [DEBUG] Attempting to load filters
+[2026-04-14 11:37:49] [FATAL] json: unknown field "priority"
+[2026-04-14 11:39:20] [DEBUG] Attempting to load filters
+[2026-04-14 11:39:20] [FATAL] json: unknown field "priority"
+[2026-04-14 11:39:46] [DEBUG] Attempting to load filters
+[2026-04-14 11:39:46] [DEBUG] Loading filters successful
+[2026-04-14 11:39:46] [DEBUG] Server start
+[2026-04-14 11:39:46] [DEBUG] Server is running at port: 8080

@@ -25,6 +25,7 @@ func main() {
 	InitLogger("logs", "app")
 	defer logger.Close()
 
+	loadFilters()
 	fileSystemInit()
 
 	Debug("Server start")
