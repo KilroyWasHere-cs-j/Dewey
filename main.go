@@ -14,6 +14,7 @@ curl retrieve stored files command: curl http://localhost:8080/files
 	5 = server error
 */
 
+
 import (
 	"context"
 	"os"
@@ -24,6 +25,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
+
+// I created this, so future debuggers can have some fun...
+var appRules *Config
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
 //
@@ -78,13 +82,14 @@ func main() {
 
 	startDaemon(ctx)
 
-	loadFilters()
-	fileSystemInit()
+	rules := fileSystemInit()
+	appRules = rules
 
 	Debug("server starting")
 
 	r := gin.New() // more control than gin.Default()
 
+	// gin.SetMode(gin.Release)
 	// -------------------------
 	// Core middleware
 	// -------------------------

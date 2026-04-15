@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 )
 
+// var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
 
 type Config struct {
@@ -65,8 +66,9 @@ func loadFilters() *Config {
 // Behavior:
 //   - Creates upload directory
 //   - Creates base storage directory
+//	 - Initiate the loading of filter rules
 //   - Fails fast if any directory cannot be created
-func fileSystemInit() {
+func fileSystemInit() *Config {
 	dirs := []string{
 		uploadDir,
 		fileSystemBaseDir,
@@ -77,12 +79,20 @@ func fileSystemInit() {
 			Fatal("failed to create directory " + dir + ": " + err.Error())
 		}
 	}
+	
+	config := loadFilters()
+	if config == nil {
+		Fatal("Unable to load configs")
+	}
 
 	Debug("filesystem initialization complete")
+	return config
 }
 
 func idAndSort(path string){
-	//	barcodeText := scanBarCode(path)
+	//  barcodeText := scanBarCode(path)
+	
+
 
 	// Determine where the file needs to go
 	// Create and store db entry

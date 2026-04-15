@@ -1,0 +1,105 @@
+[2026-04-15 08:19:14] [DEBUG] starting cache clear daemon
+[2026-04-15 08:19:14] [DEBUG] attempting to load filters
+[2026-04-15 08:19:14] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:19:14] [DEBUG] attempting to load filters
+[2026-04-15 08:19:14] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:19:14] [FATAL] Unable to load configs
+[2026-04-15 08:19:38] [DEBUG] starting cache clear daemon
+[2026-04-15 08:19:38] [DEBUG] attempting to load filters
+[2026-04-15 08:19:38] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:19:38] [DEBUG] attempting to load filters
+[2026-04-15 08:19:38] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:19:38] [DEBUG] filesystem initialization complete
+[2026-04-15 08:19:38] [DEBUG] server starting
+[2026-04-15 08:19:38] [DEBUG] server running on port 8080
+[2026-04-15 08:22:08] [DEBUG] starting cache clear daemon
+[2026-04-15 08:22:08] [DEBUG] attempting to load filters
+[2026-04-15 08:22:08] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:22:08] [DEBUG] attempting to load filters
+[2026-04-15 08:22:08] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:22:08] [DEBUG] filesystem initialization complete
+[2026-04-15 08:22:08] [DEBUG] server starting
+[2026-04-15 08:22:08] [DEBUG] server running on port 8080
+[2026-04-15 08:24:56] [DEBUG] starting cache clear daemon
+[2026-04-15 08:24:56] [DEBUG] attempting to load filters
+[2026-04-15 08:24:56] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:24:56] [DEBUG] filesystem initialization complete
+[2026-04-15 08:24:56] [DEBUG] server starting
+[2026-04-15 08:24:56] [DEBUG] server running on port 8080
+[2026-04-15 08:53:40] [DEBUG] starting cache clear daemon
+[2026-04-15 08:53:40] [DEBUG] attempting to load filters
+[2026-04-15 08:53:40] [DEBUG] filter configuration loaded successfully
+[2026-04-15 08:53:40] [DEBUG] filesystem initialization complete
+[2026-04-15 08:53:40] [DEBUG] server starting
+[2026-04-15 08:53:40] [DEBUG] server running on port 8080
+[2026-04-15 09:20:18] [DEBUG] starting cache clear daemon
+[2026-04-15 09:20:18] [DEBUG] attempting to load filters
+[2026-04-15 09:20:18] [DEBUG] filter configuration loaded successfully
+[2026-04-15 09:20:18] [DEBUG] filesystem initialization complete
+[2026-04-15 09:20:18] [DEBUG] server starting
+[2026-04-15 09:20:18] [DEBUG] server running on port 8080
+[2026-04-15 09:20:20] [DEBUG] index
+[2026-04-15 09:20:20] [DEBUG] uploadFile
+[2026-04-15 09:20:20] [DEBUG] checking formats
+[2026-04-15 09:20:20] [WARN] invalid file type: 
+[2026-04-15 09:30:15] [DEBUG] index
+[2026-04-15 09:30:15] [DEBUG] uploadFile
+[2026-04-15 09:30:15] [DEBUG] checking formats
+[2026-04-15 09:30:15] [WARN] invalid file type: 
+[2026-04-15 09:30:15] [DEBUG] uploadFile
+[2026-04-15 09:30:15] [DEBUG] checking formats
+[2026-04-15 09:30:15] [WARN] invalid file type: .bin
+[2026-04-15 09:30:44] [DEBUG] index
+[2026-04-15 09:30:44] [DEBUG] uploadFile
+[2026-04-15 09:30:44] [DEBUG] checking formats
+[2026-04-15 09:30:44] [WARN] invalid file type: 
+[2026-04-15 09:30:44] [DEBUG] uploadFile
+[2026-04-15 09:30:44] [DEBUG] checking formats
+[2026-04-15 09:30:44] [WARN] invalid file type: .bin
+[2026-04-15 09:35:35] [DEBUG] index
+[2026-04-15 09:35:35] [DEBUG] uploadFile
+[2026-04-15 09:35:35] [DEBUG] checking formats
+[2026-04-15 09:35:35] [WARN] invalid file type: .exe
+[2026-04-15 09:35:35] [DEBUG] uploadFile
+[2026-04-15 09:35:35] [DEBUG] checking formats
+[2026-04-15 09:35:35] [WARN] invalid file type: .bin
+[2026-04-15 09:35:36] [DEBUG] uploadFile
+[2026-04-15 09:35:36] [DEBUG] checking formats
+[2026-04-15 09:35:36] [WARN] invalid file type: .bin
+[2026-04-15 09:36:34] [DEBUG] index
+[2026-04-15 09:36:34] [DEBUG] uploadFile
+[2026-04-15 09:36:34] [DEBUG] checking formats
+[2026-04-15 09:36:34] [WARN] invalid file type: .exe
+[2026-04-15 09:36:34] [DEBUG] uploadFile
+[2026-04-15 09:36:34] [DEBUG] checking formats
+[2026-04-15 09:36:34] [WARN] invalid file type: .bin
+[2026-04-15 09:36:35] [DEBUG] uploadFile
+[2026-04-15 09:36:35] [DEBUG] checking formats
+[2026-04-15 09:36:35] [WARN] invalid file type: .bin
+[2026-04-15 09:36:36] [DEBUG] uploadFile
+[2026-04-15 09:36:36] [DEBUG] checking formats
+[2026-04-15 09:36:36] [WARN] invalid file type: .bin
+[2026-04-15 09:36:37] [DEBUG] uploadFile
+[2026-04-15 09:36:37] [DEBUG] checking formats
+[2026-04-15 09:36:37] [WARN] invalid file type: .exe
+[2026-04-15 09:36:38] [DEBUG] uploadFile
+[2026-04-15 09:36:38] [DEBUG] checking formats
+[2026-04-15 09:36:38] [WARN] invalid file type: .bin
+[2026-04-15 09:36:39] [DEBUG] uploadFile
+[2026-04-15 09:36:39] [DEBUG] checking formats
+[2026-04-15 09:36:39] [WARN] invalid file type: .bin
+[2026-04-15 09:36:40] [DEBUG] uploadFile
+[2026-04-15 09:36:40] [DEBUG] checking formats
+[2026-04-15 09:36:40] [WARN] invalid file type: .bin
+[2026-04-15 09:36:41] [DEBUG] uploadFile
+[2026-04-15 09:36:41] [DEBUG] checking formats
+[2026-04-15 09:36:41] [WARN] invalid file type: .bin
+[2026-04-15 09:36:42] [DEBUG] uploadFile
+[2026-04-15 09:36:42] [DEBUG] checking formats
+[2026-04-15 09:36:42] [WARN] invalid file type: .bin
+[2026-04-15 09:36:43] [DEBUG] uploadFile
+[2026-04-15 09:36:43] [DEBUG] checking formats
+[2026-04-15 09:36:43] [WARN] invalid file type: .bin
+[2026-04-15 09:36:44] [DEBUG] uploadFile
+[2026-04-15 09:36:44] [DEBUG] checking formats
+[2026-04-15 09:36:44] [WARN] invalid file type: .exe
