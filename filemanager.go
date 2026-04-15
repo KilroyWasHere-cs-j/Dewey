@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"path/filepath"
+	"regexp"
 )
 
 // var filters *Config
@@ -91,7 +92,25 @@ func fileSystemInit() *Config {
 
 func idAndSort(path string){
 	//  barcodeText := scanBarCode(path)
+
+	//-------------------------------
+	// Perform name match rule
+	//-------------------------------
+	for _, pattern := range appRules.Rules {
+		Debug("Attempting match with regex: " + pattern.NameMatch)
+		re := regexp.MustCompile(pattern.NameMatch)
+		if re.MatchString(path) {
+			Debug("Match on pattern: " + pattern.NameMatch)
+			Debug("Action: " + pattern.Action)
+			Debug("Target dir: " + pattern.TargetDirectory)
+			return
+		} else {
+			Debug("No match")
+		}
+	}
+
 	
+
 
 
 	// Determine where the file needs to go

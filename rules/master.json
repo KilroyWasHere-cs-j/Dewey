@@ -25,20 +25,10 @@
     {
       "name_match": ".*\\.(pdf|docx)$",
       "action": "move_to_directory",
-      "target_directory": "/documents/archives",
+      "target_directory": "/pdf",
       "meta": [
         {
           "tag1": "document"
-        }
-      ]
-    },
-    {
-      "name_match": ".*",
-      "action": "ignore",
-      "target_directory": "",
-      "meta": [
-        {
-          "tag1": "catch_all"
         }
       ]
     }

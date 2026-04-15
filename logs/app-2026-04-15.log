@@ -103,3 +103,164 @@
 [2026-04-15 09:36:44] [DEBUG] uploadFile
 [2026-04-15 09:36:44] [DEBUG] checking formats
 [2026-04-15 09:36:44] [WARN] invalid file type: .exe
+[2026-04-15 10:15:03] [DEBUG] starting cache clear daemon
+[2026-04-15 10:15:03] [DEBUG] attempting to load filters
+[2026-04-15 10:15:03] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:15:03] [DEBUG] filesystem initialization complete
+[2026-04-15 10:15:03] [DEBUG] server starting
+[2026-04-15 10:15:03] [DEBUG] server running on port 8080
+[2026-04-15 10:16:12] [DEBUG] starting cache clear daemon
+[2026-04-15 10:16:12] [DEBUG] attempting to load filters
+[2026-04-15 10:16:12] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:16:12] [DEBUG] filesystem initialization complete
+[2026-04-15 10:16:12] [DEBUG] server starting
+[2026-04-15 10:16:12] [DEBUG] server running on port 8080
+[2026-04-15 10:16:19] [DEBUG] uploadFile
+[2026-04-15 10:16:19] [DEBUG] checking formats
+[2026-04-15 10:16:19] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:16:19] [DEBUG] Match
+[2026-04-15 10:21:14] [DEBUG] starting cache clear daemon
+[2026-04-15 10:21:14] [DEBUG] attempting to load filters
+[2026-04-15 10:21:14] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:21:14] [DEBUG] filesystem initialization complete
+[2026-04-15 10:21:14] [DEBUG] server starting
+[2026-04-15 10:21:14] [DEBUG] server running on port 8080
+[2026-04-15 10:21:17] [DEBUG] uploadFile
+[2026-04-15 10:21:17] [DEBUG] checking formats
+[2026-04-15 10:21:17] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:21:17] [DEBUG] .*\.txt$
+[2026-04-15 10:21:17] [DEBUG] .*\.(jpg|png|gif)$
+[2026-04-15 10:21:17] [DEBUG] .*\.(pdf|docx)$
+[2026-04-15 10:21:17] [DEBUG] .*
+[2026-04-15 10:21:17] [DEBUG] Match
+[2026-04-15 10:24:43] [DEBUG] starting cache clear daemon
+[2026-04-15 10:24:43] [DEBUG] attempting to load filters
+[2026-04-15 10:24:43] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:24:43] [DEBUG] filesystem initialization complete
+[2026-04-15 10:24:43] [DEBUG] server starting
+[2026-04-15 10:24:43] [DEBUG] server running on port 8080
+[2026-04-15 10:24:44] [DEBUG] uploadFile
+[2026-04-15 10:24:44] [DEBUG] checking formats
+[2026-04-15 10:24:44] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:24:44] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:24:44] [DEBUG] No match
+[2026-04-15 10:24:44] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:24:44] [DEBUG] No match
+[2026-04-15 10:24:44] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:24:44] [DEBUG] Match
+[2026-04-15 10:24:44] [DEBUG] Attempting match with regex: .*
+[2026-04-15 10:24:44] [DEBUG] Match
+[2026-04-15 10:25:20] [DEBUG] starting cache clear daemon
+[2026-04-15 10:25:20] [DEBUG] attempting to load filters
+[2026-04-15 10:25:20] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:25:20] [DEBUG] filesystem initialization complete
+[2026-04-15 10:25:20] [DEBUG] server starting
+[2026-04-15 10:25:20] [DEBUG] server running on port 8080
+[2026-04-15 10:25:22] [DEBUG] uploadFile
+[2026-04-15 10:25:22] [DEBUG] checking formats
+[2026-04-15 10:25:22] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:25:22] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:25:22] [DEBUG] No match
+[2026-04-15 10:25:22] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:25:22] [DEBUG] No match
+[2026-04-15 10:25:22] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:25:22] [DEBUG] Match on pattern: .*\.(pdf|docx)$
+[2026-04-15 10:25:22] [DEBUG] Attempting match with regex: .*
+[2026-04-15 10:25:22] [DEBUG] Match on pattern: .*
+[2026-04-15 10:25:57] [DEBUG] starting cache clear daemon
+[2026-04-15 10:25:57] [DEBUG] attempting to load filters
+[2026-04-15 10:25:57] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:25:57] [DEBUG] filesystem initialization complete
+[2026-04-15 10:25:57] [DEBUG] server starting
+[2026-04-15 10:25:57] [DEBUG] server running on port 8080
+[2026-04-15 10:25:58] [DEBUG] uploadFile
+[2026-04-15 10:25:58] [DEBUG] checking formats
+[2026-04-15 10:25:58] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:25:58] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:25:58] [DEBUG] No match
+[2026-04-15 10:25:58] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:25:58] [DEBUG] No match
+[2026-04-15 10:25:58] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:25:58] [DEBUG] Match on pattern: .*\.(pdf|docx)$
+[2026-04-15 10:32:38] [DEBUG] starting cache clear daemon
+[2026-04-15 10:32:38] [DEBUG] attempting to load filters
+[2026-04-15 10:32:38] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:32:38] [DEBUG] filesystem initialization complete
+[2026-04-15 10:32:38] [DEBUG] server starting
+[2026-04-15 10:32:38] [DEBUG] server running on port 8080
+[2026-04-15 10:32:39] [DEBUG] uploadFile
+[2026-04-15 10:32:39] [DEBUG] checking formats
+[2026-04-15 10:32:39] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:32:39] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:32:39] [DEBUG] No match
+[2026-04-15 10:32:39] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:32:39] [DEBUG] No match
+[2026-04-15 10:32:39] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:32:39] [DEBUG] Match on pattern: .*\.(pdf|docx)$
+[2026-04-15 10:32:39] [DEBUG] Action: move_to_directory
+[2026-04-15 10:32:39] [DEBUG] Target dir: /pdf
+[2026-04-15 10:37:19] [DEBUG] starting cache clear daemon
+[2026-04-15 10:37:19] [DEBUG] attempting to load filters
+[2026-04-15 10:37:19] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:37:19] [DEBUG] filesystem initialization complete
+[2026-04-15 10:37:19] [DEBUG] server starting
+[2026-04-15 10:37:19] [DEBUG] server running on port 8080
+[2026-04-15 10:37:59] [DEBUG] uploadFile
+[2026-04-15 10:37:59] [DEBUG] checking formats
+[2026-04-15 10:37:59] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-15 10:37:59] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:37:59] [DEBUG] No match
+[2026-04-15 10:37:59] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:37:59] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-15 10:37:59] [DEBUG] Action: move_to_directory
+[2026-04-15 10:37:59] [DEBUG] Target dir: /documents/images
+[2026-04-15 10:37:59] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:37:59] [DEBUG] No match
+[2026-04-15 10:38:33] [DEBUG] uploadFile
+[2026-04-15 10:38:33] [DEBUG] checking formats
+[2026-04-15 10:38:33] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:38:33] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:38:33] [DEBUG] No match
+[2026-04-15 10:38:33] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:38:33] [DEBUG] No match
+[2026-04-15 10:38:33] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:38:33] [DEBUG] Match on pattern: .*\.(pdf|docx)$
+[2026-04-15 10:38:33] [DEBUG] Action: move_to_directory
+[2026-04-15 10:38:33] [DEBUG] Target dir: /pdf
+[2026-04-15 10:43:16] [DEBUG] starting cache clear daemon
+[2026-04-15 10:43:16] [DEBUG] attempting to load filters
+[2026-04-15 10:43:16] [DEBUG] filter configuration loaded successfully
+[2026-04-15 10:43:16] [DEBUG] filesystem initialization complete
+[2026-04-15 10:43:16] [DEBUG] server starting
+[2026-04-15 10:43:16] [DEBUG] server running on port 8080
+[2026-04-15 10:43:18] [DEBUG] uploadFile
+[2026-04-15 10:43:18] [DEBUG] checking formats
+[2026-04-15 10:43:18] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-04-15 10:43:18] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:43:18] [DEBUG] No match
+[2026-04-15 10:43:18] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:43:18] [DEBUG] No match
+[2026-04-15 10:43:18] [DEBUG] Attempting match with regex: .*\.(pdf|docx)$
+[2026-04-15 10:43:18] [DEBUG] Match on pattern: .*\.(pdf|docx)$
+[2026-04-15 10:43:18] [DEBUG] Action: move_to_directory
+[2026-04-15 10:43:18] [DEBUG] Target dir: /pdf
+[2026-04-15 10:43:32] [DEBUG] uploadFile
+[2026-04-15 10:43:32] [DEBUG] checking formats
+[2026-04-15 10:43:32] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-15 10:43:32] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:43:32] [DEBUG] No match
+[2026-04-15 10:43:32] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-15 10:43:32] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-15 10:43:32] [DEBUG] Action: move_to_directory
+[2026-04-15 10:43:32] [DEBUG] Target dir: /documents/images
+[2026-04-15 10:46:58] [DEBUG] uploadFile
+[2026-04-15 10:46:58] [WARN] request Content-Type isn't multipart/form-data
+[2026-04-15 10:47:12] [DEBUG] uploadFile
+[2026-04-15 10:47:12] [WARN] request Content-Type isn't multipart/form-data
+[2026-04-15 10:47:36] [DEBUG] uploadFile
+[2026-04-15 10:47:36] [DEBUG] checking formats
+[2026-04-15 10:47:36] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-04-15 10:47:36] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-15 10:47:36] [DEBUG] Match on pattern: .*\.txt$
+[2026-04-15 10:47:36] [DEBUG] Action: move_to_directory
+[2026-04-15 10:47:36] [DEBUG] Target dir: /documents/text_files
