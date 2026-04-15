@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"io"
 	"fmt"
 	"encoding/json"
 	"path/filepath"
@@ -103,6 +104,29 @@ func idAndSort(path string){
 			Debug("Match on pattern: " + pattern.NameMatch)
 			Debug("Action: " + pattern.Action)
 			Debug("Target dir: " + pattern.TargetDirectory)
+
+			err := os.MkdirAll(fileSystemBaseDir + pattern.TargetDirectory, 0755)
+			if err != nil {
+				Warn("Failed to create directory for uploaded file " + err.Error())
+			}
+			
+			Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
+			
+			// err = os.Rename(uploadDir + "/" + path, fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
+			// if err != nil {
+			// 	Warn(err.Error())
+			// }
+
+			err = CopyFile(
+				filepath.Join(uploadDir, path),
+				filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path),
+			)
+
+			if err != nil {
+				Warn(err.Error())
+				return
+			}
+
 			return
 		} else {
 			Debug("No match")
@@ -116,6 +140,35 @@ func idAndSort(path string){
 	// Determine where the file needs to go
 	// Create and store db entry
 	// Store file bytes and dn entry route
+}
+
+func CopyFile(src, dst string) error {
+	// open source
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	// ensure destination directory exists
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+
+	// create destination file
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	// copy content
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	// flush to disk
+	return dstFile.Sync()
 }
 
 // searchAndReturn validates that a file exists and returns its absolute path.

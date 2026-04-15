@@ -5,7 +5,7 @@
     {
       "name_match": ".*\\.txt$",
       "action": "move_to_directory",
-      "target_directory": "/documents/text_files",
+      "target_directory": "/text_files",
       "meta": [
         {
           "tag1": "text" 
@@ -15,7 +15,7 @@
     {
       "name_match": ".*\\.(jpg|png|gif)$",
       "action": "move_to_directory",
-      "target_directory": "/documents/images",
+      "target_directory": "/images",
       "meta": [
         {
           "tag1": "image"
@@ -23,7 +23,17 @@
       ]
     },
     {
-      "name_match": ".*\\.(pdf|docx)$",
+      "name_match": ".*\\.(pdf)$",
+      "action": "move_to_directory",
+      "target_directory": "/pdf",
+      "meta": [
+        {
+          "tag1": "document"
+        }
+      ]
+    },
+    {
+      "name_match": ".*\\.(docx)$",
       "action": "move_to_directory",
       "target_directory": "/pdf",
       "meta": [

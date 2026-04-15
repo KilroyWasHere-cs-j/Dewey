@@ -32,7 +32,7 @@ var appRules *Config
 // startDaemon launches a background worker that periodically runs maintenance tasks.
 //
 // Behavior:
-//   - Runs runTask every 3 hours
+//   - Runs runTask every n hours
 //   - Stops cleanly when context is cancelled
 //
 // Args:
@@ -40,7 +40,7 @@ var appRules *Config
 func startDaemon(ctx context.Context) {
 	Debug("starting cache clear daemon")
 
-	ticker := time.NewTicker(3 * time.Hour)
+	ticker := time.NewTicker(daemonTickTime * time.Hour)
 
 	go func() {
 		defer ticker.Stop()
@@ -55,7 +55,7 @@ func startDaemon(ctx context.Context) {
 							Warn("daemon panic recovered")
 						}
 					}()
-					runTask()
+					dumpCache()
 				}()
 
 			case <-ctx.Done():
@@ -67,10 +67,22 @@ func startDaemon(ctx context.Context) {
 }
 
 // runTask executes periodic maintenance logic such as cache cleanup.
-func runTask() {
-	Debug("running system cache clear")
+func dumpCache() {
+	Debug("Running system cache dump")
+	entries, err := os.ReadDir(uploadDir) // Read current directory
+  if err != nil {
+		Fatal("Failed to dump cache dir " + err.Error())
+  }
 
-	// TODO: implement cache cleanup logic here
+  for _, entry := range entries {
+		if !entry.IsDir() {
+			err := os.Remove(uploadDir + "/" + entry.Name())
+			if err != nil {
+				Fatal("Failed to remove a file from the cache " + err.Error())
+			}
+		}	
+  }
+	Debug("Cache dumped")
 }
 
 func main() {
