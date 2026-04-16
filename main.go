@@ -13,9 +13,18 @@ import (
 	"net/http"
 	"time"
 	"path/filepath"
+	// "log"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+//	"github.com/prometheus/client_golang/prometheus"
+//	"github.com/prometheus/client_golang/prometheus/collectors"
+//	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // I created this, so future debuggers can have some fun...
@@ -77,7 +86,19 @@ func dumpCache() {
 	Debug("Cache dumped")
 }
 
+func prometheusRun() {
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	http.ListenAndServe(":2112", nil)
+
+}
+
 func main() {
+	go prometheusRun()
 	InitLogger("logs", "app")
 	defer logger.Close()
 
@@ -89,13 +110,11 @@ func main() {
 	rules := fileSystemInit()
 	appRules = rules
 
-
 	// dbFunction()
 	Debug("server starting")
 
-	r := gin.New() // more control than gin.Default()
+	r := gin.New()
 
-	// gin.SetMode(gin.Release)
 	// -------------------------
 	// Core middleware
 	// -------------------------
