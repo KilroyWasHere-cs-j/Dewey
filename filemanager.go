@@ -41,7 +41,7 @@ type Meta struct {
 func loadFilters() *Config {
 	Debug("attempting to load filters")
 
-	path := filepath.Join(rulesDir, "master.json")
+	path := filepath.Join(rulesDir, "rules.json")
 
 	file, err := os.Open(path)
 	if err != nil {
