@@ -37,3 +37,45 @@
 [2026-04-16 12:15:27] [DEBUG] Creating database
 [2026-04-16 12:15:27] [DEBUG] server starting
 [2026-04-16 12:15:27] [DEBUG] server running on port 8080
+[2026-04-16 12:15:59] [DEBUG] starting cache clear daemon
+[2026-04-16 12:15:59] [DEBUG] attempting to load filters
+[2026-04-16 12:15:59] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:15:59] [DEBUG] filesystem initialization complete
+[2026-04-16 12:15:59] [DEBUG] Creating database
+[2026-04-16 12:15:59] [DEBUG] server starting
+[2026-04-16 12:15:59] [DEBUG] server running on port 8080
+[2026-04-16 12:17:23] [DEBUG] starting cache clear daemon
+[2026-04-16 12:17:23] [DEBUG] attempting to load filters
+[2026-04-16 12:17:23] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:17:23] [DEBUG] filesystem initialization complete
+[2026-04-16 12:17:23] [DEBUG] Creating database
+[2026-04-16 12:17:23] [DEBUG] Table 'users' created successfully
+[2026-04-16 12:17:23] [DEBUG] server starting
+[2026-04-16 12:17:23] [DEBUG] server running on port 8080
+[2026-04-16 12:18:54] [DEBUG] starting cache clear daemon
+[2026-04-16 12:18:54] [DEBUG] attempting to load filters
+[2026-04-16 12:18:54] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:18:54] [DEBUG] filesystem initialization complete
+[2026-04-16 12:18:54] [DEBUG] Table 'users' created successfully
+[2026-04-16 12:18:54] [DEBUG] server starting
+[2026-04-16 12:18:54] [DEBUG] server running on port 8080
+[2026-04-16 12:19:08] [DEBUG] starting cache clear daemon
+[2026-04-16 12:19:08] [DEBUG] attempting to load filters
+[2026-04-16 12:19:08] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:19:08] [DEBUG] filesystem initialization complete
+[2026-04-16 12:19:08] [DEBUG] Table 'users' created successfully
+[2026-04-16 12:19:08] [DEBUG] server starting
+[2026-04-16 12:19:08] [DEBUG] server running on port 8080
+[2026-04-16 12:37:25] [DEBUG] starting cache clear daemon
+[2026-04-16 12:37:25] [DEBUG] attempting to load filters
+[2026-04-16 12:37:25] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:37:25] [DEBUG] filesystem initialization complete
+[2026-04-16 12:37:25] [DEBUG] server starting
+[2026-04-16 12:37:25] [DEBUG] server running on port 8080
+[2026-04-16 12:38:27] [DEBUG] starting cache clear daemon
+[2026-04-16 12:38:27] [DEBUG] attempting to load filters
+[2026-04-16 12:38:27] [DEBUG] filter configuration loaded successfully
+[2026-04-16 12:38:27] [DEBUG] filesystem initialization complete
+[2026-04-16 12:38:27] [DEBUG] Table 'users' created successfully
+[2026-04-16 12:38:27] [DEBUG] server starting
+[2026-04-16 12:38:27] [DEBUG] server running on port 8080
