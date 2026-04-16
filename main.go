@@ -89,6 +89,8 @@ func main() {
 	rules := fileSystemInit()
 	appRules = rules
 
+
+	createDB()
 	Debug("server starting")
 
 	r := gin.New() // more control than gin.Default()
@@ -150,7 +152,7 @@ func main() {
 	r.GET("/files/:filename/:meta", getFile)
 	r.GET("/files", listFiles)
 	r.DELETE("/files/:filename", deleteFile)
-
+	r.GET("/admin/dumpCache", triggerCacheDump)
 	// -------------------------
 	// Start server
 	// -------------------------
