@@ -90,7 +90,7 @@ func main() {
 	appRules = rules
 
 
-	dbFunction()
+	// dbFunction()
 	Debug("server starting")
 
 	r := gin.New() // more control than gin.Default()
