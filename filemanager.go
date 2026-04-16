@@ -111,11 +111,6 @@ func idAndSort(path string){
 			}
 			
 			Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
-			
-			// err = os.Rename(uploadDir + "/" + path, fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
-			// if err != nil {
-			// 	Warn(err.Error())
-			// }
 
 			err = CopyFile(
 				filepath.Join(uploadDir, path),
@@ -132,10 +127,6 @@ func idAndSort(path string){
 			Debug("No match")
 		}
 	}
-
-	
-
-
 
 	// Determine where the file needs to go
 	// Create and store db entry
