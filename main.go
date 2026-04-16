@@ -18,10 +18,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-
+	// "github.com/prometheus/client_golang/prometheus"
+	// "github.com/prometheus/client_golang/prometheus/collectors"
+	// "github.com/prometheus/client_golang/prometheus/promhttp"
+	//
 //	"github.com/prometheus/client_golang/prometheus"
 //	"github.com/prometheus/client_golang/prometheus/collectors"
 //	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -39,7 +39,7 @@ var appRules *Config
 // Args:
 //   - ctx: context used to signal shutdown (cancellation-safe goroutine)
 func startDaemon(ctx context.Context) {
-	Debug("starting cache clear daemon")
+	// Debug("starting cache clear daemon")
 
 	ticker := time.NewTicker(daemonTickTime * time.Hour)
 
@@ -53,14 +53,14 @@ func startDaemon(ctx context.Context) {
 				func() {
 					defer func() {
 						if r := recover(); r != nil {
-							Warn("daemon panic recovered")
+							// Warn("daemon panic recovered")
 						}
 					}()
 					dumpCache()
 				}()
 
 			case <-ctx.Done():
-				Warn("daemon stopped")
+				// Warn("daemon stopped")
 				return
 			}
 		}
@@ -69,36 +69,23 @@ func startDaemon(ctx context.Context) {
 
 // runTask executes periodic maintenance logic such as cache cleanup.
 func dumpCache() {
-	Debug("Running system cache dump")
+	// Debug("Running system cache dump")
 	entries, err := os.ReadDir(uploadDir) // Read current directory
   if err != nil {
-		Fatal("Failed to dump cache dir " + err.Error())
+		// Fatal("Failed to dump cache dir " + err.Error())
   }
 
   for _, entry := range entries {
 		if !entry.IsDir() {
 			err := os.Remove(uploadDir + "/" + entry.Name())
 			if err != nil {
-				Fatal("Failed to remove a file from the cache " + err.Error())
+				// Fatal("Failed to remove a file from the cache " + err.Error())
 			}
 		}	
   }
-	Debug("Cache dumped")
+	// Debug("Cache dumped")
 }
-
-func prometheusRun() {
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	http.ListenAndServe(":2112", nil)
-
-}
-
 func main() {
-	go prometheusRun()
 	InitLogger("logs", "app")
 	defer logger.Close()
 
