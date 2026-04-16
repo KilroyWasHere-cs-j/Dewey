@@ -1,3 +1,6 @@
+# Build command: podman build -t cross-doc-tool-dev .
+# Run command: podman run -p 8080:8080 cross-doc-tool-dev
+
 # ---- Build stage ----
 FROM golang:1.26-alpine AS builder
 
@@ -21,8 +24,14 @@ FROM alpine:latest
 
 WORKDIR /app
 
+# Install nano here
+RUN apk add --no-cache nano
+
 # Copy only the binary from builder
 COPY --from=builder /app/app-binary .
+COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/rules ./rules
+
 
 EXPOSE 8080
 
