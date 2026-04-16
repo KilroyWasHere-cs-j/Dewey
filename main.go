@@ -7,14 +7,6 @@ curl retrieve stored files command: curl http://localhost:8080/files
 */
 
 
-/*
-	Error code index
-	0 = clean exit no error
-	3 = directory error
-	5 = server error
-*/
-
-
 import (
 	"context"
 	"os"
@@ -165,7 +157,6 @@ func main() {
 	Debug("server running on port " + portNumber)
 
 	if err := r.Run(":" + portNumber); err != nil {
-		Fatal(err.Error())
-		os.Exit(1)
+		Fatal(err.Error())	
 	}
 }
