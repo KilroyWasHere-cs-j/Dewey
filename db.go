@@ -31,7 +31,7 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 
 // INSERT INTO files (filename, acts_id, sha256_hash, created_at)
 // VALUES ('insert_test.txt', 'ACTS-003','sha256', current_date);
-	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath) VALUES (?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath)
+	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted) VALUES (?, ?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath, false)
 	if err != nil {
 		tx.Rollback()
 		Warn(err.Error())
