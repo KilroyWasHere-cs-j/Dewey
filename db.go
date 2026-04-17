@@ -1,31 +1,46 @@
 package main
 
 import (
+	"time"
+
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// A testing/utility function for making changes to a sql db
-func dbFunction() {
-	db, err := sql.Open("sqlite3", fileSystemBaseDir + "/master.db")
+var db *sql.DB
+
+func InitDB() error {
+	var err error
+	db, err = sql.Open("sqlite3", fileSystemBaseDir+"/master.db")
 	if err != nil {
-		Fatal(err.Error())
+		return err
 	}
-	defer db.Close()
-// 	sqlStmt := `
-//     CREATE TABLE files (
-//     id INTEGER PRIMARY KEY AUTOINCREMENT,
-//     filename TEXT NOT NULL,
-//     acts_id TEXT,
-//     sha256_hash TEXT,
-//     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-// );
-//     `
-// 	_, err = db.Exec(sqlStmt)
-// 	if err != nil {
-// 		Fatal(err.Error())
-// 	}
-// 	Debug("Table 'users' created successfully")
+	db.SetMaxOpenConns(1)
+
+	return db.Ping()
+}
+
+func createNewFileRecord(filename string, acts_id string, sha256_hash string) {
+	tx, err := db.Begin()
+	if err != nil {
+		Warn(err.Error())
+		return
+	}
+
+	now := time.Now()
+
+// INSERT INTO files (filename, acts_id, sha256_hash, created_at)
+// VALUES ('insert_test.txt', 'ACTS-003','sha256', current_date);
+	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at) VALUES (?, ?, ?, ?)", filename, acts_id, sha256_hash, now)
+	if err != nil {
+		tx.Rollback()
+		Warn(err.Error())
+		return
+	}
+
+	tx.Commit()
+
+	return 
 }
 
 // db, err := sql.Open("sqlite3", "./test.db")

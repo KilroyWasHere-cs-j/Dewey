@@ -1,0 +1,37 @@
+[2026-04-17 10:17:39] [DEBUG] attempting to load filters
+[2026-04-17 10:17:39] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:17:39] [DEBUG] filesystem initialization complete
+[2026-04-17 10:17:39] [DEBUG] server starting
+[2026-04-17 10:17:39] [DEBUG] server running on port 8080
+[2026-04-17 10:36:23] [DEBUG] attempting to load filters
+[2026-04-17 10:36:23] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:36:23] [DEBUG] filesystem initialization complete
+[2026-04-17 10:36:23] [DEBUG] server starting
+[2026-04-17 10:36:23] [DEBUG] server running on port 8080
+[2026-04-17 10:38:16] [DEBUG] attempting to load filters
+[2026-04-17 10:38:16] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:38:16] [DEBUG] filesystem initialization complete
+[2026-04-17 10:38:16] [WARN] 1 values for 4 columns
+[2026-04-17 10:38:16] [DEBUG] server starting
+[2026-04-17 10:38:16] [DEBUG] server running on port 8080
+[2026-04-17 10:40:29] [DEBUG] attempting to load filters
+[2026-04-17 10:40:29] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:40:29] [DEBUG] filesystem initialization complete
+[2026-04-17 10:40:29] [WARN] 5 values for 4 columns
+[2026-04-17 10:40:29] [DEBUG] server starting
+[2026-04-17 10:40:29] [DEBUG] server running on port 8080
+[2026-04-17 10:40:37] [DEBUG] attempting to load filters
+[2026-04-17 10:40:37] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:40:37] [DEBUG] filesystem initialization complete
+[2026-04-17 10:40:37] [DEBUG] server starting
+[2026-04-17 10:40:37] [DEBUG] server running on port 8080
+[2026-04-17 10:44:47] [DEBUG] attempting to load filters
+[2026-04-17 10:44:47] [DEBUG] filter configuration loaded successfully
+[2026-04-17 10:44:47] [DEBUG] filesystem initialization complete
+[2026-04-17 10:44:47] [DEBUG] server starting
+[2026-04-17 10:44:47] [DEBUG] server running on port 8080
+[2026-04-17 11:01:34] [DEBUG] attempting to load filters
+[2026-04-17 11:01:34] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:01:34] [DEBUG] filesystem initialization complete
+[2026-04-17 11:01:34] [DEBUG] server starting
+[2026-04-17 11:01:34] [DEBUG] server running on port 8080

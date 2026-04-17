@@ -149,7 +149,10 @@ func listFiles(c *gin.Context) {
 		"count": len(filenames),
 	})
 }
-
+type UploadPayload struct {
+    Name string `json:"name"`
+    Data string `json:"data"` // or whatever fields you expect
+}
 // uploadFile handles file uploads via multipart/form-data.
 //
 // Args:
@@ -167,7 +170,31 @@ func listFiles(c *gin.Context) {
 //   - 400 Bad Request: missing file or invalid extension
 //   - 500 Internal Server Error: processing or storage failure
 func uploadFile(c *gin.Context) {
+
+	// curl -X POST http://localhost:8080/upload \
+	//  -H "Content-Type: application/json" \
+	//  -d '{"name":"test","data":"hello"}'
 	Debug("uploadFile")
+
+	    contentType := c.GetHeader("Content-Type")
+
+    // Handle JSON body
+    if strings.Contains(contentType, "application/json") {
+        var payload UploadPayload
+        if err := c.ShouldBindJSON(&payload); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{
+                "error": "Invalid JSON",
+            })
+            return
+        }
+
+        // process JSON
+        c.JSON(http.StatusOK, gin.H{
+            "message": "JSON received",
+            "data": payload,
+        })
+        return
+    }
 
 	// -------------------------
 	// 1. Get uploaded file
@@ -284,7 +311,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// 8. Post-processing
 	// -------------------------
-	idAndSort(safeFilename)
+	idAndSort(safeFilename, hashString)
 
 	// -------------------------
 	// 9. Response

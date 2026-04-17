@@ -94,8 +94,14 @@ func main() {
 
 	startDaemon(ctx)
 
+	dbPing := InitDB()
+	if dbPing != nil {
+		Warn("Bad db")
+	}
 	rules := fileSystemInit()
 	appRules = rules
+
+	
 
 	// dbFunction()
 	Debug("server starting")

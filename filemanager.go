@@ -91,7 +91,7 @@ func fileSystemInit() *Config {
 	return config
 }
 
-func idAndSort(path string){
+func idAndSort(path string, hash string){
 	//  barcodeText := scanBarCode(path)
 
 	//-------------------------------
@@ -127,7 +127,7 @@ func idAndSort(path string){
 			Debug("No match")
 		}
 	}
-
+// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash")
 	// Determine where the file needs to go
 	// Create and store db entry
 	// Store file bytes and dn entry route
