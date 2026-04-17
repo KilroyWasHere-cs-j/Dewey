@@ -35,3 +35,112 @@
 [2026-04-17 11:01:34] [DEBUG] filesystem initialization complete
 [2026-04-17 11:01:34] [DEBUG] server starting
 [2026-04-17 11:01:34] [DEBUG] server running on port 8080
+[2026-04-17 11:21:32] [DEBUG] attempting to load filters
+[2026-04-17 11:21:32] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:21:32] [DEBUG] filesystem initialization complete
+[2026-04-17 11:21:32] [DEBUG] server starting
+[2026-04-17 11:21:32] [DEBUG] server running on port 8080
+[2026-04-17 11:21:34] [DEBUG] uploadFile
+[2026-04-17 11:24:31] [DEBUG] uploadFile
+[2026-04-17 11:43:38] [DEBUG] attempting to load filters
+[2026-04-17 11:43:38] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:43:38] [DEBUG] filesystem initialization complete
+[2026-04-17 11:43:38] [DEBUG] server starting
+[2026-04-17 11:43:38] [DEBUG] server running on port 8080
+[2026-04-17 11:43:55] [DEBUG] attempting to load filters
+[2026-04-17 11:43:55] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:43:55] [DEBUG] filesystem initialization complete
+[2026-04-17 11:43:55] [DEBUG] server starting
+[2026-04-17 11:43:55] [DEBUG] server running on port 8080
+[2026-04-17 11:43:57] [DEBUG] uploadFile
+[2026-04-17 11:44:58] [DEBUG] uploadFile
+[2026-04-17 11:45:15] [DEBUG] uploadFile
+[2026-04-17 11:46:06] [DEBUG] uploadFile
+[2026-04-17 11:46:06] [DEBUG] checking formats
+[2026-04-17 11:46:06] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:46:06] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:46:06] [DEBUG] No match
+[2026-04-17 11:46:06] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:46:06] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:46:06] [DEBUG] Action: move_to_directory
+[2026-04-17 11:46:06] [DEBUG] Target dir: /images
+[2026-04-17 11:46:06] [DEBUG] Placing file at ./store//images/1776440766_lenna.jpg
+[2026-04-17 11:47:36] [DEBUG] attempting to load filters
+[2026-04-17 11:47:36] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:47:36] [DEBUG] filesystem initialization complete
+[2026-04-17 11:47:36] [DEBUG] server starting
+[2026-04-17 11:47:36] [DEBUG] server running on port 8080
+[2026-04-17 11:47:37] [DEBUG] uploadFile
+[2026-04-17 11:47:37] [DEBUG] checking formats
+[2026-04-17 11:47:37] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:47:37] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:47:37] [DEBUG] No match
+[2026-04-17 11:47:37] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:47:37] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:47:37] [DEBUG] Action: move_to_directory
+[2026-04-17 11:47:37] [DEBUG] Target dir: /images
+[2026-04-17 11:47:37] [DEBUG] Placing file at ./store//images/1776440857_lenna.jpg
+[2026-04-17 11:47:42] [DEBUG] uploadFile
+[2026-04-17 11:47:42] [DEBUG] checking formats
+[2026-04-17 11:47:42] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:47:42] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:47:42] [DEBUG] No match
+[2026-04-17 11:47:42] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:47:42] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:47:42] [DEBUG] Action: move_to_directory
+[2026-04-17 11:47:42] [DEBUG] Target dir: /images
+[2026-04-17 11:47:42] [DEBUG] Placing file at ./store//images/1776440862_lenna.jpg
+[2026-04-17 11:54:15] [DEBUG] attempting to load filters
+[2026-04-17 11:54:15] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:54:15] [DEBUG] filesystem initialization complete
+[2026-04-17 11:54:15] [DEBUG] server starting
+[2026-04-17 11:54:15] [DEBUG] server running on port 8080
+[2026-04-17 11:54:16] [DEBUG] uploadFile
+[2026-04-17 11:54:16] [DEBUG] checking formats
+[2026-04-17 11:54:16] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:54:16] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:54:16] [DEBUG] No match
+[2026-04-17 11:54:16] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:54:16] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:54:16] [DEBUG] Action: move_to_directory
+[2026-04-17 11:54:16] [DEBUG] Target dir: /images
+[2026-04-17 11:54:16] [DEBUG] Placing file at ./store//images/1776441256_lenna.jpg
+[2026-04-17 11:54:50] [DEBUG] uploadFile
+[2026-04-17 11:54:50] [DEBUG] checking formats
+[2026-04-17 11:54:50] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:54:50] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:54:50] [DEBUG] No match
+[2026-04-17 11:54:50] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:54:50] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:54:50] [DEBUG] Action: move_to_directory
+[2026-04-17 11:54:50] [DEBUG] Target dir: /images
+[2026-04-17 11:54:50] [DEBUG] Placing file at ./store//images/1776441290_lenna.jpg
+[2026-04-17 11:55:28] [DEBUG] attempting to load filters
+[2026-04-17 11:55:28] [DEBUG] filter configuration loaded successfully
+[2026-04-17 11:55:28] [DEBUG] filesystem initialization complete
+[2026-04-17 11:55:28] [DEBUG] server starting
+[2026-04-17 11:55:28] [DEBUG] server running on port 8080
+[2026-04-17 11:55:30] [DEBUG] uploadFile
+[2026-04-17 11:55:30] [DEBUG] test
+[2026-04-17 11:55:30] [DEBUG] hello
+[2026-04-17 11:55:30] [DEBUG] checking formats
+[2026-04-17 11:55:30] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:55:30] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:55:30] [DEBUG] No match
+[2026-04-17 11:55:30] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:55:30] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:55:30] [DEBUG] Action: move_to_directory
+[2026-04-17 11:55:30] [DEBUG] Target dir: /images
+[2026-04-17 11:55:30] [DEBUG] Placing file at ./store//images/1776441330_lenna.jpg
+[2026-04-17 11:56:22] [DEBUG] uploadFile
+[2026-04-17 11:56:22] [DEBUG] green shirt
+[2026-04-17 11:56:22] [DEBUG] bird
+[2026-04-17 11:56:22] [DEBUG] checking formats
+[2026-04-17 11:56:22] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 11:56:22] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 11:56:22] [DEBUG] No match
+[2026-04-17 11:56:22] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 11:56:22] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 11:56:22] [DEBUG] Action: move_to_directory
+[2026-04-17 11:56:22] [DEBUG] Target dir: /images
+[2026-04-17 11:56:22] [DEBUG] Placing file at ./store//images/1776441382_lenna.jpg

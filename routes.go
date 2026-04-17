@@ -14,6 +14,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type UploadPayload struct {
+    Name string `json:"name"`
+    Data string `json:"data"` // or whatever fields you expect
+}
+
 // index is the default health-check route.
 //
 // Behavior:
@@ -149,10 +154,7 @@ func listFiles(c *gin.Context) {
 		"count": len(filenames),
 	})
 }
-type UploadPayload struct {
-    Name string `json:"name"`
-    Data string `json:"data"` // or whatever fields you expect
-}
+
 // uploadFile handles file uploads via multipart/form-data.
 //
 // Args:
@@ -169,41 +171,54 @@ type UploadPayload struct {
 //   - 200 OK: upload success + file metadata
 //   - 400 Bad Request: missing file or invalid extension
 //   - 500 Internal Server Error: processing or storage failure
-func uploadFile(c *gin.Context) {
 
-	// curl -X POST http://localhost:8080/upload \
-	//  -H "Content-Type: application/json" \
-	//  -d '{"name":"test","data":"hello"}'
+func uploadFile(c *gin.Context) {
 	Debug("uploadFile")
 
-	    contentType := c.GetHeader("Content-Type")
-
-    // Handle JSON body
-    if strings.Contains(contentType, "application/json") {
-        var payload UploadPayload
-        if err := c.ShouldBindJSON(&payload); err != nil {
-            c.JSON(http.StatusBadRequest, gin.H{
-                "error": "Invalid JSON",
-            })
-            return
-        }
-
-        // process JSON
-        c.JSON(http.StatusOK, gin.H{
-            "message": "JSON received",
-            "data": payload,
-        })
-        return
-    }
+	contentType := c.GetHeader("Content-Type")
 
 	// -------------------------
-	// 1. Get uploaded file
+	// JSON ONLY
 	// -------------------------
+	if strings.Contains(contentType, "application/json") {
+		var payload UploadPayload
+
+		if err := c.ShouldBindJSON(&payload); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid JSON",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "JSON received",
+			"data":    payload,
+		})
+		return
+	}
+
+	// -------------------------
+	// MULTIPART (file + fields)
+	// -------------------------
+	if !strings.Contains(contentType, "multipart/form-data") {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Unsupported Content-Type",
+		})
+		return
+	}
+
+	// Get form fields
+	name := c.PostForm("name")
+	data := c.PostForm("data")
+
+	Debug(name)
+	Debug(data)
+	
+	// Get file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		Warn(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "No file uploaded or 'file' field missing",
+			"error": "file is required",
 		})
 		return
 	}
@@ -211,34 +226,26 @@ func uploadFile(c *gin.Context) {
 	Debug("checking formats")
 
 	// -------------------------
-	// 2. Validate extension
+	// Validate extension
 	// -------------------------
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 
 	allowedExts := map[string]struct{}{
-		".pdf":  {},
-		".txt":  {},
-		".doc":  {},
-		".docx": {},
-		".xls":  {},
-		".xlsx": {},
-		".csv":  {},
-		".ppt":  {},
-		".png":  {},
-		".jpg":  {},
-		".jpeg": {},
+		".pdf": {}, ".txt": {}, ".doc": {}, ".docx": {},
+		".xls": {}, ".xlsx": {}, ".csv": {}, ".ppt": {},
+		".png": {}, ".jpg": {}, ".jpeg": {},
 	}
 
 	if _, ok := allowedExts[ext]; !ok {
 		Warn("invalid file type: " + ext)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid file type. Allowed: PDF, TXT, DOC/DOCX, XLS/XLSX, CSV, PPT, PNG, JPG",
+			"error": "Invalid file type",
 		})
 		return
 	}
 
 	// -------------------------
-	// 3. Open file stream
+	// Open file
 	// -------------------------
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -251,38 +258,34 @@ func uploadFile(c *gin.Context) {
 	defer file.Close()
 
 	// -------------------------
-	// 4. Security checks (PE / ELF)
+	// Security checks
 	// -------------------------
-	if isPE, err := IsPEFile(file); err == nil && isPE {
-		Warn("PE detected")
+	if isPE, _ := IsPEFile(file); isPE {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Executable file detected (PE blocked)",
 		})
 		return
 	}
 
-	// reset stream for next read
 	file.Seek(0, io.SeekStart)
 
-	if isELF, err := IsELFFile(file); err == nil && isELF {
-		Warn("ELF detected")
+	if isELF, _ := IsELFFile(file); isELF {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Executable file detected (ELF blocked)",
 		})
 		return
 	}
 
-	// reset again before hashing
 	file.Seek(0, io.SeekStart)
 
 	// -------------------------
-	// 5. Generate safe filename
+	// Generate filename
 	// -------------------------
 	timestamp := time.Now().Unix()
 	safeFilename := fmt.Sprintf("%d_%s", timestamp, filepath.Base(fileHeader.Filename))
 
 	// -------------------------
-	// 6. Compute SHA-256 hash
+	// Hash file
 	// -------------------------
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
@@ -297,7 +300,7 @@ func uploadFile(c *gin.Context) {
 	Debug("SHA256: " + hashString)
 
 	// -------------------------
-	// 7. Save file to disk
+	// Save file
 	// -------------------------
 	dst := filepath.Join(uploadDir, safeFilename)
 	if err := c.SaveUploadedFile(fileHeader, dst); err != nil {
@@ -309,21 +312,26 @@ func uploadFile(c *gin.Context) {
 	}
 
 	// -------------------------
-	// 8. Post-processing
+	// Post-processing
 	// -------------------------
-	idAndSort(safeFilename, hashString)
+	idAndSort(safeFilename, hashString, safeFilename)
 
 	// -------------------------
-	// 9. Response
+	// Response
 	// -------------------------
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File uploaded successfully",
+		"name":     name,
+		"data":     data,
 		"filename": safeFilename,
 		"original": fileHeader.Filename,
 		"size":     fileHeader.Size,
 		"sha256":   hashString,
 	})
 }
+
+
+
 
 // deleteFile removes a file from upload storage by filename.
 //

@@ -91,7 +91,7 @@ func fileSystemInit() *Config {
 	return config
 }
 
-func idAndSort(path string, hash string){
+func idAndSort(path string, hash string, filename string){
 	//  barcodeText := scanBarCode(path)
 
 	//-------------------------------
@@ -112,10 +112,13 @@ func idAndSort(path string, hash string){
 			
 			Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
 
+			new_path := filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path)
 			err = CopyFile(
 				filepath.Join(uploadDir, path),
-				filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path),
+				new_path,
 			)
+
+			createNewFileRecord(filename, "ACTS_00N", hash, new_path)
 
 			if err != nil {
 				Warn(err.Error())
@@ -127,7 +130,7 @@ func idAndSort(path string, hash string){
 			Debug("No match")
 		}
 	}
-// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash")
+// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash", "./")
 	// Determine where the file needs to go
 	// Create and store db entry
 	// Store file bytes and dn entry route

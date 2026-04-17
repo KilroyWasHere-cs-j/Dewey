@@ -20,7 +20,7 @@ func InitDB() error {
 	return db.Ping()
 }
 
-func createNewFileRecord(filename string, acts_id string, sha256_hash string) {
+func createNewFileRecord(filename string, acts_id string, sha256_hash string, filepath string) {
 	tx, err := db.Begin()
 	if err != nil {
 		Warn(err.Error())
@@ -31,7 +31,7 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string) {
 
 // INSERT INTO files (filename, acts_id, sha256_hash, created_at)
 // VALUES ('insert_test.txt', 'ACTS-003','sha256', current_date);
-	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at) VALUES (?, ?, ?, ?)", filename, acts_id, sha256_hash, now)
+	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath) VALUES (?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath)
 	if err != nil {
 		tx.Rollback()
 		Warn(err.Error())
