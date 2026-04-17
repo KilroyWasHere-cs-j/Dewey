@@ -29,8 +29,6 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 
 	now := time.Now()
 
-// INSERT INTO files (filename, acts_id, sha256_hash, created_at)
-// VALUES ('insert_test.txt', 'ACTS-003','sha256', current_date);
 	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted) VALUES (?, ?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath, false)
 	if err != nil {
 		tx.Rollback()
@@ -43,37 +41,3 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 	return 
 }
 
-// db, err := sql.Open("sqlite3", "./test.db")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer db.Close()
-// 	_, err = db.Exec("INSERT INTO users(name) VALUES(?)", "John Doe")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	log.Println("New user inserted successfully")
-// import (
-// 	"database/sql"
-// 	"log"
-// 	_ "github.com/mattn/go-sqlite3"
-// )
-//
-// func main() {
-// 	db, err := sql.Open("sqlite3", "./test.db")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer db.Close()
-// 	sqlStmt := `
-//     CREATE TABLE IF NOT EXISTS users (
-//         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-//         name TEXT
-//     );
-//     `
-// 	_, err = db.Exec(sqlStmt)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	log.Println("Table 'users' created successfully")
-// }
