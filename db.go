@@ -7,6 +7,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type metadate struct {
+	claimantName string;
+	dateofInjury string;
+	employer string;
+	adjuster string;
+	support string;
+	claimType string;
+	jurisdiction string;
+	policy string;
+}
+
 var db *sql.DB
 
 func InitDB() error {
@@ -20,7 +31,7 @@ func InitDB() error {
 	return db.Ping()
 }
 
-func createNewFileRecord(filename string, acts_id string, sha256_hash string, filepath string) {
+func createNewFileRecord(filename string, acts_id string, sha256_hash string, filepath string, claimNumber string) {
 	tx, err := db.Begin()
 	if err != nil {
 		Warn(err.Error())
@@ -29,7 +40,7 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 
 	now := time.Now()
 
-	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted) VALUES (?, ?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath, false)
+	_, err = tx.Exec("INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber) VALUES (?, ?, ?, ?, ?, ?, ?)", filename, acts_id, sha256_hash, now, filepath, false, claimNumber)
 	if err != nil {
 		tx.Rollback()
 		Warn(err.Error())
@@ -37,7 +48,9 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 	}
 
 	tx.Commit()
-
 	return 
 }
 
+func deleteFileRecord() {
+
+}

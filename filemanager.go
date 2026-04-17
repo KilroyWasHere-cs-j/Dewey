@@ -118,7 +118,7 @@ func idAndSort(path string, hash string, filename string){
 				new_path,
 			)
 
-			createNewFileRecord(filename, "ACTS_00N", hash, new_path)
+			createNewFileRecord(filename, "ACTS_00N", hash, new_path, "11111111111111111111111111111111")
 
 			if err != nil {
 				Warn(err.Error())

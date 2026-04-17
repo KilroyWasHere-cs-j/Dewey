@@ -250,3 +250,114 @@
 [2026-04-17 12:13:49] [DEBUG] Action: move_to_directory
 [2026-04-17 12:13:49] [DEBUG] Target dir: /images
 [2026-04-17 12:13:49] [DEBUG] Placing file at ./store//images/1776442429_lenna.jpg
+[2026-04-17 12:30:10] [DEBUG] attempting to load filters
+[2026-04-17 12:30:10] [DEBUG] filter configuration loaded successfully
+[2026-04-17 12:30:10] [DEBUG] filesystem initialization complete
+[2026-04-17 12:30:10] [DEBUG] server starting
+[2026-04-17 12:30:10] [DEBUG] server running on port 8080
+[2026-04-17 12:33:56] [DEBUG] attempting to load filters
+[2026-04-17 12:33:56] [DEBUG] filter configuration loaded successfully
+[2026-04-17 12:33:56] [DEBUG] filesystem initialization complete
+[2026-04-17 12:33:56] [DEBUG] server starting
+[2026-04-17 12:33:56] [DEBUG] server running on port 8080
+[2026-04-17 12:33:59] [DEBUG] uploadFile
+[2026-04-17 12:33:59] [DEBUG] green shirt
+[2026-04-17 12:33:59] [DEBUG] bird
+[2026-04-17 12:33:59] [DEBUG] checking formats
+[2026-04-17 12:33:59] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:33:59] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:33:59] [DEBUG] No match
+[2026-04-17 12:33:59] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:33:59] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:33:59] [DEBUG] Action: move_to_directory
+[2026-04-17 12:33:59] [DEBUG] Target dir: /images
+[2026-04-17 12:33:59] [DEBUG] Placing file at ./store//images/1776443639_lenna.jpg
+[2026-04-17 12:34:00] [DEBUG] uploadFile
+[2026-04-17 12:34:00] [DEBUG] green shirt
+[2026-04-17 12:34:00] [DEBUG] bird
+[2026-04-17 12:34:00] [DEBUG] checking formats
+[2026-04-17 12:34:00] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:00] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:00] [DEBUG] No match
+[2026-04-17 12:34:00] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:00] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:00] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:00] [DEBUG] Target dir: /images
+[2026-04-17 12:34:00] [DEBUG] Placing file at ./store//images/1776443640_lenna.jpg
+[2026-04-17 12:34:00] [DEBUG] uploadFile
+[2026-04-17 12:34:00] [DEBUG] green shirt
+[2026-04-17 12:34:00] [DEBUG] bird
+[2026-04-17 12:34:00] [DEBUG] checking formats
+[2026-04-17 12:34:00] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:00] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:00] [DEBUG] No match
+[2026-04-17 12:34:00] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:00] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:00] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:00] [DEBUG] Target dir: /images
+[2026-04-17 12:34:00] [DEBUG] Placing file at ./store//images/1776443640_lenna.jpg
+[2026-04-17 12:34:01] [DEBUG] uploadFile
+[2026-04-17 12:34:01] [DEBUG] green shirt
+[2026-04-17 12:34:01] [DEBUG] bird
+[2026-04-17 12:34:01] [DEBUG] checking formats
+[2026-04-17 12:34:01] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:01] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:01] [DEBUG] No match
+[2026-04-17 12:34:01] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:01] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:01] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:01] [DEBUG] Target dir: /images
+[2026-04-17 12:34:01] [DEBUG] Placing file at ./store//images/1776443641_lenna.jpg
+[2026-04-17 12:34:23] [DEBUG] attempting to load filters
+[2026-04-17 12:34:23] [DEBUG] filter configuration loaded successfully
+[2026-04-17 12:34:23] [DEBUG] filesystem initialization complete
+[2026-04-17 12:34:23] [DEBUG] server starting
+[2026-04-17 12:34:23] [DEBUG] server running on port 8080
+[2026-04-17 12:34:24] [DEBUG] uploadFile
+[2026-04-17 12:34:24] [DEBUG] green shirt
+[2026-04-17 12:34:24] [DEBUG] bird
+[2026-04-17 12:34:24] [DEBUG] checking formats
+[2026-04-17 12:34:24] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:24] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:24] [DEBUG] No match
+[2026-04-17 12:34:24] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:24] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:24] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:24] [DEBUG] Target dir: /images
+[2026-04-17 12:34:24] [DEBUG] Placing file at ./store//images/1776443664_lenna.jpg
+[2026-04-17 12:34:25] [DEBUG] uploadFile
+[2026-04-17 12:34:25] [DEBUG] green shirt
+[2026-04-17 12:34:25] [DEBUG] bird
+[2026-04-17 12:34:25] [DEBUG] checking formats
+[2026-04-17 12:34:25] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:25] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:25] [DEBUG] No match
+[2026-04-17 12:34:25] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:25] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:25] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:25] [DEBUG] Target dir: /images
+[2026-04-17 12:34:25] [DEBUG] Placing file at ./store//images/1776443665_lenna.jpg
+[2026-04-17 12:34:25] [DEBUG] uploadFile
+[2026-04-17 12:34:25] [DEBUG] green shirt
+[2026-04-17 12:34:25] [DEBUG] bird
+[2026-04-17 12:34:25] [DEBUG] checking formats
+[2026-04-17 12:34:25] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:25] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:25] [DEBUG] No match
+[2026-04-17 12:34:25] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:25] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:25] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:25] [DEBUG] Target dir: /images
+[2026-04-17 12:34:25] [DEBUG] Placing file at ./store//images/1776443665_lenna.jpg
+[2026-04-17 12:34:26] [DEBUG] uploadFile
+[2026-04-17 12:34:26] [DEBUG] green shirt
+[2026-04-17 12:34:26] [DEBUG] bird
+[2026-04-17 12:34:26] [DEBUG] checking formats
+[2026-04-17 12:34:26] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-04-17 12:34:26] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-04-17 12:34:26] [DEBUG] No match
+[2026-04-17 12:34:26] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:26] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-04-17 12:34:26] [DEBUG] Action: move_to_directory
+[2026-04-17 12:34:26] [DEBUG] Target dir: /images
+[2026-04-17 12:34:26] [DEBUG] Placing file at ./store//images/1776443666_lenna.jpg
