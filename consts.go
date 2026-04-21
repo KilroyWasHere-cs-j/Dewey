@@ -7,7 +7,7 @@ const uploadDir = "./cache" // Temp dir for storing files after files post uploa
 const fileSystemBaseDir = "./store" // The base directory at which all the stored files live
 const rulesDir = "./rules" // Where the rules in JSON format live
 const htmlTemplatesDir = "./templates" // Contains the HTML files that are used to render the admin pages
-const daemonTickTime = 12 // In hours, if you need this to fire less than an hour you'll need to do the math  
+const daemonTickTime = 1 // In hours, if you need this to fire less than an hour you'll need to do the math  
 
 // Server specific constants
 const maxFileSize = 50 << 2 // Controls the max size that uploaded can be

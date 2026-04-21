@@ -418,3 +418,74 @@
 [2026-04-21 14:10:27] [DEBUG] filesystem initialization complete
 [2026-04-21 14:10:27] [DEBUG] server starting
 [2026-04-21 14:10:27] [DEBUG] server running on port 8080
+[2026-04-21 14:22:43] [DEBUG] attempting to load filters
+[2026-04-21 14:22:43] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:22:43] [DEBUG] filesystem initialization complete
+[2026-04-21 14:22:43] [DEBUG] server starting
+[2026-04-21 14:22:43] [DEBUG] server running on port 8080
+[2026-04-21 14:31:03] [DEBUG] attempting to load filters
+[2026-04-21 14:31:03] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:31:03] [DEBUG] filesystem initialization complete
+[2026-04-21 14:31:03] [DEBUG] server starting
+[2026-04-21 14:31:03] [DEBUG] server running on port 8080
+[2026-04-21 14:34:45] [DEBUG] attempting to load filters
+[2026-04-21 14:34:45] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:34:45] [DEBUG] filesystem initialization complete
+[2026-04-21 14:34:45] [DEBUG] server starting
+[2026-04-21 14:34:45] [DEBUG] server running on port 8080
+[2026-04-21 14:34:48] [DEBUG] getFile
+[2026-04-21 14:34:48] [DEBUG] Checking cache
+[2026-04-21 14:34:48] [DEBUG] No file found in cache, searching db
+[2026-04-21 14:34:48] [DEBUG] Pulled this path from db store/pdf/1776794026_test.pdf
+[2026-04-21 14:36:04] [DEBUG] attempting to load filters
+[2026-04-21 14:36:04] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:36:04] [DEBUG] filesystem initialization complete
+[2026-04-21 14:36:04] [DEBUG] server starting
+[2026-04-21 14:36:04] [DEBUG] server running on port 8080
+[2026-04-21 14:37:07] [DEBUG] attempting to load filters
+[2026-04-21 14:37:07] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:37:07] [DEBUG] filesystem initialization complete
+[2026-04-21 14:37:07] [DEBUG] server starting
+[2026-04-21 14:37:07] [DEBUG] server running on port 8080
+[2026-04-21 14:37:33] [DEBUG] attempting to load filters
+[2026-04-21 14:37:33] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:37:33] [DEBUG] filesystem initialization complete
+[2026-04-21 14:37:33] [DEBUG] server starting
+[2026-04-21 14:37:33] [DEBUG] server running on port 8080
+[2026-04-21 14:39:29] [DEBUG] attempting to load filters
+[2026-04-21 14:39:29] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:39:29] [DEBUG] filesystem initialization complete
+[2026-04-21 14:39:29] [DEBUG] server starting
+[2026-04-21 14:39:29] [DEBUG] server running on port 8080
+[2026-04-21 14:41:29] [DEBUG] Creating zip backup
+[2026-04-21 14:41:29] [WARN] mkdir /20260421_144129/backup/zip: no such file or directory
+[2026-04-21 14:41:29] [WARN] open /20260421_144129/backup/zip: no such file or directory
+[2026-04-21 14:41:29] [DEBUG] opening first file...
+[2026-04-21 14:41:29] [WARN] open test.csv: no such file or directory
+[2026-04-21 14:41:29] [DEBUG] writing first file to archive...
+[2026-04-21 14:41:29] [WARN] invalid argument
+[2026-04-21 14:41:29] [DEBUG] closing zip archive...
+[2026-04-21 14:45:14] [DEBUG] attempting to load filters
+[2026-04-21 14:45:14] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:45:14] [DEBUG] filesystem initialization complete
+[2026-04-21 14:45:14] [DEBUG] server starting
+[2026-04-21 14:45:14] [DEBUG] server running on port 8080
+[2026-04-21 14:46:14] [DEBUG] Creating zip backup
+[2026-04-21 14:46:14] [WARN] open backup/20260421_144614/backup/zip: no such file or directory
+[2026-04-21 14:46:14] [DEBUG] opening first file...
+[2026-04-21 14:46:14] [WARN] open test.csv: no such file or directory
+[2026-04-21 14:46:14] [DEBUG] writing first file to archive...
+[2026-04-21 14:46:14] [WARN] invalid argument
+[2026-04-21 14:46:14] [DEBUG] closing zip archive...
+[2026-04-21 14:47:35] [DEBUG] attempting to load filters
+[2026-04-21 14:47:35] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:47:35] [DEBUG] filesystem initialization complete
+[2026-04-21 14:47:35] [DEBUG] server starting
+[2026-04-21 14:47:35] [DEBUG] server running on port 8080
+[2026-04-21 14:50:29] [DEBUG] attempting to load filters
+[2026-04-21 14:50:29] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:50:29] [DEBUG] filesystem initialization complete
+[2026-04-21 14:50:29] [DEBUG] server starting
+[2026-04-21 14:50:29] [DEBUG] server running on port 8080
+[2026-04-21 14:51:29] [DEBUG] Creating zip backup
+[2026-04-21 14:52:29] [DEBUG] Creating zip backup
