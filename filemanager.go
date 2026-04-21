@@ -4,7 +4,7 @@ import (
 	"os"
 	"io"
 	// "io/fs"
-	"fmt"
+	// "fmt"
 	"encoding/json"
 	"path/filepath"
 	"regexp"
@@ -183,6 +183,7 @@ func searchAndReturn(filename string, pullMeta string) (string) {
 	/// Search cache and return if found
 
 	if pullMeta == "false" {
+		Debug("Checking cache")
 		files, err := os.ReadDir(uploadDir) // List current directory
 		if err != nil {
 			Fatal("During file reterival os.ReadDir() encoutered " + err.Error())
@@ -190,21 +191,23 @@ func searchAndReturn(filename string, pullMeta string) (string) {
 
 		for _, file := range files {
 			if file.Name() == filename {
+				Debug("Found file in cache")
 				return uploadDir + "/" + file.Name()
 			}
 		}
-		Debug("No file found, searching db")
-		rows, err := pullRecordByFilename(filename)
+		
+		Debug("No file found in cache, searching db")
+		
+		path, err := pullRecordByFilename(filename)
 		if err != nil {
-			Warn("Failed to pullRecordByFilename " + err.Error())
-			return ""
+			Warn("pullRecordByFilename failed " + err.Error())
 		}
-
-		for _, r := range rows {
-			fmt.Printf("%+v\n", r)
-		}
-
-		} else if pullMeta == "true" {
+		Debug("Pulled this path from db " + path)
+		return path
+	
+		
+		// : http.ResponseWriter, r *http.Request
+	} else if pullMeta == "true" {
 			Debug("Would sql search and pull meta")
 			return ""
 	} else {

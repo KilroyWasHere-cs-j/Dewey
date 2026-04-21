@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 	// "fmt"
-	"strings"
+	// "strings"
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -63,77 +63,36 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 	return 
 }
 
-func pullRecordByFilename(filename string) ([]FileRecord, error) {
-	rows, err := db.Query("SELECT * FROM files WHERE filename = ?", filename)
+func pullRecordByFilename(fileName string) (string, error) {
+	rows, err := db.Query("SELECT * FROM files WHERE filename = ?", fileName)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer rows.Close()
 
-	var results []FileRecord
-
+	var filepaths []string
 	for rows.Next() {
-		var rec FileRecord
-
-		err := rows.Scan(
-			&rec.Filename,
-			&rec.ActsID,
-			&rec.SHA256Hash,
-			&rec.CreatedAt,
-			&rec.Filepath,
-			&rec.IsDeleted,
-			&rec.ClaimNumber,
-		)
+		var id int
+		var filename string
+		var acts_id string
+		var sha256_hash string
+		var created_at string
+		var filepath string
+		var is_deleted string
+		var ClaimNumber string
+		err = rows.Scan(&id, &filename, &acts_id, &sha256_hash, &created_at, &filepath, &is_deleted, &ClaimNumber)
 		if err != nil {
-			return nil, err
+			Fatal(err.Error())
 		}
-
-		results = append(results, rec)
+		filepaths = append(filepaths, filepath)
 	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	if err = rows.Err(); err != nil {
+		Fatal(err.Error())
 	}
-
-	return results, nil
+	return filepaths[0], nil
 }
 
 func deleteFileRecord() {
 
 }
 
-
-
-
-
-func parseRow(input string) map[string]interface{} {
-	result := make(map[string]interface{})
-
-	// Split by tabs
-	pairs := strings.Split(input, "\t")
-
-	for _, pair := range pairs {
-		pair = strings.TrimSpace(pair)
-		if pair == "" {
-			continue
-		}
-
-		// Split only on first colon
-		parts := strings.SplitN(pair, ":", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-
-		// Handle <nil>
-		if val == "<nil>" {
-			result[key] = nil
-		} else {
-			result[key] = val
-		}
-	}
-
-	return result
-}
