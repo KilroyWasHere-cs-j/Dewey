@@ -1,12 +1,5 @@
 package main
 
-/**
-curl upload testing command: curl -X POST http://localhost:8080/upload -F "file=@test.txt"
-curl retrieve testing command: curl http://localhost:8080/files/test.txt
-curl retrieve stored files command: curl http://localhost:8080/files
-*/
-
-
 import (
 	"context"
 	"os"

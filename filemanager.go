@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"io"
+	// "io/fs"
 	"fmt"
 	"encoding/json"
 	"path/filepath"
@@ -178,28 +179,40 @@ func CopyFile(src, dst string) error {
 // Returns:
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
-func searchAndReturn(filePath string) (string, error) {
-	// Normalize to absolute early (helps prevent traversal ambiguity)
-	absInput, err := filepath.Abs(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve input path: %w", err)
-	}
+func searchAndReturn(filename string, pullMeta string) (string) {
+	/// Search cache and return if found
 
-	info, err := os.Stat(absInput)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("file does not exist: %s", absInput)
+	if pullMeta == "false" {
+		files, err := os.ReadDir(uploadDir) // List current directory
+		if err != nil {
+			Fatal("During file reterival os.ReadDir() encoutered " + err.Error())
 		}
-		return "", fmt.Errorf("error checking file: %w", err)
+
+		for _, file := range files {
+			if file.Name() == filename {
+				return uploadDir + "/" + file.Name()
+			}
+		}
+		Debug("No file found, searching db")
+		rows, err := pullRecordByFilename(filename)
+		if err != nil {
+			Warn("Failed to pullRecordByFilename " + err.Error())
+			return ""
+		}
+
+		for _, r := range rows {
+			fmt.Printf("%+v\n", r)
+		}
+
+		} else if pullMeta == "true" {
+			Debug("Would sql search and pull meta")
+			return ""
+	} else {
+		Debug("Unknown meta flag")
+		return "Unknown meta flag"
 	}
-
-	if info.IsDir() {
-		return "", fmt.Errorf("path is a directory, not a file")
-	}
-
-	Debug("resolved absolute path: " + absInput)
-
-	return absInput, nil
+	
+	return "huh?"
 }
 
 func changeMeta(){

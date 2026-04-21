@@ -1,0 +1,284 @@
+[2026-04-21 10:21:37] [DEBUG] attempting to load filters
+[2026-04-21 10:21:37] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:21:37] [DEBUG] filesystem initialization complete
+[2026-04-21 10:21:37] [DEBUG] server starting
+[2026-04-21 10:21:37] [DEBUG] server running on port 8080
+[2026-04-21 10:23:07] [DEBUG] attempting to load filters
+[2026-04-21 10:23:07] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:23:07] [DEBUG] filesystem initialization complete
+[2026-04-21 10:23:07] [DEBUG] server starting
+[2026-04-21 10:23:07] [DEBUG] server running on port 8080
+[2026-04-21 10:30:28] [DEBUG] attempting to load filters
+[2026-04-21 10:30:28] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:30:28] [DEBUG] filesystem initialization complete
+[2026-04-21 10:30:28] [DEBUG] server starting
+[2026-04-21 10:30:28] [DEBUG] server running on port 8080
+[2026-04-21 10:34:23] [DEBUG] attempting to load filters
+[2026-04-21 10:34:23] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:34:23] [DEBUG] filesystem initialization complete
+[2026-04-21 10:34:23] [DEBUG] server starting
+[2026-04-21 10:34:23] [DEBUG] server running on port 8080
+[2026-04-21 10:35:20] [DEBUG] getFile
+[2026-04-21 10:39:34] [DEBUG] attempting to load filters
+[2026-04-21 10:39:34] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:39:34] [DEBUG] filesystem initialization complete
+[2026-04-21 10:39:34] [DEBUG] server starting
+[2026-04-21 10:39:34] [DEBUG] server running on port 8080
+[2026-04-21 10:39:37] [DEBUG] getFile
+[2026-04-21 10:39:37] [FATAL] During file reterival os.ReadDir() encoutered open 1776274297_bee_moive_script.txt: no such file or directory
+[2026-04-21 10:40:44] [DEBUG] attempting to load filters
+[2026-04-21 10:40:44] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:40:44] [DEBUG] filesystem initialization complete
+[2026-04-21 10:40:44] [DEBUG] server starting
+[2026-04-21 10:40:44] [DEBUG] server running on port 8080
+[2026-04-21 10:40:45] [DEBUG] getFile
+[2026-04-21 10:42:29] [DEBUG] getFile
+[2026-04-21 10:43:03] [DEBUG] attempting to load filters
+[2026-04-21 10:43:03] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:43:03] [DEBUG] filesystem initialization complete
+[2026-04-21 10:43:03] [DEBUG] server starting
+[2026-04-21 10:43:03] [DEBUG] server running on port 8080
+[2026-04-21 10:43:06] [DEBUG] getFile
+[2026-04-21 10:43:06] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:43:06] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] getFile
+[2026-04-21 10:43:34] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:43:34] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] getFile
+[2026-04-21 10:43:49] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:43:49] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] getFile
+[2026-04-21 10:44:23] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:44:23] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:46:45] [DEBUG] attempting to load filters
+[2026-04-21 10:46:45] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:46:45] [DEBUG] filesystem initialization complete
+[2026-04-21 10:46:45] [DEBUG] server starting
+[2026-04-21 10:46:45] [DEBUG] server running on port 8080
+[2026-04-21 10:47:26] [DEBUG] attempting to load filters
+[2026-04-21 10:47:26] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:47:26] [DEBUG] filesystem initialization complete
+[2026-04-21 10:47:26] [DEBUG] server starting
+[2026-04-21 10:47:26] [DEBUG] server running on port 8080
+[2026-04-21 10:48:18] [DEBUG] getFile
+[2026-04-21 10:48:49] [DEBUG] attempting to load filters
+[2026-04-21 10:48:49] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:48:49] [DEBUG] filesystem initialization complete
+[2026-04-21 10:48:49] [DEBUG] server starting
+[2026-04-21 10:48:49] [DEBUG] server running on port 8080
+[2026-04-21 10:48:51] [DEBUG] getFile
+[2026-04-21 10:48:51] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:48:51] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:48:59] [DEBUG] getFile
+[2026-04-21 10:49:02] [DEBUG] getFile
+[2026-04-21 10:49:02] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:49:02] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:50:27] [DEBUG] attempting to load filters
+[2026-04-21 10:50:27] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:50:27] [DEBUG] filesystem initialization complete
+[2026-04-21 10:50:27] [DEBUG] server starting
+[2026-04-21 10:50:27] [DEBUG] server running on port 8080
+[2026-04-21 10:50:30] [DEBUG] getFile
+[2026-04-21 10:50:30] [DEBUG] Would sql search and pull meta
+[2026-04-21 10:50:35] [DEBUG] getFile
+[2026-04-21 10:50:35] [DEBUG] Unknown meta flag
+[2026-04-21 10:50:39] [DEBUG] getFile
+[2026-04-21 10:50:39] [DEBUG] 1776440766_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776440857_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776440862_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776441256_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776441290_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776441330_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776441382_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442385_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442387_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442388_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442425_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442426_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442428_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776442429_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443639_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443640_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443641_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443664_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443665_lenna.jpg
+[2026-04-21 10:50:39] [DEBUG] 1776443666_lenna.jpg
+[2026-04-21 10:51:39] [DEBUG] attempting to load filters
+[2026-04-21 10:51:39] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:51:39] [DEBUG] filesystem initialization complete
+[2026-04-21 10:51:39] [DEBUG] server starting
+[2026-04-21 10:51:39] [DEBUG] server running on port 8080
+[2026-04-21 10:51:40] [DEBUG] getFile
+[2026-04-21 10:51:40] [DEBUG] Found it
+[2026-04-21 10:54:27] [DEBUG] attempting to load filters
+[2026-04-21 10:54:27] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:54:27] [DEBUG] filesystem initialization complete
+[2026-04-21 10:54:27] [DEBUG] server starting
+[2026-04-21 10:54:27] [DEBUG] server running on port 8080
+[2026-04-21 10:55:14] [DEBUG] getFile
+[2026-04-21 10:55:33] [DEBUG] attempting to load filters
+[2026-04-21 10:55:33] [DEBUG] filter configuration loaded successfully
+[2026-04-21 10:55:33] [DEBUG] filesystem initialization complete
+[2026-04-21 10:55:33] [DEBUG] server starting
+[2026-04-21 10:55:33] [DEBUG] server running on port 8080
+[2026-04-21 10:55:34] [DEBUG] getFile
+[2026-04-21 10:57:48] [DEBUG] getFile
+[2026-04-21 11:11:09] [DEBUG] attempting to load filters
+[2026-04-21 11:11:09] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:11:09] [DEBUG] filesystem initialization complete
+[2026-04-21 11:11:09] [DEBUG] server starting
+[2026-04-21 11:11:09] [DEBUG] server running on port 8080
+[2026-04-21 11:11:14] [DEBUG] getFile
+[2026-04-21 11:13:14] [DEBUG] attempting to load filters
+[2026-04-21 11:13:14] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:13:14] [DEBUG] filesystem initialization complete
+[2026-04-21 11:13:14] [DEBUG] server starting
+[2026-04-21 11:13:14] [DEBUG] server running on port 8080
+[2026-04-21 11:13:23] [DEBUG] getFile
+[2026-04-21 11:13:23] [DEBUG] No file found
+[2026-04-21 11:14:45] [DEBUG] attempting to load filters
+[2026-04-21 11:14:45] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:14:45] [DEBUG] filesystem initialization complete
+[2026-04-21 11:14:45] [DEBUG] server starting
+[2026-04-21 11:14:45] [DEBUG] server running on port 8080
+[2026-04-21 11:14:46] [DEBUG] getFile
+[2026-04-21 11:14:46] [DEBUG] No file found, searching db
+[2026-04-21 11:14:46] [FATAL] sql: expected 8 destination arguments in Scan, not 2
+[2026-04-21 11:14:50] [DEBUG] attempting to load filters
+[2026-04-21 11:14:50] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:14:50] [DEBUG] filesystem initialization complete
+[2026-04-21 11:14:50] [DEBUG] server starting
+[2026-04-21 11:14:50] [DEBUG] server running on port 8080
+[2026-04-21 11:14:52] [DEBUG] getFile
+[2026-04-21 11:14:52] [DEBUG] No file found, searching db
+[2026-04-21 11:14:52] [FATAL] sql: expected 8 destination arguments in Scan, not 2
+[2026-04-21 11:18:37] [DEBUG] attempting to load filters
+[2026-04-21 11:18:37] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:18:37] [DEBUG] filesystem initialization complete
+[2026-04-21 11:18:37] [DEBUG] server starting
+[2026-04-21 11:18:37] [DEBUG] server running on port 8080
+[2026-04-21 11:18:39] [DEBUG] getFile
+[2026-04-21 11:18:39] [DEBUG] No file found, searching db
+[2026-04-21 11:27:35] [DEBUG] attempting to load filters
+[2026-04-21 11:27:35] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:27:35] [DEBUG] filesystem initialization complete
+[2026-04-21 11:27:35] [DEBUG] server starting
+[2026-04-21 11:27:35] [DEBUG] server running on port 8080
+[2026-04-21 11:27:37] [DEBUG] getFile
+[2026-04-21 11:27:37] [DEBUG] No file found, searching db
+[2026-04-21 11:29:43] [DEBUG] attempting to load filters
+[2026-04-21 11:29:43] [DEBUG] filter configuration loaded successfully
+[2026-04-21 11:29:43] [DEBUG] filesystem initialization complete
+[2026-04-21 11:29:43] [DEBUG] server starting
+[2026-04-21 11:29:43] [DEBUG] server running on port 8080
+[2026-04-21 11:29:45] [DEBUG] getFile
+[2026-04-21 11:29:45] [DEBUG] No file found, searching db
+[2026-04-21 11:30:07] [DEBUG] getFile

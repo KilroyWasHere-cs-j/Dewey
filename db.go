@@ -2,6 +2,8 @@ package main
 
 import (
 	"time"
+	// "fmt"
+	"strings"
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
@@ -16,6 +18,16 @@ type metadate struct {
 	claimType string;
 	jurisdiction string;
 	policy string;
+}
+
+type FileRecord struct {
+	Filename    string
+	ActsID      string
+	SHA256Hash  string
+	CreatedAt   string // or time.Time if you parse it
+	Filepath    string
+	IsDeleted   int
+	ClaimNumber *string
 }
 
 var db *sql.DB
@@ -51,6 +63,77 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 	return 
 }
 
+func pullRecordByFilename(filename string) ([]FileRecord, error) {
+	rows, err := db.Query("SELECT * FROM files WHERE filename = ?", filename)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []FileRecord
+
+	for rows.Next() {
+		var rec FileRecord
+
+		err := rows.Scan(
+			&rec.Filename,
+			&rec.ActsID,
+			&rec.SHA256Hash,
+			&rec.CreatedAt,
+			&rec.Filepath,
+			&rec.IsDeleted,
+			&rec.ClaimNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, rec)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
 func deleteFileRecord() {
 
+}
+
+
+
+
+
+func parseRow(input string) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// Split by tabs
+	pairs := strings.Split(input, "\t")
+
+	for _, pair := range pairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+
+		// Split only on first colon
+		parts := strings.SplitN(pair, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+
+		// Handle <nil>
+		if val == "<nil>" {
+			result[key] = nil
+		} else {
+			result[key] = val
+		}
+	}
+
+	return result
 }

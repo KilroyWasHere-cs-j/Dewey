@@ -56,61 +56,9 @@ func getFile(c *gin.Context) {
 	Debug("getFile")
 
 	filename := c.Param("filename")
-	metaFlag := c.Query("meta") // FIX: meta should be query param, not path param
+	metaFlag := c.Param("meta")
 
-	// -------------------------
-	// 1. Validate filename
-	// -------------------------
-	if filepath.IsAbs(filename) || filepath.Base(filename) != filename {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid filename",
-		})
-		return
-	}
-
-	filePath := filepath.Join(uploadDir, filename)
-
-	// -------------------------
-	// 2. Check file existence
-	// -------------------------
-	fileLocation, err := searchAndReturn(filePath)
-	if err != nil {
-		Warn("file not found: " + err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "file not found",
-		})
-		return
-	}
-
-	// -------------------------
-	// 3. Metadata handling
-	// -------------------------
-	if metaFlag == "true" {
-		Debug("metadata requested")
-
-		info, err := os.Stat(fileLocation)
-		if err != nil {
-			Warn(err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to read file metadata",
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"name":    info.Name(),
-			"size":    info.Size(),
-			"modTime": info.ModTime(),
-		})
-		return
-	}
-
-	Debug("serving file")
-
-	// -------------------------
-	// 4. Serve file
-	// -------------------------
-	c.File(fileLocation)
+	c.File(searchAndReturn(filename, metaFlag))
 }
 
 // listFiles returns all files stored in the upload directory.
