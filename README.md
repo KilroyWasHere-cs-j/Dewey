@@ -3,16 +3,34 @@ This repo is PoC for a document managment backend tool.
 
 App is written fully in golang
 
+flowchart TD
 
-graph TD
-    A[Ingest file] --> B[Validate file type]
-    B --> C[Place file in cache]
-    C --> D[Sort file and copy to new location]
-    D --> E[Create file record in DB]
-    E --> F[Populate associated metadata table]
+%% In Path
+A[Start Ingest] --> B[Ingest File]
+B --> C{Validate File Type}
+C -- Invalid --> D[Reject File]
+C -- Valid --> E[Place File in Cache]
+E --> F[Sort File]
+F --> G[Copy File to New Location]
+G --> H[Create DB Record]
+H --> I[Populate Metadata Table]
+I --> J[End Ingest]
 
-    G[Handle request] --> H[Determine if metadata needs return]
-    H --> I[Search cache for file]
-    I --> J[If not found, search DB]
-    J --> K[Return file]
+%% Out Path
+K[Start Request] --> L[Handle Request]
+L --> M{Return Metadata Only?}
+M -- Yes --> N[Fetch Metadata from DB]
+N --> O[Return Metadata]
 
+M -- No --> P[Search Cache]
+P --> Q{File Found in Cache?}
+Q -- Yes --> R[Return File from Cache]
+Q -- No --> S[Search Database]
+S --> T{File Found in DB?}
+T -- Yes --> U[Return File from DB]
+T -- No --> V[Return Not Found]
+
+R --> W[End Request]
+U --> W
+O --> W
+V --> W
