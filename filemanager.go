@@ -186,7 +186,7 @@ func searchAndReturn(filename string, pullMeta string) (string) {
 		Debug("Checking cache")
 		files, err := os.ReadDir(uploadDir) // List current directory
 		if err != nil {
-			Fatal("During file reterival os.ReadDir() encoutered " + err.Error())
+			Warn("During file reterival os.ReadDir() encoutered " + err.Error())
 		}
 
 		for _, file := range files {

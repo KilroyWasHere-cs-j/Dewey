@@ -413,3 +413,8 @@
 [2026-04-21 13:54:17] [DEBUG] Checking cache
 [2026-04-21 13:54:17] [DEBUG] No file found in cache, searching db
 [2026-04-21 13:54:17] [DEBUG] Pulled this path from db store/pdf/1776794026_test.pdf
+[2026-04-21 14:10:27] [DEBUG] attempting to load filters
+[2026-04-21 14:10:27] [DEBUG] filter configuration loaded successfully
+[2026-04-21 14:10:27] [DEBUG] filesystem initialization complete
+[2026-04-21 14:10:27] [DEBUG] server starting
+[2026-04-21 14:10:27] [DEBUG] server running on port 8080

@@ -92,6 +92,35 @@ func pullRecordByFilename(fileName string) (string, error) {
 	return filepaths[0], nil
 }
 
+func pullRecordByACTsNumber(acts_no string) (string, error) {
+	rows, err := db.Query("SELECT * FROM files WHERE acts_id = ?", acts_no)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var acts_nos []string
+	for rows.Next() {
+		var id int
+		var filename string
+		var acts_id string
+		var sha256_hash string
+		var created_at string
+		var filepath string
+		var is_deleted string
+		var ClaimNumber string
+		err = rows.Scan(&id, &filename, &acts_id, &sha256_hash, &created_at, &filepath, &is_deleted, &ClaimNumber)
+		if err != nil {
+			Fatal(err.Error())
+		}
+		acts_nos = append(acts_nos, acts_id)
+	}
+	if err = rows.Err(); err != nil {
+		Fatal(err.Error())
+	}
+	return acts_nos[0], nil
+}
+
 func deleteFileRecord() {
 
 }
