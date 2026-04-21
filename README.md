@@ -1,8 +1,9 @@
-# CrossDocTool
-This repo is PoC for a document managment backend tool.
+## CrossDocTool
 
-App is written fully in golang
+This repo is PoC for a document management backend tool.  
+App is written fully in Golang.
 
+```mermaid
 flowchart TD
 
 %% In Path
@@ -34,3 +35,4 @@ R --> W[End Request]
 U --> W
 O --> W
 V --> W
+```
