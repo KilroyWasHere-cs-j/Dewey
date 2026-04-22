@@ -70,7 +70,15 @@ func save() error {
 	Debug("Creating zip backup")
 
 	sourceDir := "store"
-	zipPath := "back_up.zip"
+	// Ensure backup directory exists
+	backupDir := "backup"
+	if err := os.MkdirAll(backupDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	// Create filename with UTC timestamp
+	timestamp := time.Now().UTC().Format("20060102_150405")
+	zipPath := filepath.Join(backupDir, timestamp+"_backup.zip")
 
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
@@ -86,7 +94,6 @@ func save() error {
 			return err
 		}
 
-		// Skip directories (we only add files, but keep structure via headers)
 		if d.IsDir() {
 			return nil
 		}
@@ -97,7 +104,6 @@ func save() error {
 		}
 		defer file.Close()
 
-		// Create path inside zip (relative to sourceDir)
 		relPath, err := filepath.Rel(sourceDir, path)
 		if err != nil {
 			return err
@@ -109,6 +115,7 @@ func save() error {
 		}
 
 		_, err = io.Copy(writer, file)
+		Debug("Zip written")
 		return err
 	})
 }

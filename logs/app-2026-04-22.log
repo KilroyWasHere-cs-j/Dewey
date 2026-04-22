@@ -1,0 +1,12 @@
+[2026-04-22 11:00:16] [DEBUG] attempting to load filters
+[2026-04-22 11:00:16] [DEBUG] filter configuration loaded successfully
+[2026-04-22 11:00:16] [DEBUG] filesystem initialization complete
+[2026-04-22 11:00:16] [DEBUG] server starting
+[2026-04-22 11:00:16] [DEBUG] server running on port 8080
+[2026-04-22 11:01:16] [DEBUG] Creating zip backup
+[2026-04-22 11:02:16] [DEBUG] Creating zip backup
+[2026-04-22 11:04:34] [DEBUG] attempting to load filters
+[2026-04-22 11:04:34] [DEBUG] filter configuration loaded successfully
+[2026-04-22 11:04:34] [DEBUG] filesystem initialization complete
+[2026-04-22 11:04:34] [DEBUG] server starting
+[2026-04-22 11:04:34] [DEBUG] server running on port 8080
