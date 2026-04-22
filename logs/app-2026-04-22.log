@@ -128,3 +128,36 @@
 [2026-04-22 14:07:47] [DEBUG] 20115
 [2026-04-22 14:07:47] [DEBUG] server starting
 [2026-04-22 14:07:47] [DEBUG] server running on port 8080
+[2026-04-22 14:47:36] [DEBUG] attempting to load filters
+[2026-04-22 14:47:36] [DEBUG] filter configuration loaded successfully
+[2026-04-22 14:47:36] [DEBUG] filesystem initialization complete
+[2026-04-22 14:49:37] [DEBUG] attempting to load filters
+[2026-04-22 14:49:37] [DEBUG] filter configuration loaded successfully
+[2026-04-22 14:49:37] [DEBUG] filesystem initialization complete
+[2026-04-22 14:49:38] [DEBUG] 20115
+[2026-04-22 14:49:38] [DEBUG] server starting
+[2026-04-22 14:49:38] [DEBUG] server running on port 8080
+[2026-04-22 14:50:37] [DEBUG] Creating zip backup
+[2026-04-22 14:50:37] [WARN] mkdir ./backup: file exists
+[2026-04-22 14:50:37] [WARN] open 20260422_145037/backup/zip: no such file or directory
+[2026-04-22 14:50:37] [DEBUG] opening first file...
+[2026-04-22 14:50:37] [WARN] open test.csv: no such file or directory
+[2026-04-22 14:50:37] [DEBUG] writing first file to archive...
+[2026-04-22 14:50:37] [WARN] invalid argument
+[2026-04-22 14:50:37] [DEBUG] closing zip archive...
+[2026-04-22 14:51:37] [DEBUG] Creating zip backup
+[2026-04-22 14:51:37] [WARN] mkdir ./backup: file exists
+[2026-04-22 14:51:37] [WARN] open 20260422_145137/backup/zip: no such file or directory
+[2026-04-22 14:51:37] [DEBUG] opening first file...
+[2026-04-22 14:51:37] [WARN] open test.csv: no such file or directory
+[2026-04-22 14:51:37] [DEBUG] writing first file to archive...
+[2026-04-22 14:51:37] [WARN] invalid argument
+[2026-04-22 14:51:37] [DEBUG] closing zip archive...
+[2026-04-22 14:52:11] [DEBUG] attempting to load filters
+[2026-04-22 14:52:11] [DEBUG] filter configuration loaded successfully
+[2026-04-22 14:52:11] [DEBUG] filesystem initialization complete
+[2026-04-22 14:52:12] [DEBUG] 20115
+[2026-04-22 14:52:12] [DEBUG] server starting
+[2026-04-22 14:52:12] [DEBUG] server running on port 8080
+[2026-04-22 14:53:11] [DEBUG] Creating zip backup
+[2026-04-22 14:53:11] [DEBUG] Zip written

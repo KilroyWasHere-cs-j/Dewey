@@ -4,11 +4,83 @@ import (
 	"os"
 	"io"
 	"time"
+	"net/http"
 	"context"
 	"archive/zip"
 	"path/filepath"
+
+	"github.com/prometheus/client_golang/prometheus"
+  "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// Prometheus metrics
+var (
+    httpRequestsTotal = prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "http_requests_total",
+            Help: "Total number of HTTP requests",
+        },
+        []string{"method", "path", "status"},
+    )
+
+    httpRequestDuration = prometheus.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    "http_request_duration_seconds",
+            Help:    "HTTP request duration in seconds",
+            Buckets: prometheus.DefBuckets,
+        },
+        []string{"method", "path"},
+    )
+
+    activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{
+        Name: "active_connections",
+        Help: "Number of active connections",
+    })
+)
+
+func init() {
+    prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, activeConnections)
+}
+
+// Middleware to instrument handlers
+func metricsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        activeConnections.Inc()
+        defer activeConnections.Dec()
+
+        // Wrap ResponseWriter to capture status code
+        rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+        next.ServeHTTP(rw, r)
+
+        duration := time.Since(start).Seconds()
+        status := http.StatusText(rw.statusCode)
+
+        httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, status).Inc()
+        httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
+    })
+}
+
+type responseWriter struct {
+    http.ResponseWriter
+    statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+    rw.statusCode = code
+    rw.ResponseWriter.WriteHeader(code)
+}
+
+func startPrometheus() {
+	mux := http.NewServeMux()
+
+	// Prometheus scrape endpoint
+	mux.Handle("/metrics", promhttp.Handler())
+	// Wrap everything with metrics middleware
+	http.ListenAndServe(prometheusServer, metricsMiddleware(mux))
+}
+
+//
 // startDaemon launches a background worker that periodically runs maintenance tasks.
 //
 // Behavior:
@@ -49,21 +121,21 @@ func startDaemon(ctx context.Context) {
 
 // runTask executes periodic maintenance logic such as cache cleanup.
 func dumpCache() {
-	Debug("Running system cache dump")
+	// Debug("Running system cache dump")
 	entries, err := os.ReadDir(uploadDir) // Read current directory
   if err != nil {
-		Warn("Failed to dump cache dir " + err.Error())
+		// Fatal("Failed to dump cache dir " + err.Error())
   }
 
   for _, entry := range entries {
 		if !entry.IsDir() {
 			err := os.Remove(uploadDir + "/" + entry.Name())
 			if err != nil {
-				Warn("Failed to remove a file from the cache " + err.Error())
+				// Fatal("Failed to remove a file from the cache " + err.Error())
 			}
 		}	
   }
-	Debug("Cache dumped")
+	// Debug("Cache dumped")
 }
 
 func save() error {

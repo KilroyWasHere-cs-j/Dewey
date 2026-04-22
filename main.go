@@ -28,6 +28,7 @@ func main() {
 	rules := fileSystemInit()
 	appRules = rules
 
+	go startPrometheus()
 
 	barcodeText, err := scanBarCode("./barcodes/one.png")
 	if err != nil {

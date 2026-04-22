@@ -17,3 +17,6 @@ const loopback = "::1" // Allows for loopback to work (no worky)
 
 // Database specific constants
 const dbConnectionString = ""
+
+// Prometheus server
+const prometheusServer = ":8081"

@@ -129,6 +129,7 @@ func scanBarCode(path string) (string, error) {
 
     return "", fmt.Errorf("no barcode found in %s", path)
 }
+
 // Below is some GPTChat code for handling PDFs still need to test
 // doc, _ := fitz.New("file.pdf")
 // defer doc.Close()
