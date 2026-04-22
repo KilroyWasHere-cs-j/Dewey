@@ -3,8 +3,6 @@ package main
 import (
 	"os"
 	"io"
-	// "io/fs"
-	// "fmt"
 	"encoding/json"
 	"path/filepath"
 	"regexp"

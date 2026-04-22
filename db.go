@@ -2,8 +2,6 @@ package main
 
 import (
 	"time"
-	// "fmt"
-	// "strings"
 
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"

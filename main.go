@@ -28,7 +28,12 @@ func main() {
 	rules := fileSystemInit()
 	appRules = rules
 
-	
+
+	barcodeText, err := scanBarCode("./barcodes/one.png")
+	if err != nil {
+		Warn("Unable to process barcodes " + err.Error())
+	}
+	Debug(barcodeText)
 
 	// dbFunction()
 	Debug("server starting")

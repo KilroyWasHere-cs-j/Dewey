@@ -49,21 +49,21 @@ func startDaemon(ctx context.Context) {
 
 // runTask executes periodic maintenance logic such as cache cleanup.
 func dumpCache() {
-	// Debug("Running system cache dump")
+	Debug("Running system cache dump")
 	entries, err := os.ReadDir(uploadDir) // Read current directory
   if err != nil {
-		// Fatal("Failed to dump cache dir " + err.Error())
+		Warn("Failed to dump cache dir " + err.Error())
   }
 
   for _, entry := range entries {
 		if !entry.IsDir() {
 			err := os.Remove(uploadDir + "/" + entry.Name())
 			if err != nil {
-				// Fatal("Failed to remove a file from the cache " + err.Error())
+				Warn("Failed to remove a file from the cache " + err.Error())
 			}
 		}	
   }
-	// Debug("Cache dumped")
+	Debug("Cache dumped")
 }
 
 func save() error {

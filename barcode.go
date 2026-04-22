@@ -6,13 +6,15 @@ package main
 import (
 	"errors"
 	"image"
-	"image/png"
+	_ "image/jpeg"
+  "image/png"
 	"os"
-	// "fmt"
+	"fmt"
+	"image/draw"
 
 	"github.com/makiuchi-d/gozxing"
 	"github.com/makiuchi-d/gozxing/oned"
-	"github.com/makiuchi-d/gozxing/qrcode"
+	// "github.com/makiuchi-d/gozxing/multi"
 )
 
 /*
@@ -68,33 +70,44 @@ func createImage(filename string, img *gozxing.BitMatrix) error {
 	return png.Encode(file, img)
 }
 
-func scanBarCode(path string) string {
-	// open and decode image file
-	file, err := os.Open(path)
-	if err != nil {
-		Warn(err.Error())
-		return ""
-	}
-	img, _, err := image.Decode(file)
-	if err != nil {
-		Warn(err.Error())
-		return ""
-	}
+func scanBarCode(path string) (string, error) {
+    file, err := os.Open(path)
+    if err != nil {
+        return "", fmt.Errorf("open file: %w", err)
+    }
+    defer file.Close()
 
-	// prepare BinaryBitmap
-	bmp, err := gozxing.NewBinaryBitmapFromImage(img)
-	if err != nil {
-		Warn(err.Error())
-		return ""
-	}
+    img, _, err := image.Decode(file)
+    if err != nil {
+        return "", fmt.Errorf("decode image: %w", err)
+    }
 
-	// decode image
-	qrReader := qrcode.NewQRCodeReader()
-	result, _ := qrReader.Decode(bmp, nil)
+    gray := image.NewGray(img.Bounds())
+    draw.Draw(gray, gray.Bounds(), img, img.Bounds().Min, draw.Src)
 
-	return result.GetText()
+    b := gray.Bounds()
+    hints := map[gozxing.DecodeHintType]interface{}{
+        gozxing.DecodeHintType_TRY_HARDER: true,
+    }
+    reader := oned.NewCode128Reader()
+
+    for i := 0; i <= 18; i++ {
+        top := b.Dy() * (i * 5) / 100
+        bot := b.Dy() * (i*5 + 15) / 100
+        slice := gray.SubImage(image.Rect(0, top, b.Dx(), bot))
+
+        bmp, err := gozxing.NewBinaryBitmapFromImage(slice)
+        if err != nil {
+            continue
+        }
+        result, err := reader.Decode(bmp, hints)
+        if err == nil {
+            return result.GetText(), nil
+        }
+    }
+
+    return "", fmt.Errorf("no barcode found in %s", path)
 }
-
 // Below is some GPTChat code for handling PDFs still need to test
 // doc, _ := fitz.New("file.pdf")
 // defer doc.Close()
