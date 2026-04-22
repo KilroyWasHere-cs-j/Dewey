@@ -122,3 +122,9 @@
 [2026-04-22 14:04:09] [DEBUG] Cache dumped
 [2026-04-22 14:04:09] [DEBUG] Creating zip backup
 [2026-04-22 14:04:09] [DEBUG] Zip written
+[2026-04-22 14:07:46] [DEBUG] attempting to load filters
+[2026-04-22 14:07:46] [DEBUG] filter configuration loaded successfully
+[2026-04-22 14:07:46] [DEBUG] filesystem initialization complete
+[2026-04-22 14:07:47] [DEBUG] 20115
+[2026-04-22 14:07:47] [DEBUG] server starting
+[2026-04-22 14:07:47] [DEBUG] server running on port 8080

@@ -11,6 +11,7 @@ import (
 	"os"
 	"fmt"
 	"image/draw"
+	"image/color"
 
 	"github.com/makiuchi-d/gozxing"
 	"github.com/makiuchi-d/gozxing/oned"
@@ -70,6 +71,26 @@ func createImage(filename string, img *gozxing.BitMatrix) error {
 	return png.Encode(file, img)
 }
 
+func toHighContrast(src image.Image) *image.Gray {
+    gray := image.NewGray(src.Bounds())
+    draw.Draw(gray, gray.Bounds(), src, src.Bounds().Min, draw.Src)
+
+    // Apply threshold: anything below 180 becomes black, else white
+    // This handles the navy-blue bars which land around 80-120 in gray
+    b := gray.Bounds()
+    for y := b.Min.Y; y < b.Max.Y; y++ {
+        for x := b.Min.X; x < b.Max.X; x++ {
+            c := gray.GrayAt(x, y)
+            if c.Y < 180 {
+                gray.SetGray(x, y, color.Gray{Y: 0})
+            } else {
+                gray.SetGray(x, y, color.Gray{Y: 255})
+            }
+        }
+    }
+    return gray
+}
+
 func scanBarCode(path string) (string, error) {
     file, err := os.Open(path)
     if err != nil {
@@ -82,8 +103,8 @@ func scanBarCode(path string) (string, error) {
         return "", fmt.Errorf("decode image: %w", err)
     }
 
-    gray := image.NewGray(img.Bounds())
-    draw.Draw(gray, gray.Bounds(), img, img.Bounds().Min, draw.Src)
+    // Apply high-contrast threshold to handle colored/gray bars
+    gray := toHighContrast(img)
 
     b := gray.Bounds()
     hints := map[gozxing.DecodeHintType]interface{}{
@@ -122,3 +143,8 @@ func scanBarCode(path string) (string, error) {
 //         fmt.Println(result.String())
 //     }
 // }
+
+
+//
+// Threshold value (180) — lower it if you get false positives, raise it if dark bars are getting missed
+// Slice size/step (15% height, 5% increments) — tighten the increments if barcodes are very thin relative to page height
