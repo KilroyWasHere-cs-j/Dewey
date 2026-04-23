@@ -73,7 +73,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 
 func startPrometheus() {
 	mux := http.NewServeMux()
-
+	Debug("Prometheus started")
 	// Prometheus scrape endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 	// Wrap everything with metrics middleware

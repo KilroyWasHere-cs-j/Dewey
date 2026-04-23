@@ -1,0 +1,15 @@
+[2026-04-23 09:04:07] [DEBUG] attempting to load filters
+[2026-04-23 09:04:07] [DEBUG] filter configuration loaded successfully
+[2026-04-23 09:04:07] [DEBUG] filesystem initialization complete
+[2026-04-23 09:04:08] [DEBUG] 20115
+[2026-04-23 09:04:08] [DEBUG] server starting
+[2026-04-23 09:04:08] [DEBUG] server running on port 8080
+[2026-04-23 09:05:07] [DEBUG] Creating zip backup
+[2026-04-23 09:05:07] [DEBUG] Zip written
+[2026-04-23 09:08:14] [DEBUG] attempting to load filters
+[2026-04-23 09:08:14] [DEBUG] filter configuration loaded successfully
+[2026-04-23 09:08:14] [DEBUG] filesystem initialization complete
+[2026-04-23 09:08:14] [DEBUG] Prometheus started
+[2026-04-23 09:08:14] [DEBUG] 20115
+[2026-04-23 09:08:14] [DEBUG] server starting
+[2026-04-23 09:08:14] [DEBUG] server running on port 8080
