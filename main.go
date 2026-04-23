@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
+	// "github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zsais/go-gin-prometheus"
 )
 
 // I created this, so future debuggers can have some fun...
@@ -28,7 +30,7 @@ func main() {
 	rules := fileSystemInit()
 	appRules = rules
 
-	go startPrometheus()
+	// go startPrometheus()
 
 	barcodeText, err := scanBarCode("./barcodes/one.png")
 	if err != nil {
@@ -46,7 +48,12 @@ func main() {
 	// -------------------------
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
+	//r.Use(PrometheusMiddleware())
 
+	p := ginprometheus.NewWithConfig(ginprometheus.Config{
+		Subsystem: "gin",
+	})
+	p.Use(r)
 	// Limit multipart uploads
 	r.MaxMultipartMemory = maxFileSize
 
@@ -98,9 +105,11 @@ func main() {
 	r.GET("/files", listFiles)
 	r.DELETE("/files/:filename", deleteFile)
 	r.GET("/admin/dumpCache", triggerCacheDump)
+	//r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	// -------------------------
 	// Start server
 	// -------------------------
+	 r.Run(":8080")
 	Debug("server running on port " + portNumber)
 
 	if err := r.Run(":" + portNumber); err != nil {

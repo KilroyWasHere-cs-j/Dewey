@@ -4,83 +4,13 @@ import (
 	"os"
 	"io"
 	"time"
-	"net/http"
+	// "net/http"
 	"context"
 	"archive/zip"
 	"path/filepath"
 
-	"github.com/prometheus/client_golang/prometheus"
-  "github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Prometheus metrics
-var (
-    httpRequestsTotal = prometheus.NewCounterVec(
-        prometheus.CounterOpts{
-            Name: "http_requests_total",
-            Help: "Total number of HTTP requests",
-        },
-        []string{"method", "path", "status"},
-    )
-
-    httpRequestDuration = prometheus.NewHistogramVec(
-        prometheus.HistogramOpts{
-            Name:    "http_request_duration_seconds",
-            Help:    "HTTP request duration in seconds",
-            Buckets: prometheus.DefBuckets,
-        },
-        []string{"method", "path"},
-    )
-
-    activeConnections = prometheus.NewGauge(prometheus.GaugeOpts{
-        Name: "active_connections",
-        Help: "Number of active connections",
-    })
-)
-
-func init() {
-    prometheus.MustRegister(httpRequestsTotal, httpRequestDuration, activeConnections)
-}
-
-// Middleware to instrument handlers
-func metricsMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        start := time.Now()
-        activeConnections.Inc()
-        defer activeConnections.Dec()
-
-        // Wrap ResponseWriter to capture status code
-        rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-        next.ServeHTTP(rw, r)
-
-        duration := time.Since(start).Seconds()
-        status := http.StatusText(rw.statusCode)
-
-        httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, status).Inc()
-        httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
-    })
-}
-
-type responseWriter struct {
-    http.ResponseWriter
-    statusCode int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-    rw.statusCode = code
-    rw.ResponseWriter.WriteHeader(code)
-}
-
-func startPrometheus() {
-	mux := http.NewServeMux()
-	Debug("Prometheus started")
-	// Prometheus scrape endpoint
-	mux.Handle("/metrics", promhttp.Handler())
-	// Wrap everything with metrics middleware
-	http.ListenAndServe(prometheusServer, metricsMiddleware(mux))
-}
-
-//
 // startDaemon launches a background worker that periodically runs maintenance tasks.
 //
 // Behavior:

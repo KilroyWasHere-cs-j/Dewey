@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: "my-go-service"
+  - job_name: "gin-app"
     static_configs:
-      - targets: ["host.docker.internal:8080"]  # points to your local Go app
+      - targets: ["localhost:8080"]
