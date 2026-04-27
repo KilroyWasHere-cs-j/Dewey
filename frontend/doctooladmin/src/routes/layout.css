@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import "tailwindcss";
+@import "@skeletonlabs/skeleton";
+@import "@skeletonlabs/skeleton/themes/cerberus";
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
