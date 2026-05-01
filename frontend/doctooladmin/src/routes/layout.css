@@ -1,6 +1,10 @@
 @import 'tailwindcss';
-@import "tailwindcss";
 @import "@skeletonlabs/skeleton";
 @import "@skeletonlabs/skeleton/themes/cerberus";
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+html, body {
+  height: 100%;
+  background-color: #0f172a; /* slate-900 */
+}
