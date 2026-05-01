@@ -14,8 +14,7 @@
 		>
 			☰
 		</button>
-
-		<h1 class="text-xl font-semibold">Analytics</h1>
+		<h1 class="text-xl font-semibold text-gray-800">Dewey Dashboard</h1>
 	</div>
 
 	<div class="flex items-center gap-4">

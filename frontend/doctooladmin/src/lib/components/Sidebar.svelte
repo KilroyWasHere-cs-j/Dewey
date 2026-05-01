@@ -43,5 +43,13 @@
 		>
 			Settings
 		</a>
+
+		<a
+			href="/dev"
+			class="block px-3 py-2 rounded hover:bg-gray-700"
+			on:click={() => toggle?.()}
+		>
+			Dev
+		</a>
 	</nav>
 </aside>
