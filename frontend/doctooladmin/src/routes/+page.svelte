@@ -6,3 +6,4 @@
 		goto('/dashboard');
 	});
 </script>
+

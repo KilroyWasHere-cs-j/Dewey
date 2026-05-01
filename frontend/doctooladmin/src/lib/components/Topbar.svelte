@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Avatar } from "flowbite-svelte";
+  import { BugOutline } from "flowbite-svelte-icons";
+
 	let { sidebarOpen, toggleSidebar } = $props<{
 		sidebarOpen: boolean;
 		toggleSidebar: () => void;
@@ -19,7 +22,9 @@
 
 	<div class="flex items-center gap-4">
 		<span class="text-sm text-gray-600">User</span>
-		<div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+		<Avatar>
+			<BugOutline />
+		</Avatar>
 	</div>
 
 </header>

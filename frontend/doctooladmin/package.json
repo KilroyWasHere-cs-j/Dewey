@@ -17,6 +17,7 @@
 		"@eslint/compat": "^2.0.4",
 		"@eslint/js": "^10.0.1",
 		"@flowbite-svelte-plugins/chart": "^0.2.4",
+		"@flowbite-svelte-plugins/datatable": "^0.4.1",
 		"@skeletonlabs/skeleton": "^4.15.2",
 		"@skeletonlabs/skeleton-svelte": "^4.15.2",
 		"@sveltejs/adapter-auto": "^7.0.1",

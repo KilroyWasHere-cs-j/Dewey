@@ -6,6 +6,7 @@
 	/// Page data
 	let sidebarOpen = $state(true);
 	let pageRefreshing = $state(false);
+	let tickRequestInProgress = $state(false);
 
 	/// Page functions
 	function handleRefresh() {
@@ -18,6 +19,10 @@
 			pageRefreshing = false;
 			// Update status variables with new data here
 		}, 2000);
+	}
+
+	function handleTickRequest() {
+		// Implement tick request logic here
 	}
 
 	const toggleSidebar = () => {
@@ -38,13 +43,58 @@
 
 		<Topbar {sidebarOpen} {toggleSidebar} />
 
-		<div class="bg-white shadow-sm m-4 rounded-lg">
+		<div class="grid grid-cols-6 gap-2 not-first:bg-white shadow-sm m-4 rounded-lg">
 			<div class="max-w-7xl mx-auto py-4 px-6">
 				<Button color="purple" onclick={handleRefresh} disabled={pageRefreshing}>
 					{pageRefreshing ? "Refreshing..." : "Refresh"}
 				</Button>
 				<Tooltip>Refresh dashboard</Tooltip>
 				{#if pageRefreshing}
+					<Spinner type="orbit" color="rose" />
+				{/if}
+			</div>
+			<div class="max-w-7xl mx-auto py-4 px-6">
+				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
+					{tickRequestInProgress ? "Processing..." : "Request Tick"}
+				</Button>
+				<Tooltip>Refresh dashboard</Tooltip>
+				{#if tickRequestInProgress}
+					<Spinner type="orbit" color="rose" />
+				{/if}
+			</div>
+			<div class="max-w-7xl mx-auto py-4 px-6">
+				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
+					{tickRequestInProgress ? "Processing..." : "Request Tick"}
+				</Button>
+				<Tooltip>Refresh dashboard</Tooltip>
+				{#if tickRequestInProgress}
+					<Spinner type="orbit" color="rose" />
+				{/if}
+			</div>
+			<div class="max-w-7xl mx-auto py-4 px-6">
+				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
+					{tickRequestInProgress ? "Processing..." : "Request Tick"}
+				</Button>
+				<Tooltip>Refresh dashboard</Tooltip>
+				{#if tickRequestInProgress}
+					<Spinner type="orbit" color="rose" />
+				{/if}
+			</div>
+			<div class="max-w-7xl mx-auto py-4 px-6">
+				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
+					{tickRequestInProgress ? "Processing..." : "Request Tick"}
+				</Button>
+				<Tooltip>Refresh dashboard</Tooltip>
+				{#if tickRequestInProgress}
+					<Spinner type="orbit" color="rose" />
+				{/if}
+			</div>
+			<div class="max-w-7xl mx-auto py-4 px-6">
+				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
+					{tickRequestInProgress ? "Processing..." : "Request Tick"}
+				</Button>
+				<Tooltip>Refresh dashboard</Tooltip>
+				{#if tickRequestInProgress}
 					<Spinner type="orbit" color="rose" />
 				{/if}
 			</div>

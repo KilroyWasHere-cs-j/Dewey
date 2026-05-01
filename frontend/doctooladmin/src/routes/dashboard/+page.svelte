@@ -6,6 +6,7 @@
 	// Page data
 	let sidebarOpen = $state(true);
 	let pageRefreshing = $state(false);
+	  export let data;
 
 	function handleRefresh() {
 		pageRefreshing = true;
@@ -15,6 +16,15 @@
 			// Update status variables with new data here
 		}, 2000);
 	}
+
+	export async function load({ fetch }) {
+  const res = await fetch('/api/metrics?metric=rps');
+  const data = await res.json();
+
+  return {
+    rps: data
+  };
+}
 
 	const statusColorMap = {
 		Good: "text-green-500 bg-green-600",
@@ -43,6 +53,8 @@
 	let statusErrorsThrow = 0;
 	let statusCacheCount = 0;
 	let statusTimeTillTick = '00:00:00';
+	let statusFileTypesRejected = 0;
+	let statusExecutableFilesBlocked = 0;
 
 	const toggleSidebar = () => {
 		sidebarOpen = !sidebarOpen;
@@ -82,7 +94,7 @@
 						{statusSystemHealth}
 					</p>
 				</div>
-				<Tooltip>System health status</Tooltip>
+				<Tooltip>System health status. Normal day to day should be indicated as "Good". Periodic "Slow" is acceptable. Anyother status indicates a problem.</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">System Uptime</h2>
@@ -94,40 +106,40 @@
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Total Stored Files</h2>
 					<p class="text-zinc-600 text-sm">{statusTotalStoredFiles}</p>
 				</div>
-				<Tooltip>Total number of files stored in the system</Tooltip>
+				<Tooltip>Total number of files stored in the system. Useful for monitoring storage usage.</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Cache Count</h2>
 					<p class="text-zinc-600 text-sm">{statusCacheCount}</p>
 				</div>
-				<Tooltip>Total number of files currently in the cache</Tooltip>
+				<Tooltip>Total number of files currently in the cache. Every set interval, the cache is cleared.</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Time till tick</h2>
 					<p class="text-zinc-600 text-sm">{statusTimeTillTick}</p>
 				</div>
-				<Tooltip>Time remaining until the next system tick</Tooltip>
+				<Tooltip>Time remaining until the next system tick. Ticks trigger system selfcare routines. Such as cache dumps, backups, etc...</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Errors Throw</h2>
 					<p class="text-zinc-600 text-sm">{statusErrorsThrow}</p>
 				</div>
-				<Tooltip>Total number of errors thrown by the system</Tooltip>
+				<Tooltip>Total number of errors thrown by the system. This should be zero. Other numbers indicate issues. Please check logs for specific details.</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
-					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Errors Throw</h2>
-					<p class="text-zinc-600 text-sm">{statusErrorsThrow}</p>
+					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Files rejected</h2>
+					<p class="text-zinc-600 text-sm">{statusFileTypesRejected}</p>
 				</div>
-				<Tooltip>Total number of errors thrown by the system</Tooltip>
+				<Tooltip>Total number of file types rejected.</Tooltip>
 
 				<div class="bg-yellow-400 p-4 rounded-2xl shadow-md">
-					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Errors Throw</h2>
-					<p class="text-zinc-600 text-sm">{statusErrorsThrow}</p>
+					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Executable Files Blocked</h2>
+					<p class="text-zinc-600 text-sm">{statusExecutableFilesBlocked}</p>
 				</div>
-				<Tooltip>Total number of errors thrown by the system</Tooltip>
+				<Tooltip>Total number of executable files blocked. Each insidendent of a executable file being uploaded needs to be reviewed.</Tooltip>
 
 				<!-- Wide Card -->
-				<div class="bg-white p-4 rounded-2xl shadow-sm col-span-1 sm:col-span-2 lg:col-span-3">
+				<div class="bg-white p-4 rounded-2xl shadow-sm col-span-1 sm:col-span-2 lg:col-span-4">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Wide Section</h2>
 					<p class="text-zinc-600 text-sm">
 						Useful for charts, tables, logs, etc.
@@ -135,11 +147,12 @@
 				</div>
 
 				<!-- Wide Card -->
-				<div class="bg-white p-4 rounded-2xl shadow-sm col-span-1 sm:col-span-2 lg:col-span-3">
+				<div class="bg-white p-4 rounded-2xl shadow-sm col-span-1 sm:col-span-2 lg:col-span-4">
 					<h2 class="text-lg text-zinc-700 font-semibold mb-2">Wide Section</h2>
 					<p class="text-zinc-600 text-sm">
 						Useful for charts, tables, logs, etc.
 					</p>
+					
 				</div>
 			</div>
 		</main>
