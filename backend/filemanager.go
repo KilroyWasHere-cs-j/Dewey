@@ -6,56 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
-
-var (
-	fileOps = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace:   "myapp",
-			Name:        "file_io_ops_total",
-			Help:        "Counts of file IO operations.",
-			ConstLabels: prometheus.Labels{"app": appName},
-		},
-		[]string{"op", "result", "file_group"},
-	)
-
-	fileBytes = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace:   "myapp",
-			Name:        "file_io_bytes_total",
-			Help:        "Total bytes read/written.",
-			ConstLabels: prometheus.Labels{"app": appName},
-		},
-		[]string{"op"},
-	)
-
-	fileDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace:   "myapp",
-			Name:        "file_io_duration_seconds",
-			Help:        "Duration of file IO operations.",
-			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"app": appName},
-		},
-		[]string{"op"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(fileOps, fileBytes, fileDuration)
-
-	// create zero-valued label instances so metrics appear even before traffic
-	fileBytes.WithLabelValues("read")
-	fileBytes.WithLabelValues("write")
-
-	fileOps.WithLabelValues("read", "ok", "default")
-	fileOps.WithLabelValues("write", "ok", "default")
-
-	fileDuration.WithLabelValues("read")
-	fileDuration.WithLabelValues("write")
-}
 
 // var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
@@ -107,7 +58,7 @@ func loadFilters() *Config {
 	}
 
 	Debug("filter configuration loaded successfully")
-
+	FiltersLoadings++
 	return &cfg
 }
 
@@ -140,6 +91,8 @@ func fileSystemInit() *Config {
 }
 
 func idAndSort(path string, hash string, filename string) {
+	FileSorts++
+
 	//  barcodeText := scanBarCode(path)
 
 	//-------------------------------
@@ -209,6 +162,8 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
+	FileCopys++
+
 	// flush to disk
 	return dstFile.Sync()
 }
@@ -227,6 +182,7 @@ func CopyFile(src, dst string) error {
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
 func searchAndReturn(filename string, pullMeta string) string {
+
 	/// Search cache and return if found
 
 	if pullMeta == "false" {
@@ -239,6 +195,8 @@ func searchAndReturn(filename string, pullMeta string) string {
 		for _, file := range files {
 			if file.Name() == filename {
 				Debug("Found file in cache")
+
+				FileRetrievals++
 				return uploadDir + "/" + file.Name()
 			}
 		}
@@ -250,6 +208,8 @@ func searchAndReturn(filename string, pullMeta string) string {
 			Warn("pullRecordByFilename failed " + err.Error())
 		}
 		Debug("Pulled this path from db " + path)
+
+		FileRetrievals++
 		return path
 
 		// : http.ResponseWriter, r *http.Request

@@ -11,6 +11,9 @@ import (
 	"io"
 )
 
+var PECount = 0
+var ELFCount = 0
+
 // IsPEFile checks whether the provided file is a Windows Portable Executable (PE).
 //
 // It validates:
@@ -37,7 +40,8 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 
 	// Check "MZ" signature
 	if header[0] != 'M' || header[1] != 'Z' {
-		return false, nil
+		PECount++
+		return true, nil
 	}
 
 	// PE header offset (e_lfanew at 0x3C)
@@ -63,7 +67,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 	if peSig != [4]byte{'P', 'E', 0, 0} {
 		return false, nil
 	}
-
+	PECount++
 	return true, nil
 }
 
@@ -71,7 +75,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 //
 // It validates the ELF magic number:
 //
-//   0x7F 'E' 'L' 'F'
+//	0x7F 'E' 'L' 'F'
 //
 // Args:
 //   - f: seekable file reader (io.ReadSeeker)
@@ -92,6 +96,7 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 		return false, err
 	}
 
+	ELFCount++
 	return header == [4]byte{0x7F, 'E', 'L', 'F'}, nil
 }
 
