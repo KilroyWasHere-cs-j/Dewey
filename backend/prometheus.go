@@ -230,12 +230,22 @@ var (
 			return float64(FileSorts)
 		},
 	)
+
+	timeTilNextTick = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_time_til_next_tick",
+			Help: "Time until the next daemon tick",
+		},
+		func() float64 {
+			return float64(TimeUntilNextTick().Seconds())
+		},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(fileOps, fileBytes, fileDuration, uptime, systemInfo, cpuCount,
 		ramUsage, currentHeap, gcCycles, cacheSize, filesInStore, filesInBackUp, exeCount,
-		fileCopys, fileRetries, fileSorts,
+		fileCopys, fileRetries, fileSorts, timeTilNextTick,
 	)
 
 	// create zero-valued label instances so metrics appear even before traffic
