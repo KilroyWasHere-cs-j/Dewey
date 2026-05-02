@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	// "net/http"
 	"archive/zip"
 	"context"
 	"path/filepath"
@@ -19,17 +18,75 @@ import (
 //
 // Args:
 //   - ctx: context used to signal shutdown (cancellation-safe goroutine)
+//
+// observableTicker wraps time.Ticker so callers can inspect time remaining
+// until the next tick.
+type observableTicker struct {
+	ticker   *time.Ticker
+	interval time.Duration
+	start    time.Time
+	mu       sync.RWMutex
+	last     time.Time
+}
+
+var daemonTicker *observableTicker
+
+func newObservableTicker(d time.Duration) *observableTicker {
+	return &observableTicker{
+		ticker:   time.NewTicker(d),
+		interval: d,
+		start:    time.Now(),
+	}
+}
+
+func (o *observableTicker) Chan() <-chan time.Time { return o.ticker.C }
+func (o *observableTicker) Stop()                    { o.ticker.Stop() }
+func (o *observableTicker) markTick(t time.Time) {
+	o.mu.Lock()
+	o.last = t
+	o.mu.Unlock()
+}
+
+// Remaining returns the duration until the next tick. If the ticker hasn't
+// fired yet it computes remaining time from the start time. Never returns a
+// negative duration; returns 0 if the next tick is due now.
+func (o *observableTicker) Remaining() time.Duration {
+	o.mu.RLock()
+	last := o.last
+	start := o.start
+	interval := o.interval
+	o.mu.RUnlock()
+
+	if last.IsZero() {
+		elapsed := time.Since(start)
+		// compute how far until the next interval boundary
+		rem := interval - (elapsed % interval)
+		if rem < 0 {
+			return 0
+		}
+		return rem
+	}
+
+	rem := interval - time.Since(last)
+	if rem < 0 {
+		return 0
+	}
+	return rem
+}
+
 func startDaemon(ctx context.Context) {
 	// Debug("starting cache clear daemon")
 
-	ticker := time.NewTicker(daemonTickTime * time.Hour)
+	daemonTicker = newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
 
 	go func() {
-		defer ticker.Stop()
+		defer daemonTicker.Stop()
 
 		for {
 			select {
-			case <-ticker.C:
+			case t := <-daemonTicker.Chan():
+				// record tick time so Remaining() can be observed
+				daemonTicker.markTick(t)
 				// run task safely so panic won't kill goroutine
 				func() {
 					defer func() {
@@ -47,6 +104,15 @@ func startDaemon(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// TimeUntilNextTick returns the duration until the daemon's next scheduled
+// run. If the daemon hasn't been started it returns -1.
+func TimeUntilNextTick() time.Duration {
+	if daemonTicker == nil {
+		return time.Duration(-1)
+	}
+	return daemonTicker.Remaining()
 }
 
 // runTask executes periodic maintenance logic such as cache cleanup.
