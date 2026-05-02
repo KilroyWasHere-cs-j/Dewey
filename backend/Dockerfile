@@ -17,6 +17,8 @@ RUN go mod download
 COPY . .
 
 # Build binary
+ARG CGO_CFLAGS="-Wno-discarded-qualifiers"
+ENV CGO_CFLAGS=${CGO_CFLAGS}
 RUN go build -o app-binary
 
 # ---- Run stage ----

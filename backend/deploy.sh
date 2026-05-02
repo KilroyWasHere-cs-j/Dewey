@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 podman pod rm -f cross-doc-pod
-podman build -t cross-doc-tool-dev .
+# pass CGO_CFLAGS to the build to silence sqlite3 warnings
+podman build --build-arg CGO_CFLAGS="-Wno-discarded-qualifiers" -t cross-doc-tool-dev .
 podman run -d -p 8080:8080 cross-doc-tool-dev
 podman run -d \
   --name grafana \
