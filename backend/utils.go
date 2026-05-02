@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"time"
+	"sync"
 
 	"archive/zip"
 	"context"
