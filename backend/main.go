@@ -1,14 +1,13 @@
 package main
 
 import (
-	"context"	
+	"context"
 	"net/http"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"golang.org/x/time/rate"
-	// "github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/zsais/go-gin-prometheus"
 )
 
 // I created this, so future debuggers can have some fun...
@@ -106,13 +105,14 @@ func main() {
 	r.DELETE("/files/:filename", deleteFile)
 	r.GET("/admin/dumpCache", triggerCacheDump)
 	//r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// -------------------------
 	// Start server
 	// -------------------------
-	 r.Run(":8080")
+	r.Run(":8080")
 	Debug("server running on port " + portNumber)
 
 	if err := r.Run(":" + portNumber); err != nil {
-		Fatal(err.Error())	
+		Fatal(err.Error())
 	}
 }

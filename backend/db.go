@@ -4,18 +4,19 @@ import (
 	"time"
 
 	"database/sql"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type metadate struct {
-	claimantName string;
-	dateofInjury string;
-	employer string;
-	adjuster string;
-	support string;
-	claimType string;
-	jurisdiction string;
-	policy string;
+	claimantName string
+	dateofInjury string
+	employer     string
+	adjuster     string
+	support      string
+	claimType    string
+	jurisdiction string
+	policy       string
 }
 
 type FileRecord struct {
@@ -58,7 +59,6 @@ func createNewFileRecord(filename string, acts_id string, sha256_hash string, fi
 	}
 
 	tx.Commit()
-	return 
 }
 
 func pullRecordByFilename(fileName string) (string, error) {
@@ -122,4 +122,3 @@ func pullRecordByACTsNumber(acts_no string) (string, error) {
 func deleteFileRecord() {
 
 }
-

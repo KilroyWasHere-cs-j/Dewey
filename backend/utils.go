@@ -1,14 +1,14 @@
 package main
 
 import (
-	"os"
 	"io"
+	"os"
 	"time"
-	// "net/http"
-	"context"
-	"archive/zip"
-	"path/filepath"
 
+	// "net/http"
+	"archive/zip"
+	"context"
+	"path/filepath"
 )
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
@@ -22,7 +22,7 @@ import (
 func startDaemon(ctx context.Context) {
 	// Debug("starting cache clear daemon")
 
-	ticker := time.NewTicker(daemonTickTime * time.Minute)
+	ticker := time.NewTicker(daemonTickTime * time.Hour)
 
 	go func() {
 		defer ticker.Stop()
@@ -53,18 +53,18 @@ func startDaemon(ctx context.Context) {
 func dumpCache() {
 	// Debug("Running system cache dump")
 	entries, err := os.ReadDir(uploadDir) // Read current directory
-  if err != nil {
+	if err != nil {
 		// Fatal("Failed to dump cache dir " + err.Error())
-  }
+	}
 
-  for _, entry := range entries {
+	for _, entry := range entries {
 		if !entry.IsDir() {
 			err := os.Remove(uploadDir + "/" + entry.Name())
 			if err != nil {
 				// Fatal("Failed to remove a file from the cache " + err.Error())
 			}
-		}	
-  }
+		}
+	}
 	// Debug("Cache dumped")
 }
 
