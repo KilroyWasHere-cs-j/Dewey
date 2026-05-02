@@ -1,12 +1,61 @@
 package main
 
 import (
-	"os"
-	"io"
 	"encoding/json"
+	"io"
+	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	fileOps = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace:   "myapp",
+			Name:        "file_io_ops_total",
+			Help:        "Counts of file IO operations.",
+			ConstLabels: prometheus.Labels{"app": appName},
+		},
+		[]string{"op", "result", "file_group"},
+	)
+
+	fileBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace:   "myapp",
+			Name:        "file_io_bytes_total",
+			Help:        "Total bytes read/written.",
+			ConstLabels: prometheus.Labels{"app": appName},
+		},
+		[]string{"op"},
+	)
+
+	fileDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace:   "myapp",
+			Name:        "file_io_duration_seconds",
+			Help:        "Duration of file IO operations.",
+			Buckets:     prometheus.DefBuckets,
+			ConstLabels: prometheus.Labels{"app": appName},
+		},
+		[]string{"op"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(fileOps, fileBytes, fileDuration)
+
+	// create zero-valued label instances so metrics appear even before traffic
+	fileBytes.WithLabelValues("read")
+	fileBytes.WithLabelValues("write")
+
+	fileOps.WithLabelValues("read", "ok", "default")
+	fileOps.WithLabelValues("write", "ok", "default")
+
+	fileDuration.WithLabelValues("read")
+	fileDuration.WithLabelValues("write")
+}
 
 // var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
@@ -67,7 +116,7 @@ func loadFilters() *Config {
 // Behavior:
 //   - Creates upload directory
 //   - Creates base storage directory
-//	 - Initiate the loading of filter rules
+//   - Initiate the loading of filter rules
 //   - Fails fast if any directory cannot be created
 func fileSystemInit() *Config {
 	dirs := []string{
@@ -80,7 +129,7 @@ func fileSystemInit() *Config {
 			Fatal("failed to create directory " + dir + ": " + err.Error())
 		}
 	}
-	
+
 	config := loadFilters()
 	if config == nil {
 		Fatal("Unable to load configs")
@@ -90,7 +139,7 @@ func fileSystemInit() *Config {
 	return config
 }
 
-func idAndSort(path string, hash string, filename string){
+func idAndSort(path string, hash string, filename string) {
 	//  barcodeText := scanBarCode(path)
 
 	//-------------------------------
@@ -104,11 +153,11 @@ func idAndSort(path string, hash string, filename string){
 			Debug("Action: " + pattern.Action)
 			Debug("Target dir: " + pattern.TargetDirectory)
 
-			err := os.MkdirAll(fileSystemBaseDir + pattern.TargetDirectory, 0755)
+			err := os.MkdirAll(fileSystemBaseDir+pattern.TargetDirectory, 0755)
 			if err != nil {
 				Warn("Failed to create directory for uploaded file " + err.Error())
 			}
-			
+
 			Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
 
 			new_path := filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path)
@@ -129,7 +178,7 @@ func idAndSort(path string, hash string, filename string){
 			Debug("No match")
 		}
 	}
-// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash", "./")
+	// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash", "./")
 	// Determine where the file needs to go
 	// Create and store db entry
 	// Store file bytes and dn entry route
@@ -177,7 +226,7 @@ func CopyFile(src, dst string) error {
 // Returns:
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
-func searchAndReturn(filename string, pullMeta string) (string) {
+func searchAndReturn(filename string, pullMeta string) string {
 	/// Search cache and return if found
 
 	if pullMeta == "false" {
@@ -193,35 +242,32 @@ func searchAndReturn(filename string, pullMeta string) (string) {
 				return uploadDir + "/" + file.Name()
 			}
 		}
-		
+
 		Debug("No file found in cache, searching db")
-		
+
 		path, err := pullRecordByFilename(filename)
 		if err != nil {
 			Warn("pullRecordByFilename failed " + err.Error())
 		}
 		Debug("Pulled this path from db " + path)
 		return path
-	
-		
+
 		// : http.ResponseWriter, r *http.Request
 	} else if pullMeta == "true" {
-			Debug("Would sql search and pull meta")
-			return ""
+		Debug("Would sql search and pull meta")
+		return ""
 	} else {
 		Debug("Unknown meta flag")
 		return "Unknown meta flag"
 	}
-	
-	return "huh?"
 }
 
-func changeMeta(){
+func changeMeta() {
 	// Pull metadata from SQL
 	// Update records according to the uploaded meta
 }
 
-func setFileStatus(){
+func setFileStatus() {
 	// searchAndReturn()
 
 	// Search up file retrive it's path
