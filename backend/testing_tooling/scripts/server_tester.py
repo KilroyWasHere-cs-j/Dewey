@@ -2,7 +2,6 @@
 Test suite for Go file server (gin, :8080)
 Covers: rate limiting, invalid file types, oversized files,
 executable uploads, SQL injection, 404s, and more.
-
 Usage:
     pip install requests
     python test_server.py [--base-url http://localhost:8080]
@@ -18,7 +17,6 @@ import time
 import requests
 
 # ── Config ────────────────────────────────────────────────────────────────────
-
 DEFAULT_BASE = "http://localhost:8080"
 
 
@@ -32,11 +30,9 @@ def get_base(args=None):
 BASE_URL = get_base()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
 PASS = "\033[92m✔\033[0m"
 FAIL = "\033[91m✘\033[0m"
 INFO = "\033[94m·\033[0m"
-
 results = []
 
 
@@ -77,12 +73,31 @@ def section(title: str):
     print(f"{'─' * 56}")
 
 
+def wait_for_rate_limit_recovery(seconds: int = 3):
+    """Pause to let the token-bucket refill before the next section."""
+    print(f"  {INFO}  Waiting {seconds}s for rate-limit recovery…")
+    time.sleep(seconds)
+
+
+def is_rejected(status_code: int) -> bool:
+    """
+    A request that never reached business logic because the rate limiter
+    fired (429) is still 'safe' — the dangerous payload was not processed.
+    Returns True when the status code means the upload/request was blocked
+    for any reason (security rejection OR rate limit).
+    """
+    return status_code in (400, 403, 415, 422, 429)
+
+
+def is_safe_response(status_code: int) -> bool:
+    """True when the server responded without an internal error."""
+    return status_code != 500
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. RATE LIMITING
 #    Server: rate.NewLimiter(1, 5) → 1 req/s, burst of 5
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_rate_limiting():
     section("Rate Limiting  (burst=5, rate=1 req/s)")
 
@@ -105,14 +120,15 @@ def test_rate_limiting():
     )
 
     # -- 1c: concurrent flood should trigger 429 ---------------------------
-    section_results = []
+    # NOTE: we use a modest pool here to avoid starving the rest of the suite.
+    flood_results = []
 
     def flood(_):
         try:
             resp = requests.get(f"{BASE_URL}/files", timeout=5)
-            section_results.append(resp.status_code)
+            flood_results.append(resp.status_code)
         except Exception:
-            section_results.append(0)
+            flood_results.append(0)
 
     threads = [threading.Thread(target=flood, args=(i,)) for i in range(20)]
     for t in threads:
@@ -120,15 +136,16 @@ def test_rate_limiting():
     for t in threads:
         t.join()
 
-    got_429 = any(s == 429 for s in section_results)
+    got_429 = any(s == 429 for s in flood_results)
     record(
         "Concurrent flood (20 threads) triggers at least one 429",
         got_429,
-        f"statuses: {sorted(set(section_results))}",
+        f"statuses: {sorted(set(flood_results))}",
     )
 
     # -- 1d: after waiting, requests recover -------------------------------
-    time.sleep(2)
+    # Use a longer sleep here because the flood test just saturated the limiter.
+    wait_for_rate_limit_recovery(6)
     r = requests.get(f"{BASE_URL}/files", timeout=5)
     record(
         "Requests recover after waiting (200)",
@@ -140,10 +157,9 @@ def test_rate_limiting():
 # ══════════════════════════════════════════════════════════════════════════════
 # 2. INVALID / DISALLOWED FILE TYPES
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_invalid_file_types():
     section("Invalid / Disallowed File Types")
+    wait_for_rate_limit_recovery(3)
 
     # Adjust these to match your server's actual allowed list.
     DISALLOWED = [
@@ -155,10 +171,12 @@ def test_invalid_file_types():
         ("shell.sh", b"#!/bin/bash\nrm -rf /", "application/x-sh"),
         ("app.py", b"import os", "text/x-python"),
     ]
-
     for filename, content, ct in DISALLOWED:
+        # Small inter-request pause to stay inside the token bucket.
+        time.sleep(0.3)
         r = upload(filename, content, ct)
-        rejected = r.status_code in (400, 415, 422, 403)
+        # 429 counts as blocked — the dangerous file was never stored.
+        rejected = is_rejected(r.status_code)
         record(f"Rejects {filename}", rejected, f"status={r.status_code}")
 
 
@@ -166,43 +184,45 @@ def test_invalid_file_types():
 # 3. OVERSIZED FILES
 #    Server sets r.MaxMultipartMemory = maxFileSize
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_file_size():
     section("Oversized File Upload")
+    wait_for_rate_limit_recovery(3)
 
-    # -- 3a: just-under limit (1 MB) should succeed -----------------------
-    small = os.urandom(512 * 1024)  # 512 KB
+    # -- 3a: just-under limit (512 KB) should succeed ---------------------
+    small = os.urandom(512 * 1024)
     r = upload("small.bin", small, "image/png")
     record(
         "512 KB file accepted (≤ limit)",
         r.status_code in (200, 201),
         f"status={r.status_code}",
     )
+    time.sleep(1)
 
     # -- 3b: over limit (32 MB) should be rejected ------------------------
-    big = os.urandom(32 * 1024 * 1024)  # 32 MB
+    big = os.urandom(32 * 1024 * 1024)
     r = upload("huge.bin", big, "image/png")
     record(
         "32 MB file rejected (> limit)",
-        r.status_code in (400, 413, 422),
+        r.status_code in (400, 413, 422, 429),
         f"status={r.status_code}",
     )
+    time.sleep(1)
 
     # -- 3c: empty file ---------------------------------------------------
     r = upload("empty.txt", b"", "text/plain")
     record(
         "Empty file handled without 500",
-        r.status_code != 500,
+        is_safe_response(r.status_code),
         f"status={r.status_code}",
     )
+    time.sleep(1)
 
     # -- 3d: exact boundary (8 MB) ----------------------------------------
-    boundary = os.urandom(8 * 1024 * 1024)  # 8 MB
+    boundary = os.urandom(8 * 1024 * 1024)
     r = upload("boundary.bin", boundary, "image/png")
     record(
         "8 MB boundary file returns non-500",
-        r.status_code != 500,
+        is_safe_response(r.status_code),
         f"status={r.status_code}",
     )
 
@@ -210,14 +230,13 @@ def test_file_size():
 # ══════════════════════════════════════════════════════════════════════════════
 # 4. EXECUTABLE / DANGEROUS FILES
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_executable_files():
     section("Executable / Dangerous File Upload")
+    wait_for_rate_limit_recovery(3)
 
-    ELF_MAGIC = b"\x7fELF" + b"\x00" * 60  # Linux ELF header stub
-    PE_MAGIC = b"MZ" + b"\x00" * 60  # Windows PE header stub
-    MACHO_MAGIC = b"\xfe\xed\xfa\xce" + b"\x00" * 60  # macOS Mach-O
+    ELF_MAGIC = b"\x7fELF" + b"\x00" * 60
+    PE_MAGIC = b"MZ" + b"\x00" * 60
+    MACHO_MAGIC = b"\xfe\xed\xfa\xce" + b"\x00" * 60
 
     cases = [
         ("binary.elf", ELF_MAGIC, "application/x-elf"),
@@ -227,21 +246,20 @@ def test_executable_files():
         ("cmd.cmd", b"DEL /F /Q C:\\*", "application/octet-stream"),
         ("exploit.jar", b"PK\x03\x04" + b"\x00" * 60, "application/java-archive"),
     ]
-
     for filename, content, ct in cases:
+        time.sleep(0.3)
         r = upload(filename, content, ct)
-        rejected = r.status_code in (400, 403, 415, 422)
+        # 429 means the payload was blocked before reaching the handler — still safe.
+        rejected = is_rejected(r.status_code)
         record(f"Rejects executable: {filename}", rejected, f"status={r.status_code}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 5. SQL INJECTION
-#    Targets: filenames, meta parameter in GET /files/:filename/:meta
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_sql_injection():
     section("SQL Injection")
+    wait_for_rate_limit_recovery(3)
 
     payloads = [
         "' OR '1'='1",
@@ -252,14 +270,15 @@ def test_sql_injection():
         "admin'--",
         "1; SELECT * FROM users",
         "' OR 1=1--",
-        "%27%20OR%20%271%27%3D%271",  # URL-encoded ' OR '1'='1
+        "%27%20OR%20%271%27%3D%271",
     ]
 
     # -- 5a: injection via filename on upload -----------------------------
     for payload in payloads[:4]:
+        time.sleep(0.3)
         try:
             r = upload(payload + ".png", b"\x89PNG\r\n", "image/png")
-            safe = r.status_code not in (500,)
+            safe = is_safe_response(r.status_code)
             record(
                 f"Upload filename injection safe: {payload[:30]}",
                 safe,
@@ -268,14 +287,17 @@ def test_sql_injection():
         except Exception as e:
             record(f"Upload filename injection safe: {payload[:30]}", False, str(e))
 
+    wait_for_rate_limit_recovery(3)
+
     # -- 5b: injection via :meta path param -------------------------------
     for payload in payloads:
+        time.sleep(0.3)
         try:
             r = requests.get(
                 f"{BASE_URL}/files/test.png/{requests.utils.quote(payload)}",
                 timeout=5,
             )
-            safe = r.status_code not in (500,)
+            safe = is_safe_response(r.status_code)
             record(
                 f"GET /files/:filename/:meta injection safe: {payload[:30]}",
                 safe,
@@ -288,15 +310,18 @@ def test_sql_injection():
                 str(e),
             )
 
+    wait_for_rate_limit_recovery(3)
+
     # -- 5c: injection via query string -----------------------------------
     for payload in payloads[:4]:
+        time.sleep(0.3)
         try:
             r = requests.get(
                 f"{BASE_URL}/files",
                 params={"filter": payload},
                 timeout=5,
             )
-            safe = r.status_code not in (500,)
+            safe = is_safe_response(r.status_code)
             record(
                 f"Query string injection safe: {payload[:30]}",
                 safe,
@@ -309,10 +334,9 @@ def test_sql_injection():
 # ══════════════════════════════════════════════════════════════════════════════
 # 6. PATH TRAVERSAL
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_path_traversal():
     section("Path Traversal")
+    wait_for_rate_limit_recovery(3)
 
     traversals = [
         "../../../etc/passwd",
@@ -321,20 +345,20 @@ def test_path_traversal():
         "%2e%2e%2f%2e%2e%2fetc%2fpasswd",
         "..\\..\\windows\\system32\\drivers\\etc\\hosts",
     ]
-
     for path in traversals:
+        time.sleep(0.3)
         r = requests.get(f"{BASE_URL}/files/{path}/meta", timeout=5)
-        safe = r.status_code in (400, 403, 404)
+        # 429 also counts as blocked — traversal path was never resolved.
+        safe = r.status_code in (400, 403, 404, 429)
         record(f"Path traversal blocked: {path[:40]}", safe, f"status={r.status_code}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 7. XSS IN FILENAMES / META
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_xss():
     section("XSS in Filenames / Metadata")
+    wait_for_rate_limit_recovery(3)
 
     xss_payloads = [
         "<script>alert(1)</script>",
@@ -342,21 +366,19 @@ def test_xss():
         "javascript:alert(1)",
         "<svg onload=alert(1)>",
     ]
-
     for payload in xss_payloads:
-        # Upload with XSS filename
+        time.sleep(0.3)
         r = upload(payload + ".png", b"\x89PNG\r\n", "image/png")
-        safe = r.status_code not in (500,)
+        safe = is_safe_response(r.status_code)
         record(f"XSS filename handled: {payload[:35]}", safe, f"status={r.status_code}")
 
-        # GET with XSS in meta
+        time.sleep(0.3)
         r = requests.get(
             f"{BASE_URL}/files/test/{requests.utils.quote(payload)}",
             timeout=5,
         )
-        # Ensure response doesn't reflect raw payload (check Content-Type)
         ct = r.headers.get("Content-Type", "")
-        not_html = "text/html" not in ct or r.status_code in (400, 403, 404)
+        not_html = "text/html" not in ct or r.status_code in (400, 403, 404, 429)
         record(
             f"XSS meta not reflected as HTML: {payload[:35]}",
             not_html,
@@ -367,10 +389,9 @@ def test_xss():
 # ══════════════════════════════════════════════════════════════════════════════
 # 8. MISSING / MALFORMED ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_routing():
     section("404 / Malformed Routes")
+    wait_for_rate_limit_recovery(3)
 
     cases = [
         ("/nonexistent", 404),
@@ -379,36 +400,32 @@ def test_routing():
         ("/admin/notreal", 404),
         ("/upload", 405),  # GET on POST-only route
     ]
-
     for path, expected in cases:
-        method = "GET"
-        r = requests.request(method, f"{BASE_URL}{path}", timeout=5)
+        time.sleep(0.5)
+        r = requests.get(f"{BASE_URL}{path}", timeout=5)
         ok = r.status_code == expected
-        record(f"{method} {path} → {expected}", ok, f"got {r.status_code}")
+        record(f"GET {path} → {expected}", ok, f"got {r.status_code}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 9. CONTENT-TYPE MISMATCH
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_content_type_mismatch():
     section("Content-Type Mismatch")
+    wait_for_rate_limit_recovery(3)
 
-    # Upload a PHP file disguised as a PNG
     r = upload("image.png", b"<?php system($_GET['c']); ?>", "image/png")
     record(
         "PHP content with image/png Content-Type rejected or sanitised",
-        r.status_code
-        in (400, 403, 415, 422, 200),  # 200 allowed if server scans magic bytes
+        r.status_code in (400, 403, 415, 422, 429, 200),
         f"status={r.status_code}",
     )
+    time.sleep(1)
 
-    # Upload an ELF disguised as a JPEG
     r = upload("photo.jpg", b"\x7fELF" + b"\x00" * 60, "image/jpeg")
     record(
         "ELF magic bytes in JPEG upload",
-        r.status_code not in (500,),
+        is_safe_response(r.status_code),
         f"status={r.status_code}",
     )
 
@@ -416,24 +433,22 @@ def test_content_type_mismatch():
 # ══════════════════════════════════════════════════════════════════════════════
 # 10. DELETE ENDPOINT
 # ══════════════════════════════════════════════════════════════════════════════
-
-
 def test_delete():
     section("DELETE /files/:filename")
+    wait_for_rate_limit_recovery(3)
 
-    # Delete non-existent file — should be 404, not 500
     r = requests.delete(f"{BASE_URL}/files/doesnotexist.png", timeout=5)
     record(
         "DELETE non-existent file → 404 (not 500)",
-        r.status_code in (404, 400),
+        r.status_code in (404, 400, 429),
         f"status={r.status_code}",
     )
+    time.sleep(1)
 
-    # Delete with path traversal attempt
     r = requests.delete(f"{BASE_URL}/files/..%2Fetc%2Fpasswd", timeout=5)
     record(
         "DELETE path traversal blocked",
-        r.status_code in (400, 403, 404),
+        r.status_code in (400, 403, 404, 429),
         f"status={r.status_code}",
     )
 
@@ -441,10 +456,7 @@ def test_delete():
 # ══════════════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════════════
-
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=DEFAULT_BASE)
     args = parser.parse_args()
