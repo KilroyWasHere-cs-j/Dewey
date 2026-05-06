@@ -17,6 +17,7 @@ var FileRetrievals = 0
 var FileDeletions = 0
 var FiltersLoadings = 0
 var FileCopys = 0
+var warns_logged = 0
 
 var (
 	fileOps = prometheus.NewCounterVec(
@@ -240,12 +241,22 @@ var (
 			return float64(TimeUntilNextTick().Seconds())
 		},
 	)
+
+	warnsLogged = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_warns_logged",
+			Help: "Number of warns logged",
+		},
+		func() float64 {
+			return float64(warns_logged)
+		},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(fileOps, fileBytes, fileDuration, uptime, systemInfo, cpuCount,
 		ramUsage, currentHeap, gcCycles, cacheSize, filesInStore, filesInBackUp, exeCount,
-		fileCopys, fileRetries, fileSorts, timeTilNextTick,
+		fileCopys, fileRetries, fileSorts, timeTilNextTick, warnsLogged,
 	)
 
 	// create zero-valued label instances so metrics appear even before traffic

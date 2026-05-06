@@ -157,6 +157,7 @@ func Info(msg string) {
 
 func Warn(msg string) {
 	if ensureLogger() {
+		warns_logged++
 		logger.log(WARN, msg, ColorYellow)
 	}
 }
@@ -168,4 +169,3 @@ func Fatal(msg string) {
 	}
 	os.Exit(1)
 }
-
