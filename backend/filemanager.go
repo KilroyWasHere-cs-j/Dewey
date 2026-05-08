@@ -76,7 +76,7 @@ func fileSystemInit() *Config {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0754); err != nil {
 			Fatal("failed to create directory " + dir + ": " + err.Error())
 		}
 	}
@@ -106,7 +106,7 @@ func idAndSort(path string, hash string, filename string) {
 			Debug("Action: " + pattern.Action)
 			Debug("Target dir: " + pattern.TargetDirectory)
 
-			err := os.MkdirAll(fileSystemBaseDir+pattern.TargetDirectory, 0755)
+			err := os.MkdirAll(fileSystemBaseDir+pattern.TargetDirectory, 0754)
 			if err != nil {
 				Warn("Failed to create directory for uploaded file " + err.Error())
 			}
@@ -118,6 +118,11 @@ func idAndSort(path string, hash string, filename string) {
 				filepath.Join(uploadDir, path),
 				new_path,
 			)
+			err = os.Chmod(new_path, 0444)
+			if err != nil {
+				Warn(err.Error())
+				return
+			}
 
 			createNewFileRecord(filename, "ACTS_00N", hash, new_path, "11111111111111111111111111111111")
 
@@ -162,6 +167,10 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
+	err = os.Chmod(dst, 0444)
+	if err != nil {
+		return err
+	}
 	FileCopys++
 
 	// flush to disk

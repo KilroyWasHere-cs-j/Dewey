@@ -1,0 +1,221 @@
+[2026-05-08 13:40:25] [DEBUG] attempting to load filters
+[2026-05-08 13:40:25] [DEBUG] filter configuration loaded successfully
+[2026-05-08 13:40:25] [DEBUG] filesystem initialization complete
+[2026-05-08 13:40:26] [DEBUG] 20115
+[2026-05-08 13:40:26] [DEBUG] server starting
+[2026-05-08 13:48:22] [DEBUG] listFiles
+[2026-05-08 13:48:22] [DEBUG] files found: 0
+[2026-05-08 13:48:22] [DEBUG] listFiles
+[2026-05-08 13:48:22] [DEBUG] files found: 0
+[2026-05-08 13:48:22] [DEBUG] listFiles
+[2026-05-08 13:48:22] [DEBUG] files found: 0
+[2026-05-08 13:48:22] [DEBUG] listFiles
+[2026-05-08 13:48:22] [DEBUG] files found: 0
+[2026-05-08 13:48:22] [DEBUG] listFiles
+[2026-05-08 13:48:22] [DEBUG] files found: 0
+[2026-05-08 13:48:29] [DEBUG] listFiles
+[2026-05-08 13:48:29] [DEBUG] files found: 0
+[2026-05-08 13:48:32] [DEBUG] uploadFile
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] checking formats
+[2026-05-08 13:48:32] [WARN] invalid file type: .php
+[2026-05-08 13:48:32] [DEBUG] uploadFile
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] checking formats
+[2026-05-08 13:48:32] [WARN] invalid file type: .js
+[2026-05-08 13:48:32] [DEBUG] uploadFile
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] 
+[2026-05-08 13:48:32] [DEBUG] checking formats
+[2026-05-08 13:48:32] [WARN] invalid file type: .html
+[2026-05-08 13:48:33] [DEBUG] uploadFile
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] checking formats
+[2026-05-08 13:48:33] [WARN] invalid file type: .vbs
+[2026-05-08 13:48:33] [DEBUG] uploadFile
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] checking formats
+[2026-05-08 13:48:33] [WARN] invalid file type: .yaml
+[2026-05-08 13:48:33] [DEBUG] uploadFile
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] 
+[2026-05-08 13:48:33] [DEBUG] checking formats
+[2026-05-08 13:48:33] [WARN] invalid file type: .sh
+[2026-05-08 13:48:37] [DEBUG] uploadFile
+[2026-05-08 13:48:37] [DEBUG] 
+[2026-05-08 13:48:37] [DEBUG] 
+[2026-05-08 13:48:37] [DEBUG] checking formats
+[2026-05-08 13:48:37] [WARN] invalid file type: .bin
+[2026-05-08 13:48:38] [DEBUG] uploadFile
+[2026-05-08 13:48:38] [DEBUG] 
+[2026-05-08 13:48:38] [DEBUG] 
+[2026-05-08 13:48:38] [DEBUG] checking formats
+[2026-05-08 13:48:38] [WARN] invalid file type: .bin
+[2026-05-08 13:48:39] [DEBUG] uploadFile
+[2026-05-08 13:48:39] [DEBUG] 
+[2026-05-08 13:48:39] [DEBUG] 
+[2026-05-08 13:48:39] [DEBUG] checking formats
+[2026-05-08 13:48:39] [DEBUG] SHA256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+[2026-05-08 13:48:39] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:48:39] [DEBUG] Match on pattern: .*\.txt$
+[2026-05-08 13:48:39] [DEBUG] Action: move_to_directory
+[2026-05-08 13:48:39] [DEBUG] Target dir: /text_files
+[2026-05-08 13:48:39] [DEBUG] Placing file at ./store//text_files/1778262519_empty.txt
+[2026-05-08 13:48:40] [DEBUG] uploadFile
+[2026-05-08 13:48:40] [DEBUG] 
+[2026-05-08 13:48:40] [DEBUG] 
+[2026-05-08 13:48:40] [DEBUG] checking formats
+[2026-05-08 13:48:40] [WARN] invalid file type: .bin
+[2026-05-08 13:48:43] [DEBUG] uploadFile
+[2026-05-08 13:48:43] [DEBUG] 
+[2026-05-08 13:48:43] [DEBUG] 
+[2026-05-08 13:48:43] [DEBUG] checking formats
+[2026-05-08 13:48:43] [WARN] invalid file type: .elf
+[2026-05-08 13:48:44] [DEBUG] uploadFile
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] checking formats
+[2026-05-08 13:48:44] [WARN] invalid file type: .exe
+[2026-05-08 13:48:44] [DEBUG] uploadFile
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] checking formats
+[2026-05-08 13:48:44] [WARN] invalid file type: .bin
+[2026-05-08 13:48:44] [DEBUG] uploadFile
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] checking formats
+[2026-05-08 13:48:44] [WARN] invalid file type: .bat
+[2026-05-08 13:48:44] [DEBUG] uploadFile
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] 
+[2026-05-08 13:48:44] [DEBUG] checking formats
+[2026-05-08 13:48:44] [WARN] invalid file type: .cmd
+[2026-05-08 13:48:45] [DEBUG] uploadFile
+[2026-05-08 13:48:45] [DEBUG] 
+[2026-05-08 13:48:45] [DEBUG] 
+[2026-05-08 13:48:45] [DEBUG] checking formats
+[2026-05-08 13:48:45] [WARN] invalid file type: .jar
+[2026-05-08 13:48:48] [DEBUG] uploadFile
+[2026-05-08 13:48:48] [DEBUG] 
+[2026-05-08 13:48:48] [DEBUG] 
+[2026-05-08 13:48:48] [DEBUG] checking formats
+[2026-05-08 13:48:48] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:48:48] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:48:48] [DEBUG] No match
+[2026-05-08 13:48:48] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:48] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:48] [DEBUG] Action: move_to_directory
+[2026-05-08 13:48:48] [DEBUG] Target dir: /images
+[2026-05-08 13:48:48] [DEBUG] Placing file at ./store//images/1778262528_' OR '1'='1.png
+[2026-05-08 13:48:48] [DEBUG] uploadFile
+[2026-05-08 13:48:48] [DEBUG] 
+[2026-05-08 13:48:48] [DEBUG] 
+[2026-05-08 13:48:48] [DEBUG] checking formats
+[2026-05-08 13:48:48] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:48:48] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:48:48] [DEBUG] No match
+[2026-05-08 13:48:48] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:48] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:48] [DEBUG] Action: move_to_directory
+[2026-05-08 13:48:48] [DEBUG] Target dir: /images
+[2026-05-08 13:48:48] [DEBUG] Placing file at ./store//images/1778262528_'; DROP TABLE files; --.png
+[2026-05-08 13:48:49] [DEBUG] uploadFile
+[2026-05-08 13:48:49] [DEBUG] 
+[2026-05-08 13:48:49] [DEBUG] 
+[2026-05-08 13:48:49] [DEBUG] checking formats
+[2026-05-08 13:48:49] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:48:49] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:48:49] [DEBUG] No match
+[2026-05-08 13:48:49] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:49] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:49] [DEBUG] Action: move_to_directory
+[2026-05-08 13:48:49] [DEBUG] Target dir: /images
+[2026-05-08 13:48:49] [DEBUG] Placing file at ./store//images/1778262529_1 UNION SELECT null,null,null--.png
+[2026-05-08 13:48:49] [DEBUG] uploadFile
+[2026-05-08 13:48:49] [DEBUG] 
+[2026-05-08 13:48:49] [DEBUG] 
+[2026-05-08 13:48:49] [DEBUG] checking formats
+[2026-05-08 13:48:49] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:48:49] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:48:49] [DEBUG] No match
+[2026-05-08 13:48:49] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:49] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:48:49] [DEBUG] Action: move_to_directory
+[2026-05-08 13:48:49] [DEBUG] Target dir: /images
+[2026-05-08 13:48:49] [DEBUG] Placing file at ./store//images/1778262529_' AND SLEEP(5)--.png
+[2026-05-08 13:48:52] [DEBUG] getFile
+[2026-05-08 13:48:52] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:53] [DEBUG] getFile
+[2026-05-08 13:48:53] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:53] [DEBUG] getFile
+[2026-05-08 13:48:53] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:53] [DEBUG] getFile
+[2026-05-08 13:48:53] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:54] [DEBUG] getFile
+[2026-05-08 13:48:54] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:54] [DEBUG] getFile
+[2026-05-08 13:48:54] [DEBUG] Unknown meta flag
+[2026-05-08 13:48:58] [DEBUG] listFiles
+[2026-05-08 13:48:58] [DEBUG] files found: 5
+[2026-05-08 13:48:58] [DEBUG] listFiles
+[2026-05-08 13:48:58] [DEBUG] files found: 5
+[2026-05-08 13:48:59] [DEBUG] listFiles
+[2026-05-08 13:48:59] [DEBUG] files found: 5
+[2026-05-08 13:48:59] [DEBUG] listFiles
+[2026-05-08 13:48:59] [DEBUG] files found: 5
+[2026-05-08 13:49:04] [DEBUG] getFile
+[2026-05-08 13:49:04] [DEBUG] Unknown meta flag
+[2026-05-08 13:49:07] [DEBUG] uploadFile
+[2026-05-08 13:49:07] [DEBUG] 
+[2026-05-08 13:49:07] [DEBUG] 
+[2026-05-08 13:49:07] [DEBUG] checking formats
+[2026-05-08 13:49:07] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:49:07] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:49:07] [DEBUG] No match
+[2026-05-08 13:49:07] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:07] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:07] [DEBUG] Action: move_to_directory
+[2026-05-08 13:49:07] [DEBUG] Target dir: /images
+[2026-05-08 13:49:07] [DEBUG] Placing file at ./store//images/1778262547_script>.png
+[2026-05-08 13:49:07] [DEBUG] uploadFile
+[2026-05-08 13:49:07] [DEBUG] 
+[2026-05-08 13:49:07] [DEBUG] 
+[2026-05-08 13:49:07] [DEBUG] checking formats
+[2026-05-08 13:49:07] [DEBUG] SHA256: 823ceb99fcef5252333ede1b2202341c3b287b6d47571963e6b0ddf393a24f82
+[2026-05-08 13:49:07] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:49:07] [DEBUG] No match
+[2026-05-08 13:49:07] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:07] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:07] [DEBUG] Action: move_to_directory
+[2026-05-08 13:49:07] [DEBUG] Target dir: /images
+[2026-05-08 13:49:07] [DEBUG] Placing file at ./store//images/1778262547_%22><img src=x onerror=alert(1)>.png
+[2026-05-08 13:49:08] [DEBUG] getFile
+[2026-05-08 13:49:08] [DEBUG] Unknown meta flag
+[2026-05-08 13:49:08] [DEBUG] getFile
+[2026-05-08 13:49:08] [DEBUG] Unknown meta flag
+[2026-05-08 13:49:13] [DEBUG] listFiles
+[2026-05-08 13:49:13] [DEBUG] files found: 7
+[2026-05-08 13:49:13] [DEBUG] listFiles
+[2026-05-08 13:49:13] [DEBUG] files found: 7
+[2026-05-08 13:49:17] [DEBUG] uploadFile
+[2026-05-08 13:49:17] [DEBUG] 
+[2026-05-08 13:49:17] [DEBUG] 
+[2026-05-08 13:49:17] [DEBUG] checking formats
+[2026-05-08 13:49:17] [DEBUG] SHA256: 1b2507f8f1613e46589db7cd1f34ac9208542ad8c0141f5e4958da1424b35151
+[2026-05-08 13:49:17] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 13:49:17] [DEBUG] No match
+[2026-05-08 13:49:17] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:17] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 13:49:17] [DEBUG] Action: move_to_directory
+[2026-05-08 13:49:17] [DEBUG] Target dir: /images
+[2026-05-08 13:49:17] [DEBUG] Placing file at ./store//images/1778262557_image.png
+[2026-05-08 13:49:19] [DEBUG] uploadFile
+[2026-05-08 13:49:19] [DEBUG] 
+[2026-05-08 13:49:19] [DEBUG] 
+[2026-05-08 13:49:19] [DEBUG] checking formats
+[2026-05-08 13:49:22] [WARN] file not found: doesnotexist.png
