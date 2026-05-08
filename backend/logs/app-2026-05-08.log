@@ -1,0 +1,41 @@
+[2026-05-08 14:27:43] [DEBUG] attempting to load filters
+[2026-05-08 14:27:43] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:27:43] [DEBUG] filesystem initialization complete
+[2026-05-08 14:27:43] [DEBUG] 20115
+[2026-05-08 14:27:43] [DEBUG] server starting
+[2026-05-08 14:27:46] [DEBUG] uploadFile
+[2026-05-08 14:27:46] [DEBUG] TestUpload
+[2026-05-08 14:27:46] [DEBUG] some-metadata
+[2026-05-08 14:27:46] [DEBUG] checking formats
+[2026-05-08 14:27:46] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-05-08 14:27:46] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 14:27:46] [DEBUG] No match
+[2026-05-08 14:27:46] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 14:27:46] [DEBUG] No match
+[2026-05-08 14:27:46] [DEBUG] Attempting match with regex: .*\.(pdf)$
+[2026-05-08 14:27:46] [DEBUG] Match on pattern: .*\.(pdf)$
+[2026-05-08 14:27:46] [DEBUG] Action: move_to_directory
+[2026-05-08 14:27:46] [DEBUG] Target dir: /pdf
+[2026-05-08 14:27:46] [DEBUG] Placing file at ./store//pdf/1778264866_test.pdf
+[2026-05-08 14:28:05] [DEBUG] uploadFile
+[2026-05-08 14:28:05] [DEBUG] TestUpload
+[2026-05-08 14:28:05] [DEBUG] some-metadata
+[2026-05-08 14:28:05] [DEBUG] checking formats
+[2026-05-08 14:28:05] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-05-08 14:28:05] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 14:28:05] [DEBUG] Match on pattern: .*\.txt$
+[2026-05-08 14:28:05] [DEBUG] Action: move_to_directory
+[2026-05-08 14:28:05] [DEBUG] Target dir: /text_files
+[2026-05-08 14:28:05] [DEBUG] Placing file at ./store//text_files/1778264885_bee_moive_script.txt
+[2026-05-08 14:28:26] [DEBUG] uploadFile
+[2026-05-08 14:28:26] [DEBUG] TestUpload
+[2026-05-08 14:28:26] [DEBUG] some-metadata
+[2026-05-08 14:28:26] [DEBUG] checking formats
+[2026-05-08 14:28:26] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-05-08 14:28:26] [DEBUG] Attempting match with regex: .*\.txt$
+[2026-05-08 14:28:26] [DEBUG] No match
+[2026-05-08 14:28:26] [DEBUG] Attempting match with regex: .*\.(jpg|png|gif)$
+[2026-05-08 14:28:26] [DEBUG] Match on pattern: .*\.(jpg|png|gif)$
+[2026-05-08 14:28:26] [DEBUG] Action: move_to_directory
+[2026-05-08 14:28:26] [DEBUG] Target dir: /images
+[2026-05-08 14:28:26] [DEBUG] Placing file at ./store//images/1778264906_lenna.jpg
