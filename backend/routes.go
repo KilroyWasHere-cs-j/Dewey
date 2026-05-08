@@ -8,15 +8,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type UploadPayload struct {
-    Name string `json:"name"`
-    Data string `json:"data"` // or whatever fields you expect
+	Name string `json:"name"`
+	Data string `json:"data"` // or whatever fields you expect
 }
 
 // index is the default health-check route.
@@ -159,9 +159,9 @@ func uploadFile(c *gin.Context) {
 	name := c.PostForm("name")
 	data := c.PostForm("data")
 
-	Debug(name)
-	Debug(data)
-	
+	Debug("name: " + name)
+	Debug("data: " + data)
+
 	// Get file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -191,13 +191,14 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
+	Debug("Vaild file type")
 
 	// -------------------------
 	// Open file
 	// -------------------------
 	file, err := fileHeader.Open()
 	if err != nil {
-		Warn(err.Error())
+		Warn("Failed to open file: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to open file",
 		})
@@ -237,7 +238,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
-		Warn(err.Error())
+		Warn("Failed to read file: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to read file",
 		})
@@ -252,7 +253,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	dst := filepath.Join(uploadDir, safeFilename)
 	if err := c.SaveUploadedFile(fileHeader, dst); err != nil {
-		Warn(err.Error())
+		Warn("Failed to save file: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to save file",
 		})
@@ -277,9 +278,6 @@ func uploadFile(c *gin.Context) {
 		"sha256":   hashString,
 	})
 }
-
-
-
 
 // deleteFile removes a file from upload storage by filename.
 //

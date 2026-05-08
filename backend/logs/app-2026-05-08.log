@@ -440,3 +440,82 @@
 [2026-05-08 13:55:17] [DEBUG] 
 [2026-05-08 13:55:17] [DEBUG] checking formats
 [2026-05-08 13:55:20] [WARN] file not found: doesnotexist.png
+[2026-05-08 13:58:27] [DEBUG] attempting to load filters
+[2026-05-08 13:58:27] [DEBUG] filter configuration loaded successfully
+[2026-05-08 13:58:27] [DEBUG] filesystem initialization complete
+[2026-05-08 13:58:28] [DEBUG] 20115
+[2026-05-08 13:58:28] [DEBUG] server starting
+[2026-05-08 14:00:21] [DEBUG] index
+[2026-05-08 14:01:14] [DEBUG] uploadFile
+[2026-05-08 14:01:14] [DEBUG] .test.pdf
+[2026-05-08 14:01:14] [DEBUG] somedata
+[2026-05-08 14:01:14] [DEBUG] checking formats
+[2026-05-08 14:02:01] [DEBUG] uploadFile
+[2026-05-08 14:02:01] [DEBUG] .test.pdf
+[2026-05-08 14:02:01] [DEBUG] somedata
+[2026-05-08 14:02:01] [DEBUG] checking formats
+[2026-05-08 14:05:26] [DEBUG] attempting to load filters
+[2026-05-08 14:05:26] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:05:26] [DEBUG] filesystem initialization complete
+[2026-05-08 14:05:26] [DEBUG] 20115
+[2026-05-08 14:05:26] [DEBUG] server starting
+[2026-05-08 14:05:30] [DEBUG] uploadFile
+[2026-05-08 14:05:30] [DEBUG] .test.pdf
+[2026-05-08 14:05:30] [DEBUG] somedata
+[2026-05-08 14:05:30] [DEBUG] checking formats
+[2026-05-08 14:05:51] [DEBUG] uploadFile
+[2026-05-08 14:05:51] [DEBUG] holddata
+[2026-05-08 14:05:51] [DEBUG] somedata
+[2026-05-08 14:05:51] [DEBUG] checking formats
+[2026-05-08 14:06:21] [DEBUG] attempting to load filters
+[2026-05-08 14:06:21] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:06:21] [DEBUG] filesystem initialization complete
+[2026-05-08 14:06:22] [DEBUG] 20115
+[2026-05-08 14:06:22] [DEBUG] server starting
+[2026-05-08 14:06:26] [DEBUG] uploadFile
+[2026-05-08 14:06:26] [DEBUG] holddata
+[2026-05-08 14:06:26] [DEBUG] somedata
+[2026-05-08 14:06:26] [DEBUG] checking formats
+[2026-05-08 14:07:53] [DEBUG] attempting to load filters
+[2026-05-08 14:07:53] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:07:53] [DEBUG] filesystem initialization complete
+[2026-05-08 14:07:54] [DEBUG] 20115
+[2026-05-08 14:07:54] [DEBUG] server starting
+[2026-05-08 14:07:57] [DEBUG] uploadFile
+[2026-05-08 14:07:57] [DEBUG] name: holddata
+[2026-05-08 14:07:57] [DEBUG] data: somedata
+[2026-05-08 14:07:57] [DEBUG] checking formats
+[2026-05-08 14:09:03] [DEBUG] attempting to load filters
+[2026-05-08 14:09:03] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:09:03] [DEBUG] filesystem initialization complete
+[2026-05-08 14:09:04] [DEBUG] 20115
+[2026-05-08 14:09:04] [DEBUG] server starting
+[2026-05-08 14:09:07] [DEBUG] uploadFile
+[2026-05-08 14:09:07] [DEBUG] name: holddata
+[2026-05-08 14:09:07] [DEBUG] data: somedata
+[2026-05-08 14:09:07] [DEBUG] checking formats
+[2026-05-08 14:10:13] [DEBUG] attempting to load filters
+[2026-05-08 14:10:13] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:10:13] [DEBUG] filesystem initialization complete
+[2026-05-08 14:10:13] [DEBUG] 20115
+[2026-05-08 14:10:13] [DEBUG] server starting
+[2026-05-08 14:10:40] [DEBUG] uploadFile
+[2026-05-08 14:10:40] [DEBUG] name: holddata
+[2026-05-08 14:10:40] [DEBUG] data: somedata
+[2026-05-08 14:10:40] [DEBUG] checking formats
+[2026-05-08 14:10:40] [DEBUG] Vaild file type
+[2026-05-08 14:13:18] [DEBUG] uploadFile
+[2026-05-08 14:13:18] [DEBUG] name: TestUpload
+[2026-05-08 14:13:18] [DEBUG] data: some-metadata
+[2026-05-08 14:13:18] [DEBUG] checking formats
+[2026-05-08 14:13:18] [DEBUG] Vaild file type
+[2026-05-08 14:19:51] [DEBUG] attempting to load filters
+[2026-05-08 14:19:51] [DEBUG] filter configuration loaded successfully
+[2026-05-08 14:19:51] [DEBUG] filesystem initialization complete
+[2026-05-08 14:19:51] [DEBUG] 20115
+[2026-05-08 14:19:51] [DEBUG] server starting
+[2026-05-08 14:19:55] [DEBUG] uploadFile
+[2026-05-08 14:19:55] [DEBUG] name: TestUpload
+[2026-05-08 14:19:55] [DEBUG] data: some-metadata
+[2026-05-08 14:19:55] [DEBUG] checking formats
+[2026-05-08 14:19:55] [DEBUG] Vaild file type
