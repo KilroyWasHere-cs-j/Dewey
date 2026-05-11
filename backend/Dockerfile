@@ -7,7 +7,7 @@ FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
 # Install git (needed for private modules sometimes)
-RUN apk add --no-cache git
+RUN apk add --no-cache git # TODO: Check if we need this installed
 
 # Cache dependencies
 COPY go.mod go.sum ./
@@ -28,6 +28,8 @@ WORKDIR /app
 
 # Install nano here
 RUN apk add --no-cache nano
+RUN apk add --no-cache curl
+RUN apk add --no-cache htop
 
 # Copy only the binary from builder
 COPY --from=builder /app/app-binary .

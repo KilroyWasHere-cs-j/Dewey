@@ -40,8 +40,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 
 	// Check "MZ" signature
 	if header[0] != 'M' || header[1] != 'Z' {
-		PECount++
-		return true, nil
+		return false, nil
 	}
 
 	// PE header offset (e_lfanew at 0x3C)
