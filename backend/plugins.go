@@ -129,7 +129,6 @@ func (pm *PluginManager) RunPlugins(targetBucket string) {
 			Fatal(err.Error())
 		}
 		Debug("No errors")
-
 	case "script":
 		Debug("Running script plugins...")
 		for _, plugin := range pm.ScriptMap {
@@ -178,8 +177,6 @@ func (pm *PluginManager) RunPlugins(targetBucket string) {
 			}
 			Debug("No errors")
 		}
-
-	// TODO: This goes nowhere
 	case "tick":
 		Debug("Running tick plugins...")
 		for _, plugin := range pm.TickMap {
