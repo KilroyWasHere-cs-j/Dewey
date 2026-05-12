@@ -10,6 +10,7 @@ Dewey is a backend file sorting and storage tool that exposes a RESTful API for 
 - File type and size restrictions
 - Prometheus metrics, custom graphing, and an administration portal
 - HTTP rate limiting
+- (Working) Plugins
 - (Planned) push notifications
 - (Planned) self restart and cleanup
 - (Planned) documentation for both developers and administrators
@@ -29,6 +30,7 @@ Grule - A Go native rule engine for human-readable rule definitions and sorting 
 Gin - A Go web framework for building RESTful APIs
 Gozxing - A Go library for reading and writing barcode images
 Go-sqlite3 - A Go library for SQLite3 database access (SQLite3 was picked for its simplicity and ease of use)
+GopherLua - A Go native Lua VM (used for plugins)
 
 
 #### Portability
