@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
@@ -80,11 +79,6 @@ func main() {
 			"message": "page not found",
 		})
 	})
-
-	// -------------------------
-	// Templates
-	// -------------------------
-	r.LoadHTMLGlob(filepath.Join(htmlTemplatesDir, "*"))
 
 	// -------------------------
 	// Routes
