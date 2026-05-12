@@ -11,6 +11,7 @@ import (
 	"io"
 )
 
+// Number of PE and ELF files detected this is uses for logging and debugging with Prometheus
 var PECount = 0
 var ELFCount = 0
 
