@@ -17,6 +17,8 @@ func main() {
 	InitLogger("logs", "app")
 	defer logger.Close()
 
+	Debug("Loading plugins...")
+	loadPlugins()
 	testPlugin()
 
 	ctx, cancel := context.WithCancel(context.Background())

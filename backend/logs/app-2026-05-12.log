@@ -8,3 +8,167 @@
 [2026-05-12 07:22:49] [DEBUG] filesystem initialization complete
 [2026-05-12 07:22:49] [DEBUG] 20115
 [2026-05-12 07:22:49] [DEBUG] server starting
+[2026-05-12 10:28:26] [DEBUG] Loading plugins...
+[2026-05-12 10:28:26] [DEBUG] pluginsinit.lua
+[2026-05-12 10:28:26] [DEBUG] attempting to load filters
+[2026-05-12 10:28:26] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:28:26] [DEBUG] filesystem initialization complete
+[2026-05-12 10:28:26] [DEBUG] 20115
+[2026-05-12 10:28:26] [DEBUG] server starting
+[2026-05-12 10:31:54] [DEBUG] Loading plugins...
+[2026-05-12 10:31:54] [DEBUG] pluginsinit.lua
+[2026-05-12 10:31:54] [DEBUG] attempting to load filters
+[2026-05-12 10:31:54] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:31:54] [DEBUG] filesystem initialization complete
+[2026-05-12 10:31:54] [DEBUG] 20115
+[2026-05-12 10:31:54] [DEBUG] server starting
+[2026-05-12 10:39:10] [DEBUG] Loading plugins...
+[2026-05-12 10:39:10] [DEBUG] pluginsinit.lua
+[2026-05-12 10:39:10] [DEBUG] attempting to load filters
+[2026-05-12 10:39:10] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:39:10] [DEBUG] filesystem initialization complete
+[2026-05-12 10:39:11] [DEBUG] 20115
+[2026-05-12 10:39:11] [DEBUG] server starting
+[2026-05-12 10:39:41] [DEBUG] Loading plugins...
+[2026-05-12 10:39:41] [DEBUG] pluginsinit.lua
+[2026-05-12 10:40:09] [DEBUG] Loading plugins...
+[2026-05-12 10:40:09] [DEBUG] pluginsinit.lua
+[2026-05-12 10:40:33] [DEBUG] Loading plugins...
+[2026-05-12 10:40:33] [DEBUG] pluginsinit.lua
+[2026-05-12 10:40:54] [DEBUG] Loading plugins...
+[2026-05-12 10:40:54] [DEBUG] pluginsinit.lua
+[2026-05-12 10:40:54] [DEBUG] attempting to load filters
+[2026-05-12 10:40:54] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:40:54] [DEBUG] filesystem initialization complete
+[2026-05-12 10:40:55] [DEBUG] 20115
+[2026-05-12 10:40:55] [DEBUG] server starting
+[2026-05-12 10:43:00] [DEBUG] Loading plugins...
+[2026-05-12 10:43:00] [DEBUG] pluginsinit.lua
+[2026-05-12 10:43:00] [DEBUG] attempting to load filters
+[2026-05-12 10:43:00] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:43:00] [DEBUG] filesystem initialization complete
+[2026-05-12 10:43:00] [DEBUG] 20115
+[2026-05-12 10:43:00] [DEBUG] server starting
+[2026-05-12 10:44:34] [DEBUG] Loading plugins...
+[2026-05-12 10:44:34] [DEBUG] pluginsinit.lua
+[2026-05-12 10:44:34] [DEBUG] attempting to load filters
+[2026-05-12 10:44:34] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:44:34] [DEBUG] filesystem initialization complete
+[2026-05-12 10:44:35] [DEBUG] 20115
+[2026-05-12 10:44:35] [DEBUG] server starting
+[2026-05-12 10:45:11] [DEBUG] Loading plugins...
+[2026-05-12 10:45:11] [DEBUG] pluginsinit.lua
+[2026-05-12 10:45:11] [DEBUG] attempting to load filters
+[2026-05-12 10:45:11] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:45:11] [DEBUG] filesystem initialization complete
+[2026-05-12 10:45:12] [DEBUG] 20115
+[2026-05-12 10:45:12] [DEBUG] server starting
+[2026-05-12 10:45:25] [DEBUG] Loading plugins...
+[2026-05-12 10:45:25] [DEBUG] pluginsinit.lua
+[2026-05-12 10:45:25] [DEBUG] attempting to load filters
+[2026-05-12 10:45:25] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:45:25] [DEBUG] filesystem initialization complete
+[2026-05-12 10:45:26] [DEBUG] 20115
+[2026-05-12 10:45:26] [DEBUG] server starting
+[2026-05-12 10:51:17] [DEBUG] Loading plugins...
+[2026-05-12 10:51:17] [DEBUG] pluginsinit.lua
+[2026-05-12 10:51:17] [DEBUG] attempting to load filters
+[2026-05-12 10:51:17] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:51:17] [DEBUG] filesystem initialization complete
+[2026-05-12 10:51:18] [DEBUG] 20115
+[2026-05-12 10:51:18] [DEBUG] server starting
+[2026-05-12 10:54:09] [DEBUG] Loading plugins...
+[2026-05-12 10:54:09] [DEBUG] pluginsinit.lua
+[2026-05-12 10:54:28] [DEBUG] Loading plugins...
+[2026-05-12 10:54:28] [DEBUG] pluginsinit.lua
+[2026-05-12 10:54:28] [DEBUG] attempting to load filters
+[2026-05-12 10:54:28] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:54:28] [DEBUG] filesystem initialization complete
+[2026-05-12 10:54:29] [DEBUG] 20115
+[2026-05-12 10:54:29] [DEBUG] server starting
+[2026-05-12 10:56:35] [DEBUG] Loading plugins...
+[2026-05-12 10:56:35] [DEBUG] pluginsinit.lua
+[2026-05-12 10:56:35] [DEBUG] attempting to load filters
+[2026-05-12 10:56:35] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:56:35] [DEBUG] filesystem initialization complete
+[2026-05-12 10:56:36] [DEBUG] 20115
+[2026-05-12 10:56:36] [DEBUG] server starting
+[2026-05-12 10:58:19] [DEBUG] Loading plugins...
+[2026-05-12 10:58:19] [DEBUG] pluginsinit.lua
+[2026-05-12 10:58:19] [DEBUG] attempting to load filters
+[2026-05-12 10:58:19] [DEBUG] filter configuration loaded successfully
+[2026-05-12 10:58:19] [DEBUG] filesystem initialization complete
+[2026-05-12 10:58:20] [DEBUG] 20115
+[2026-05-12 10:58:20] [DEBUG] server starting
+[2026-05-12 11:09:49] [DEBUG] Loading plugins...
+[2026-05-12 11:09:49] [DEBUG] pluginsinit.lua
+[2026-05-12 11:09:49] [DEBUG] attempting to load filters
+[2026-05-12 11:09:49] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:09:49] [DEBUG] filesystem initialization complete
+[2026-05-12 11:09:49] [DEBUG] 20115
+[2026-05-12 11:09:49] [DEBUG] server starting
+[2026-05-12 11:10:11] [DEBUG] Loading plugins...
+[2026-05-12 11:10:11] [DEBUG] pluginsinit.lua
+[2026-05-12 11:10:11] [DEBUG] attempting to load filters
+[2026-05-12 11:10:11] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:10:11] [DEBUG] filesystem initialization complete
+[2026-05-12 11:10:12] [DEBUG] 20115
+[2026-05-12 11:10:12] [DEBUG] server starting
+[2026-05-12 11:10:33] [DEBUG] Loading plugins...
+[2026-05-12 11:10:33] [DEBUG] pluginsinit.lua
+[2026-05-12 11:10:49] [DEBUG] Loading plugins...
+[2026-05-12 11:10:49] [DEBUG] pluginsinit.lua
+[2026-05-12 11:10:49] [DEBUG] attempting to load filters
+[2026-05-12 11:10:49] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:10:49] [DEBUG] filesystem initialization complete
+[2026-05-12 11:10:49] [DEBUG] 20115
+[2026-05-12 11:10:49] [DEBUG] server starting
+[2026-05-12 11:11:08] [DEBUG] Loading plugins...
+[2026-05-12 11:11:08] [DEBUG] pluginsinit.lua
+[2026-05-12 11:11:08] [DEBUG] attempting to load filters
+[2026-05-12 11:11:08] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:11:08] [DEBUG] filesystem initialization complete
+[2026-05-12 11:11:09] [DEBUG] 20115
+[2026-05-12 11:11:09] [DEBUG] server starting
+[2026-05-12 11:12:05] [DEBUG] Loading plugins...
+[2026-05-12 11:12:05] [DEBUG] pluginsinit.lua
+[2026-05-12 11:12:05] [DEBUG] attempting to load filters
+[2026-05-12 11:12:05] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:12:05] [DEBUG] filesystem initialization complete
+[2026-05-12 11:12:06] [DEBUG] 20115
+[2026-05-12 11:12:06] [DEBUG] server starting
+[2026-05-12 11:12:19] [DEBUG] Loading plugins...
+[2026-05-12 11:12:19] [DEBUG] pluginsinit.lua
+[2026-05-12 11:12:19] [DEBUG] attempting to load filters
+[2026-05-12 11:12:19] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:12:19] [DEBUG] filesystem initialization complete
+[2026-05-12 11:12:19] [DEBUG] 20115
+[2026-05-12 11:12:19] [DEBUG] server starting
+[2026-05-12 11:14:19] [DEBUG] Loading plugins...
+[2026-05-12 11:14:19] [DEBUG] pluginsinit.lua
+[2026-05-12 11:14:19] [DEBUG] attempting to load filters
+[2026-05-12 11:14:19] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:14:19] [DEBUG] filesystem initialization complete
+[2026-05-12 11:14:20] [DEBUG] 20115
+[2026-05-12 11:14:20] [DEBUG] server starting
+[2026-05-12 11:16:41] [DEBUG] Loading plugins...
+[2026-05-12 11:16:41] [DEBUG] imagefilter.lua
+[2026-05-12 11:16:41] [FATAL]  attempt to call a non-function object
+stack traceback:
+	[G]: ?
+[2026-05-12 11:18:33] [DEBUG] Loading plugins...
+[2026-05-12 11:18:33] [DEBUG] imagefilter.lua
+[2026-05-12 11:18:33] [DEBUG] pluginsinit.lua
+[2026-05-12 11:18:33] [DEBUG] attempting to load filters
+[2026-05-12 11:18:33] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:18:33] [DEBUG] filesystem initialization complete
+[2026-05-12 11:18:34] [DEBUG] 20115
+[2026-05-12 11:18:34] [DEBUG] server starting
+[2026-05-12 11:28:31] [DEBUG] Loading plugins...
+[2026-05-12 11:28:31] [DEBUG] Apluginsinit.lua
+[2026-05-12 11:28:31] [DEBUG] imagefilter.lua
+[2026-05-12 11:28:31] [DEBUG] attempting to load filters
+[2026-05-12 11:28:31] [DEBUG] filter configuration loaded successfully
+[2026-05-12 11:28:31] [DEBUG] filesystem initialization complete
+[2026-05-12 11:28:31] [DEBUG] 20115
+[2026-05-12 11:28:31] [DEBUG] server starting
