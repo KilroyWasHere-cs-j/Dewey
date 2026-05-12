@@ -1,11 +1,15 @@
 # Binary Validation Module Documentation
 
 ## Overview
-This module provides logic for identifying executable binary formats by analyzing their internal structures and "magic numbers." It specifically supports Windows Portable Executable (PE) and Linux Executable and Linkable Format (ELF) files. These validations are critical for security screening and system-specific routing.
+This module provides logic for identifying executable binary formats by analyzing their internal structures and "magic numbers." It specifically supports Windows Portable Executable (PE) and Linux Executable and Linkable Format (ELF) files. These validations are critical for security screening and for preventing a malicious file from being uploaded and stored on the server.
+
+## Imported Packages
+- **io**: Provides the `ReadSeeker` interface for reading and seeking within files.
+- **encoding/binary**: Provides binary encoding utilities for reading structured data.
 
 ## Global State
-- **PECount**: Integer tracking the total number of successfully validated Windows PE files.
-- **ELFCount**: Integer tracking the total number of successfully validated Linux ELF files.
+- **PECount**: Integer tracking the total number of Portable Executables files found.
+- **ELFCount**: Integer tracking the total number of Linux ELF files found.
 
 ---
 
