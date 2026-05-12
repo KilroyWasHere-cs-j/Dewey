@@ -22,12 +22,13 @@ func main() {
 	defer pm.Close() // L is closed exactly once, at the right time
 
 	pm.LoadPlugins()
+	pm.ListPlugins()
 	pm.RunPlugins("init")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	startDaemon(ctx)
+	startDaemon(ctx, pm)
 
 	dbPing := InitDB()
 	if dbPing != nil {

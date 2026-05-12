@@ -213,6 +213,7 @@ func (pm *PluginManager) ListPlugins() {
 	Debug(fmt.Sprintf("%d filter plugins loaded", len(pm.FilterMap)))
 	Debug(fmt.Sprintf("%d script plugins loaded", len(pm.ScriptMap)))
 	Debug(fmt.Sprintf("%d init plugins loaded", len(pm.InitMap)))
+	Debug(fmt.Sprintf("%d tick plugins loaded", len(pm.TickMap)))
 	Debug("====================")
 	Debug("")
 }

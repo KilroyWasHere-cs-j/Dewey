@@ -378,3 +378,133 @@ stack traceback:
 [2026-05-12 15:11:50] [DEBUG] filesystem initialization complete
 [2026-05-12 15:11:50] [DEBUG] 20115
 [2026-05-12 15:11:50] [DEBUG] server starting
+[2026-05-12 15:18:20] [DEBUG] Loading plugins...
+[2026-05-12 15:18:20] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:18:20] [DEBUG] imagefilter.lua
+[2026-05-12 15:18:20] [DEBUG] Running init plugins...
+[2026-05-12 15:18:20] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:18:20] [DEBUG] Calling Begin function
+[2026-05-12 15:18:20] [DEBUG] No errors
+[2026-05-12 15:18:20] [DEBUG] attempting to load filters
+[2026-05-12 15:18:20] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:18:20] [DEBUG] filesystem initialization complete
+[2026-05-12 15:18:21] [DEBUG] 20115
+[2026-05-12 15:18:21] [DEBUG] server starting
+[2026-05-12 15:18:56] [DEBUG] Loading plugins...
+[2026-05-12 15:18:56] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:18:56] [DEBUG] imagefilter.lua
+[2026-05-12 15:18:56] [DEBUG] Running init plugins...
+[2026-05-12 15:18:56] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:18:56] [DEBUG] Calling Begin function
+[2026-05-12 15:18:56] [DEBUG] No errors
+[2026-05-12 15:18:56] [DEBUG] attempting to load filters
+[2026-05-12 15:18:56] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:18:56] [DEBUG] filesystem initialization complete
+[2026-05-12 15:18:56] [DEBUG] 20115
+[2026-05-12 15:18:56] [DEBUG] server starting
+[2026-05-12 15:19:56] [DEBUG] Creating zip backup
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Zip written
+[2026-05-12 15:19:56] [DEBUG] Running tick plugins...
+[2026-05-12 15:20:40] [DEBUG] index
+[2026-05-12 15:20:56] [DEBUG] Loading plugins...
+[2026-05-12 15:20:56] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:20:56] [DEBUG] imagefilter.lua
+[2026-05-12 15:20:56] [DEBUG] tickMacro.lua
+[2026-05-12 15:20:56] [DEBUG] Running init plugins...
+[2026-05-12 15:20:56] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:20:56] [DEBUG] Calling Begin function
+[2026-05-12 15:20:56] [DEBUG] No errors
+[2026-05-12 15:20:56] [DEBUG] Running init plugin(s) tickMacro.lua
+[2026-05-12 15:20:56] [DEBUG] Calling Begin function
+[2026-05-12 15:20:56] [DEBUG] No errors
+[2026-05-12 15:20:56] [DEBUG] attempting to load filters
+[2026-05-12 15:20:56] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:20:56] [DEBUG] filesystem initialization complete
+[2026-05-12 15:20:57] [DEBUG] 20115
+[2026-05-12 15:20:57] [DEBUG] server starting
+[2026-05-12 15:21:19] [DEBUG] Loading plugins...
+[2026-05-12 15:21:19] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:21:19] [DEBUG] imagefilter.lua
+[2026-05-12 15:21:19] [DEBUG] tickMacro.lua
+[2026-05-12 15:21:19] [DEBUG] 
+[2026-05-12 15:21:19] [DEBUG] ====================
+[2026-05-12 15:21:19] [DEBUG] 1 filter plugins loaded
+[2026-05-12 15:21:19] [DEBUG] 0 script plugins loaded
+[2026-05-12 15:21:19] [DEBUG] 2 init plugins loaded
+[2026-05-12 15:21:19] [DEBUG] ====================
+[2026-05-12 15:21:19] [DEBUG] 
+[2026-05-12 15:21:19] [DEBUG] Running init plugins...
+[2026-05-12 15:21:19] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:21:19] [DEBUG] Calling Begin function
+[2026-05-12 15:21:19] [DEBUG] No errors
+[2026-05-12 15:21:19] [DEBUG] Running init plugin(s) tickMacro.lua
+[2026-05-12 15:21:19] [DEBUG] Calling Begin function
+[2026-05-12 15:21:19] [DEBUG] No errors
+[2026-05-12 15:21:19] [DEBUG] attempting to load filters
+[2026-05-12 15:21:19] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:21:19] [DEBUG] filesystem initialization complete
+[2026-05-12 15:21:20] [DEBUG] 20115
+[2026-05-12 15:21:20] [DEBUG] server starting
+[2026-05-12 15:21:35] [DEBUG] Loading plugins...
+[2026-05-12 15:21:35] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:21:35] [DEBUG] imagefilter.lua
+[2026-05-12 15:21:35] [DEBUG] tickMacro.lua
+[2026-05-12 15:21:35] [DEBUG] 
+[2026-05-12 15:21:35] [DEBUG] ====================
+[2026-05-12 15:21:35] [DEBUG] 1 filter plugins loaded
+[2026-05-12 15:21:35] [DEBUG] 0 script plugins loaded
+[2026-05-12 15:21:35] [DEBUG] 1 init plugins loaded
+[2026-05-12 15:21:35] [DEBUG] ====================
+[2026-05-12 15:21:35] [DEBUG] 
+[2026-05-12 15:21:35] [DEBUG] Running init plugins...
+[2026-05-12 15:21:35] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:21:35] [DEBUG] Calling Begin function
+[2026-05-12 15:21:35] [DEBUG] No errors
+[2026-05-12 15:21:35] [DEBUG] attempting to load filters
+[2026-05-12 15:21:35] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:21:35] [DEBUG] filesystem initialization complete
+[2026-05-12 15:21:36] [DEBUG] 20115
+[2026-05-12 15:21:36] [DEBUG] server starting
+[2026-05-12 15:21:53] [DEBUG] Loading plugins...
+[2026-05-12 15:21:53] [DEBUG] Apluginsinit.lua
+[2026-05-12 15:21:53] [DEBUG] imagefilter.lua
+[2026-05-12 15:21:53] [DEBUG] tickMacro.lua
+[2026-05-12 15:21:53] [DEBUG] 
+[2026-05-12 15:21:53] [DEBUG] ====================
+[2026-05-12 15:21:53] [DEBUG] 1 filter plugins loaded
+[2026-05-12 15:21:53] [DEBUG] 0 script plugins loaded
+[2026-05-12 15:21:53] [DEBUG] 1 init plugins loaded
+[2026-05-12 15:21:53] [DEBUG] 1 tick plugins loaded
+[2026-05-12 15:21:53] [DEBUG] ====================
+[2026-05-12 15:21:53] [DEBUG] 
+[2026-05-12 15:21:53] [DEBUG] Running init plugins...
+[2026-05-12 15:21:53] [DEBUG] Running init plugin(s) Apluginsinit.lua
+[2026-05-12 15:21:53] [DEBUG] Calling Begin function
+[2026-05-12 15:21:53] [DEBUG] No errors
+[2026-05-12 15:21:53] [DEBUG] attempting to load filters
+[2026-05-12 15:21:53] [DEBUG] filter configuration loaded successfully
+[2026-05-12 15:21:53] [DEBUG] filesystem initialization complete
+[2026-05-12 15:21:54] [DEBUG] 20115
+[2026-05-12 15:21:54] [DEBUG] server starting
