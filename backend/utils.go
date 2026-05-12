@@ -3,8 +3,8 @@ package main
 import (
 	"io"
 	"os"
-	"time"
 	"sync"
+	"time"
 
 	"archive/zip"
 	"context"
@@ -41,7 +41,7 @@ func newObservableTicker(d time.Duration) *observableTicker {
 }
 
 func (o *observableTicker) Chan() <-chan time.Time { return o.ticker.C }
-func (o *observableTicker) Stop()                    { o.ticker.Stop() }
+func (o *observableTicker) Stop()                  { o.ticker.Stop() }
 func (o *observableTicker) markTick(t time.Time) {
 	o.mu.Lock()
 	o.last = t
@@ -75,7 +75,7 @@ func (o *observableTicker) Remaining() time.Duration {
 	return rem
 }
 
-func startDaemon(ctx context.Context) {
+func startDaemon(ctx context.Context, pm *PluginManager) {
 	// Debug("starting cache clear daemon")
 
 	daemonTicker = newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
@@ -97,6 +97,7 @@ func startDaemon(ctx context.Context) {
 					}()
 					dumpCache()
 					save()
+					pm.RunPlugins("tick")
 				}()
 
 			case <-ctx.Done():
@@ -184,7 +185,6 @@ func save() error {
 		}
 
 		_, err = io.Copy(writer, file)
-		Debug("Zip written")
 		return err
 	})
 }

@@ -13,22 +13,36 @@ import (
 var appRules *Config
 
 func main() {
+
+	// ----------------------------- Logger
 	InitLogger("logs", "app")
 	defer logger.Close()
+	// -----------------------------
 
+	// ----------------------------- Plugin loading
+	Debug("Loading plugins...")
+	pm := NewPluginManager()
+	defer pm.Close() // L is closed exactly once, at the right time
+
+	pm.LoadPlugins()
+	pm.ListPlugins()
+	pm.RunPlugins("init")
+	// -----------------------------
+
+	// ----------------------------- Startup tick daemon
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	startDaemon(ctx)
+	startDaemon(ctx, pm) // Summoning daemons :)
+	// -----------------------------
 
 	dbPing := InitDB()
 	if dbPing != nil {
 		Warn("Bad db")
 	}
+	// -----------------------------
+
 	rules := fileSystemInit()
 	appRules = rules
-
-	// go startPrometheus()
 
 	barcodeText, err := scanBarCode("./barcodes/one.png")
 	if err != nil {
@@ -39,6 +53,7 @@ func main() {
 	// dbFunction()
 	Debug("server starting")
 
+	// ----------------------------- Server setup
 	r := gin.New()
 
 	// -------------------------
