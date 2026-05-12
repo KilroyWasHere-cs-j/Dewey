@@ -8,26 +8,35 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-type PluginType int
-
-const (
-	Filter PluginType = iota // 0
-	Script                   // 1
-)
-
 type Plugin struct {
-	Type     PluginType
 	salience int
 	name     string
 }
 
-var L *lua.LState
-var PluginMap = map[string]Plugin{}
+type PluginManager struct {
+	L         *lua.LState
+	FilterMap map[string]Plugin
+	ScriptMap map[string]Plugin
+	InitMap   map[string]Plugin
+	TickMap   map[string]Plugin
+}
 
-func loadPlugins() {
-	L := lua.NewState()
-	defer L.Close()
+func NewPluginManager() *PluginManager {
+	return &PluginManager{
+		L:         lua.NewState(),
+		FilterMap: make(map[string]Plugin),
+		ScriptMap: make(map[string]Plugin),
+		InitMap:   make(map[string]Plugin),
+		TickMap:   make(map[string]Plugin),
+	}
+}
 
+func (pm *PluginManager) Close() {
+	// TODO: call End() on each plugin
+	pm.L.Close()
+}
+
+func (pm *PluginManager) LoadPlugins() {
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
 		Fatal("Unable to read plugin directory: " + err.Error())
@@ -36,15 +45,15 @@ func loadPlugins() {
 	for _, entry := range entries {
 		Debug(entry.Name())
 
-		if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
+		if err := pm.L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
 			panic(err)
 		}
 
 		// 2. Retrieve the function
-		whoAmIFunc := L.GetGlobal("WhoAmI")
+		whoAmIFunc := pm.L.GetGlobal("WhoAmI")
 
 		// 3. Call the function
-		err = L.CallByParam(lua.P{
+		err = pm.L.CallByParam(lua.P{
 			Fn:      whoAmIFunc,
 			NRet:    2, // Number of return values
 			Protect: true,
@@ -54,98 +63,156 @@ func loadPlugins() {
 			Fatal(err.Error())
 		}
 
-		// 4. Retrieve return value
-		// TODO: Plugin type isn't being converted correctly
-		pluginType := L.Get(-2)
-		salience := L.Get(-1)
-		PluginMap[entry.Name()] = Plugin{name: entry.Name(), Type: PluginType(pluginType.Type()), salience: int(salience.Type())}
+		// 4. Retrieve return value, using magic numbers
+		pluginType := pm.L.Get(-2).String()
+		salienceLV := pm.L.Get(-1)
+
+		sVal, ok := salienceLV.(lua.LNumber)
+		if !ok {
+			Warn(fmt.Sprintf("plugin %s: salience must be a number, got %s", entry.Name(), salienceLV.Type()))
+			continue
+		}
+		salience := int(sVal)
+
+		switch pluginType {
+		case "filter":
+			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+		case "script":
+			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+		case "init":
+			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+		case "tick":
+			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+		}
 	}
-	listPlugins()
 }
 
-func listPlugins() {
-	Debug(fmt.Sprintf("%d plugins loaded", len(PluginMap)))
-	Debug("Listing loaded plugins")
-	for name, plugin := range PluginMap {
-		Debug(fmt.Sprintf("%s : %d (salience: %d)", name, plugin.Type, plugin.salience))
+func (pm *PluginManager) RunPlugins(targetBucket string) {
+	switch targetBucket {
+	case "filter":
+		Debug("Running filter plugins...")
+		for _, plugin := range pm.FilterMap {
+			Debug(fmt.Sprintf("Running filter plugin(s) %s", plugin.name))
+			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+				Warn(err.Error())
+			}
+
+			Debug("Calling Begin function")
+			// 2. Retrieve the function
+			beginFunc := pm.L.GetGlobal("Begin")
+
+			// 3. Call the function
+			err := pm.L.CallByParam(lua.P{
+				Fn:      beginFunc,
+				NRet:    0, // Number of return values
+				Protect: true,
+			}) // Arguments
+
+			if err != nil {
+				Fatal(err.Error())
+			}
+			Debug("No errors")
+		}
+
+		Debug("Calling Begin function")
+		// 2. Retrieve the function
+		beginFunc := pm.L.GetGlobal("Begin")
+
+		// 3. Call the function
+		err := pm.L.CallByParam(lua.P{
+			Fn:      beginFunc,
+			NRet:    0, // Number of return values
+			Protect: true,
+		}) // Arguments
+
+		if err != nil {
+			Fatal(err.Error())
+		}
+		Debug("No errors")
+
+	case "script":
+		Debug("Running script plugins...")
+		for _, plugin := range pm.ScriptMap {
+			Debug(fmt.Sprintf("Running script plugin(s) %s", plugin.name))
+			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+				Warn(err.Error())
+			}
+
+			Debug("Calling Begin function")
+			// 2. Retrieve the function
+			beginFunc := pm.L.GetGlobal("Begin")
+
+			// 3. Call the function
+			err := pm.L.CallByParam(lua.P{
+				Fn:      beginFunc,
+				NRet:    0, // Number of return values
+				Protect: true,
+			}) // Arguments
+
+			if err != nil {
+				Fatal(err.Error())
+			}
+			Debug("No errors")
+		}
+	case "init":
+		Debug("Running init plugins...")
+		for _, plugin := range pm.InitMap {
+			Debug(fmt.Sprintf("Running init plugin(s) %s", plugin.name))
+			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+				Warn(err.Error())
+			}
+
+			Debug("Calling Begin function")
+			// 2. Retrieve the function
+			beginFunc := pm.L.GetGlobal("Begin")
+
+			// 3. Call the function
+			err := pm.L.CallByParam(lua.P{
+				Fn:      beginFunc,
+				NRet:    0, // Number of return values
+				Protect: true,
+			}) // Arguments
+
+			if err != nil {
+				Fatal(err.Error())
+			}
+			Debug("No errors")
+		}
+
+	// TODO: This goes nowhere
+	case "tick":
+		Debug("Running tick plugins...")
+		for _, plugin := range pm.TickMap {
+			Debug(fmt.Sprintf("Running tick plugin(s) %s", plugin.name))
+			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+				Warn(err.Error())
+			}
+
+			Debug("Calling Begin function")
+			// 2. Retrieve the function
+			beginFunc := pm.L.GetGlobal("Begin")
+
+			// 3. Call the function
+			err := pm.L.CallByParam(lua.P{
+				Fn:      beginFunc,
+				NRet:    0, // Number of return values
+				Protect: true,
+			}) // Arguments
+
+			if err != nil {
+				Fatal(err.Error())
+			}
+			Debug("No errors")
+		}
 	}
 }
 
-func testPlugin() {
-
+func (pm *PluginManager) ListPlugins() {
+	Debug("")
+	Debug("====================")
+	Debug(fmt.Sprintf("%d filter plugins loaded", len(pm.FilterMap)))
+	Debug(fmt.Sprintf("%d script plugins loaded", len(pm.ScriptMap)))
+	Debug(fmt.Sprintf("%d init plugins loaded", len(pm.InitMap)))
+	Debug("====================")
+	Debug("")
 }
-
-func callFilter() {
-	// Code for calling a plugin of the filter type
-}
-
-func callScript() {
-	// Code for calling a plugin of the script type
-}
-
-// // 1. Create argument table
-// args := L.NewTable()
-// L.RawSet(args, lua.LNumber(1), lua.LString("wack"))
-// // L.RawSet(args, lua.LNumber(2), lua.LString("arg2"))
-
-// // 2. Set global "arg"
-// L.SetGlobal("arg", args)
-
-// if err := L.DoFile(filepath.Join(pluginDir, entries[0].Name())); err != nil {
-// 	Warn("Unable to load-run plugin: " + err.Error())
-// }
-// // Inside your Lua file (data.lua)
-// return {
-//     name = "Gopher",
-//     age = 10
-// }
-
-// // Inside your Go code
-// L := lua.NewState()
-// defer L.Close()
-// if err := L.DoFile("data.lua"); err != nil {
-//     panic(err)
-// }
-// // Get the table returned by the file
-// result := L.Get(-1)
-// if tbl, ok := result.(*lua.LTable); ok {
-//     fmt.Println(tbl.RawGetString("name"))
-// }
-
-// import (
-//     "github.com/yuin/gopher-lua"
-//     "log"
-// )
-
-// func main() {
-//     L := lua.NewState()
-//     defer L.Close()
-
-//     // 1. Load the script
-//     if err := L.DoString(`
-//         function sayHello(name)
-//             return "Hello, " .. name
-//         end
-//     `); err != nil {
-//         log.Fatal(err)
-//     }
-
-//     // 2. Retrieve the function
-//     helloFunc := L.GetGlobal("sayHello")
-
-//     // 3. Call the function
-//     err := L.CallByParam(lua.P{
-//         Fn:      helloFunc,
-//         NRet:    1, // Number of return values
-//         Protect: true,
-//     }, lua.LString("World")) // Arguments
-
-//     if err != nil {
-//         log.Fatal(err)
-//     }
-
-//     // 4. Retrieve return value
-//     ret := L.Get(-1)
-//     L.Pop(1)
-//     println(ret.String()) // Output: Hello, World
-// }

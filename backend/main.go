@@ -18,8 +18,11 @@ func main() {
 	defer logger.Close()
 
 	Debug("Loading plugins...")
-	loadPlugins()
-	testPlugin()
+	pm := NewPluginManager()
+	defer pm.Close() // L is closed exactly once, at the right time
+
+	pm.LoadPlugins()
+	pm.RunPlugins("init")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
