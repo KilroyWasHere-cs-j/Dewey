@@ -4,7 +4,6 @@ Type = "filter"
 -- Defines the salience of the plugin
 Salience = 1
 
-print("Hello, World!")
 -- print(arg[1])
 
 function WhoAmI()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -17,6 +18,7 @@ const (
 type Plugin struct {
 	Type     PluginType
 	salience int
+	name     string
 }
 
 var L *lua.LState
@@ -53,11 +55,20 @@ func loadPlugins() {
 		}
 
 		// 4. Retrieve return value
+		// TODO: Plugin type isn't being converted correctly
 		pluginType := L.Get(-2)
 		salience := L.Get(-1)
-		PluginMap[entry.Name()] = Plugin{Type: PluginType(pluginType.Type()), salience: int(salience.Type())}
+		PluginMap[entry.Name()] = Plugin{name: entry.Name(), Type: PluginType(pluginType.Type()), salience: int(salience.Type())}
 	}
+	listPlugins()
+}
 
+func listPlugins() {
+	Debug(fmt.Sprintf("%d plugins loaded", len(PluginMap)))
+	Debug("Listing loaded plugins")
+	for name, plugin := range PluginMap {
+		Debug(fmt.Sprintf("%s : %d (salience: %d)", name, plugin.Type, plugin.salience))
+	}
 }
 
 func testPlugin() {
