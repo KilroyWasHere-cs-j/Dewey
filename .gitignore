@@ -31,6 +31,9 @@ go.work.sum
 ./backend/store
 ./backend/logs
 
+# Mac file
+.DS_Store
+
 # Editor/IDE
 # .idea/
 # .vscode/
