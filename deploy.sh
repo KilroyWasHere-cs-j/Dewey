@@ -9,22 +9,15 @@ podman pod create -p 8080:8080 -p 3000:3000 dewey-pod
 echo ""
 echo "==> Deploying Prometheus..."
 
-# Pull the latest Prometheus image
 podman pull docker.io/prom/prometheus:latest
-
-# Verify the image
 podman images | grep prometheus
 
-# Run Prometheus in detached mode on port 9090
 podman run -d --pod dewey-pod\
   --name dewey-prometheus \
   -p 9090:9090 \
   prom/prometheus:latest
 
-# Check the container is running
 podman ps
-
-# Verify Prometheus is up
 curl -s http://localhost:9090/-/healthy
 
 # ---------------- BACKEND ----------------
