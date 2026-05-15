@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/aarzilli/golua v0.0.0-20250217091409-248753f411c4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
@@ -40,6 +41,7 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/stevedonovan/luar v0.0.0-20170518170841-22d247e53660 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect

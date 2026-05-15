@@ -40,8 +40,22 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
-func idAndSort(path string, hash string, filename string) {
-	FileSorts++
+func idAndSort(pm *PluginManager, path string, hash string, filename string) {
+	FileSorts++ // Move this to the end of the function after all checks are done
+
+	entry := DBEntry{
+		Filename: filename,
+		Act:      "ACTS_00N", // Placeholder, should be determined by filter rules
+		Hash:     hash,
+		Path:     path,
+		Meta:     "11111111111111111111111111111111", // Placeholder, should be determined by filter rules
+	}
+
+	runFilter := pm.RunPlugins("filter")
+	entry, err := runFilter(entry)
+	if err != nil {
+		Fatal(err.Error())
+	}
 
 	//  barcodeText := scanBarCode(path)
 

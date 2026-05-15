@@ -122,6 +122,7 @@ func listFiles(c *gin.Context) {
 
 func uploadFile(c *gin.Context) {
 	Debug("uploadFile")
+	pm := c.MustGet("plugins").(*PluginManager)
 
 	contentType := c.GetHeader("Content-Type")
 
@@ -263,7 +264,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Post-processing
 	// -------------------------
-	idAndSort(safeFilename, hashString, safeFilename)
+	idAndSort(pm, safeFilename, hashString, safeFilename)
 
 	// -------------------------
 	// Response
