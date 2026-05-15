@@ -18,6 +18,6 @@ function Begin(entry)
     print("Meta     : " .. tostring(entry.Meta))
     print("===============")
 
-    entry.Act = "uuuugggg"
+    entry.Meta = "Gabriel was here"
     return entry
 end

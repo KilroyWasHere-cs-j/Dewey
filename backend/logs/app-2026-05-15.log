@@ -403,3 +403,84 @@ stack traceback:
 [2026-05-15 15:07:02] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
 [2026-05-15 15:07:02] [DEBUG] Running filter plugin: imagefilter.lua
 [2026-05-15 15:07:02] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=11111111111111111111111111111111
+[2026-05-15 15:09:46] [DEBUG] Loading plugins...
+[2026-05-15 15:09:46] [DEBUG] Apluginsinit.lua
+[2026-05-15 15:09:46] [DEBUG] imagefilter.lua
+[2026-05-15 15:09:46] [DEBUG] testingfilter.lua
+[2026-05-15 15:09:46] [DEBUG] tickMacro.lua
+[2026-05-15 15:09:46] [DEBUG] 
+[2026-05-15 15:09:46] [DEBUG] ====================
+[2026-05-15 15:09:46] [DEBUG] 2 filter plugins loaded
+[2026-05-15 15:09:46] [DEBUG] 0 script plugins loaded
+[2026-05-15 15:09:46] [DEBUG] 1 init plugins loaded
+[2026-05-15 15:09:46] [DEBUG] 1 tick plugins loaded
+[2026-05-15 15:09:46] [DEBUG] ====================
+[2026-05-15 15:09:46] [DEBUG] 
+[2026-05-15 15:09:46] [DEBUG] filesystem initialization complete
+[2026-05-15 15:09:46] [DEBUG] 20115
+[2026-05-15 15:09:46] [DEBUG] server starting
+[2026-05-15 15:09:46] [DEBUG] server running on port 8080
+[2026-05-15 15:09:57] [DEBUG] uploadFile
+[2026-05-15 15:09:57] [DEBUG] name: myfile
+[2026-05-15 15:09:57] [DEBUG] data: somedata
+[2026-05-15 15:09:57] [DEBUG] checking formats
+[2026-05-15 15:09:57] [DEBUG] Vaild file type
+[2026-05-15 15:09:57] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-05-15 15:09:57] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-05-15 15:09:57] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=11111111111111111111111111111111
+[2026-05-15 15:09:57] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-05-15 15:09:57] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=Gabe was here
+[2026-05-15 15:10:21] [DEBUG] Loading plugins...
+[2026-05-15 15:10:21] [DEBUG] Apluginsinit.lua
+[2026-05-15 15:10:21] [DEBUG] imagefilter.lua
+[2026-05-15 15:10:21] [DEBUG] testingfilter.lua
+[2026-05-15 15:10:21] [DEBUG] tickMacro.lua
+[2026-05-15 15:10:21] [DEBUG] 
+[2026-05-15 15:10:21] [DEBUG] ====================
+[2026-05-15 15:10:21] [DEBUG] 2 filter plugins loaded
+[2026-05-15 15:10:21] [DEBUG] 0 script plugins loaded
+[2026-05-15 15:10:21] [DEBUG] 1 init plugins loaded
+[2026-05-15 15:10:21] [DEBUG] 1 tick plugins loaded
+[2026-05-15 15:10:21] [DEBUG] ====================
+[2026-05-15 15:10:21] [DEBUG] 
+[2026-05-15 15:10:21] [DEBUG] filesystem initialization complete
+[2026-05-15 15:10:22] [DEBUG] 20115
+[2026-05-15 15:10:22] [DEBUG] server starting
+[2026-05-15 15:10:22] [DEBUG] server running on port 8080
+[2026-05-15 15:10:22] [DEBUG] uploadFile
+[2026-05-15 15:10:22] [DEBUG] name: myfile
+[2026-05-15 15:10:22] [DEBUG] data: somedata
+[2026-05-15 15:10:22] [DEBUG] checking formats
+[2026-05-15 15:10:22] [DEBUG] Vaild file type
+[2026-05-15 15:10:22] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-05-15 15:10:22] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-05-15 15:10:22] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=11111111111111111111111111111111
+[2026-05-15 15:10:22] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-05-15 15:10:22] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=
+[2026-05-15 15:10:34] [DEBUG] Loading plugins...
+[2026-05-15 15:10:34] [DEBUG] Apluginsinit.lua
+[2026-05-15 15:10:34] [DEBUG] imagefilter.lua
+[2026-05-15 15:10:34] [DEBUG] testingfilter.lua
+[2026-05-15 15:10:34] [DEBUG] tickMacro.lua
+[2026-05-15 15:10:34] [DEBUG] 
+[2026-05-15 15:10:34] [DEBUG] ====================
+[2026-05-15 15:10:34] [DEBUG] 2 filter plugins loaded
+[2026-05-15 15:10:34] [DEBUG] 0 script plugins loaded
+[2026-05-15 15:10:34] [DEBUG] 1 init plugins loaded
+[2026-05-15 15:10:34] [DEBUG] 1 tick plugins loaded
+[2026-05-15 15:10:34] [DEBUG] ====================
+[2026-05-15 15:10:34] [DEBUG] 
+[2026-05-15 15:10:34] [DEBUG] filesystem initialization complete
+[2026-05-15 15:10:35] [DEBUG] 20115
+[2026-05-15 15:10:35] [DEBUG] server starting
+[2026-05-15 15:10:35] [DEBUG] server running on port 8080
+[2026-05-15 15:10:36] [DEBUG] uploadFile
+[2026-05-15 15:10:36] [DEBUG] name: myfile
+[2026-05-15 15:10:36] [DEBUG] data: somedata
+[2026-05-15 15:10:36] [DEBUG] checking formats
+[2026-05-15 15:10:36] [DEBUG] Vaild file type
+[2026-05-15 15:10:36] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-05-15 15:10:36] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-05-15 15:10:36] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=11111111111111111111111111111111
+[2026-05-15 15:10:36] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-05-15 15:10:36] [DEBUG] Plugin modified entry: Act=uuuugggg, Meta=Gabriel was here
