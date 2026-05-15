@@ -9,9 +9,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// I created this, so future debuggers can have some fun...
-var appRules *Config
-
 func main() {
 
 	// ----------------------------- Logger
@@ -41,8 +38,7 @@ func main() {
 	}
 	// -----------------------------
 
-	rules := fileSystemInit()
-	appRules = rules
+	fileSystemInit()
 
 	barcodeText, err := scanBarCode("./barcodes/one.png")
 	if err != nil {

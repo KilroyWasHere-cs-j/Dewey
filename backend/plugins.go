@@ -57,8 +57,7 @@ func (pm *PluginManager) LoadPlugins() {
 			Fn:      whoAmIFunc,
 			NRet:    2, // Number of return values
 			Protect: true,
-		}) // Arguments
-
+		})
 		if err != nil {
 			Fatal(err.Error())
 		}
