@@ -11,12 +11,12 @@ function WhoAmI()
     return Type, Salience
 end
 
--- Hook for backend to register
+-- Runs once when the plugin is invoked
 function Begin()
     print("Apluginsinit Begin")
 end
 
--- Hook for backend to call on shutdown
+-- Hook for backend to call on system shutdown
 function End()
     -- This code will be run before server end
     -- If this is a filter plugin don't add anything here, it won't be called

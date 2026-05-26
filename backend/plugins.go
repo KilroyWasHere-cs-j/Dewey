@@ -49,21 +49,18 @@ func (pm *PluginManager) LoadPlugins() {
 			panic(err)
 		}
 
-		// 2. Retrieve the function
+		// Identify the type and salience of the plugin
 		whoAmIFunc := pm.L.GetGlobal("WhoAmI")
-
-		// 3. Call the function
 		err = pm.L.CallByParam(lua.P{
 			Fn:      whoAmIFunc,
 			NRet:    2, // Number of return values
 			Protect: true,
-		}) // Arguments
-
+		})
 		if err != nil {
 			Fatal(err.Error())
 		}
 
-		// 4. Retrieve return value, using magic numbers
+		// Yes these are magic numbers don't touch them
 		pluginType := pm.L.Get(-2).String()
 		salienceLV := pm.L.Get(-1)
 
@@ -87,121 +84,88 @@ func (pm *PluginManager) LoadPlugins() {
 	}
 }
 
-func (pm *PluginManager) RunPlugins(targetBucket string) {
+func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry, error) {
 	switch targetBucket {
 	case "filter":
-		Debug("Running filter plugins...")
-		for _, plugin := range pm.FilterMap {
-			Debug(fmt.Sprintf("Running filter plugin(s) %s", plugin.name))
-			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-				Warn(err.Error())
+		return func(entry DBEntry) (DBEntry, error) {
+			for _, plugin := range pm.FilterMap {
+				Debug(fmt.Sprintf("Running filter plugin: %s", plugin.name))
+				if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+					return entry, err
+				}
+				var err error
+				entry, err = pm.callBeginWithReturn(entry)
+				if err != nil {
+					return entry, err
+				}
 			}
-
-			Debug("Calling Begin function")
-			// 2. Retrieve the function
-			beginFunc := pm.L.GetGlobal("Begin")
-
-			// 3. Call the function
-			err := pm.L.CallByParam(lua.P{
-				Fn:      beginFunc,
-				NRet:    0, // Number of return values
-				Protect: true,
-			}) // Arguments
-
-			if err != nil {
-				Fatal(err.Error())
-			}
-			Debug("No errors")
+			return entry, nil
 		}
 
-		Debug("Calling Begin function")
-		// 2. Retrieve the function
-		beginFunc := pm.L.GetGlobal("Begin")
-
-		// 3. Call the function
-		err := pm.L.CallByParam(lua.P{
-			Fn:      beginFunc,
-			NRet:    0, // Number of return values
-			Protect: true,
-		}) // Arguments
-
-		if err != nil {
-			Fatal(err.Error())
-		}
-		Debug("No errors")
 	case "script":
-		Debug("Running script plugins...")
-		for _, plugin := range pm.ScriptMap {
-			Debug(fmt.Sprintf("Running script plugin(s) %s", plugin.name))
-			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-				Warn(err.Error())
+		return func(entry DBEntry) (DBEntry, error) {
+			for _, plugin := range pm.ScriptMap {
+				Debug(fmt.Sprintf("Running script plugin: %s", plugin.name))
+				if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
+					return entry, err
+				}
+				var err error
+				entry, err = pm.callBeginWithReturn(entry)
+				if err != nil {
+					return entry, err
+				}
 			}
-
-			Debug("Calling Begin function")
-			// 2. Retrieve the function
-			beginFunc := pm.L.GetGlobal("Begin")
-
-			// 3. Call the function
-			err := pm.L.CallByParam(lua.P{
-				Fn:      beginFunc,
-				NRet:    0, // Number of return values
-				Protect: true,
-			}) // Arguments
-
-			if err != nil {
-				Fatal(err.Error())
-			}
-			Debug("No errors")
+			return entry, nil
 		}
+
 	case "init":
-		Debug("Running init plugins...")
-		for _, plugin := range pm.InitMap {
-			Debug(fmt.Sprintf("Running init plugin(s) %s", plugin.name))
-			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-				Warn(err.Error())
-			}
-
-			Debug("Calling Begin function")
-			// 2. Retrieve the function
-			beginFunc := pm.L.GetGlobal("Begin")
-
-			// 3. Call the function
-			err := pm.L.CallByParam(lua.P{
-				Fn:      beginFunc,
-				NRet:    0, // Number of return values
-				Protect: true,
-			}) // Arguments
-
-			if err != nil {
-				Fatal(err.Error())
-			}
-			Debug("No errors")
+		return func(entry DBEntry) (DBEntry, error) {
+			// one-time setup logic
+			return entry, nil
 		}
+
 	case "tick":
-		Debug("Running tick plugins...")
-		for _, plugin := range pm.TickMap {
-			Debug(fmt.Sprintf("Running tick plugin(s) %s", plugin.name))
-			if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-				Warn(err.Error())
-			}
+		return func(entry DBEntry) (DBEntry, error) {
+			// periodic logic
+			return entry, nil
+		}
 
-			Debug("Calling Begin function")
-			// 2. Retrieve the function
-			beginFunc := pm.L.GetGlobal("Begin")
-
-			// 3. Call the function
-			err := pm.L.CallByParam(lua.P{
-				Fn:      beginFunc,
-				NRet:    0, // Number of return values
-				Protect: true,
-			}) // Arguments
-
-			if err != nil {
-				Fatal(err.Error())
-			}
-			Debug("No errors")
+	default:
+		return func(entry DBEntry) (DBEntry, error) {
+			return entry, fmt.Errorf("unknown plugin bucket: %s", targetBucket)
 		}
 	}
+}
+
+func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
+	t := pm.L.NewTable()
+	pm.L.SetField(t, "Filename", lua.LString(entry.Filename))
+	pm.L.SetField(t, "Act", lua.LString(entry.Act))
+	pm.L.SetField(t, "Hash", lua.LString(entry.Hash))
+	pm.L.SetField(t, "Path", lua.LString(entry.Path))
+	pm.L.SetField(t, "Meta", lua.LString(entry.Meta))
+
+	beginFunc := pm.L.GetGlobal("Begin")
+	err := pm.L.CallByParam(lua.P{
+		Fn:      beginFunc,
+		NRet:    1,
+		Protect: true,
+	}, t)
+	if err != nil {
+		return entry, err
+	}
+
+	// Read back the (possibly modified) table
+	result, ok := pm.L.Get(-1).(*lua.LTable)
+	pm.L.Pop(1)
+	if !ok {
+		return entry, fmt.Errorf("Begin() did not return a table")
+	}
+
+	entry.Act = result.RawGetString("Act").String()
+	entry.Meta = result.RawGetString("Meta").String()
+	Debug(fmt.Sprintf("Plugin modified entry: Act=%s, Meta=%s", entry.Act, entry.Meta))
+	return entry, nil
 }
 
 func (pm *PluginManager) ListPlugins() {

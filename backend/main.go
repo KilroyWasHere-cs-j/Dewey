@@ -9,119 +9,86 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// I created this, so future debuggers can have some fun...
-var appRules *Config
-
 func main() {
 
-	// ----------------------------- Logger
+	// --- Logger
 	InitLogger("logs", "app")
 	defer logger.Close()
-	// -----------------------------
 
-	// ----------------------------- Plugin loading
+	// --- Plugins
 	Debug("Loading plugins...")
 	pm := NewPluginManager()
-	defer pm.Close() // L is closed exactly once, at the right time
-
+	defer pm.Close()
 	pm.LoadPlugins()
 	pm.ListPlugins()
 	pm.RunPlugins("init")
-	// -----------------------------
 
-	// ----------------------------- Startup tick daemon
+	// --- Daemon
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	startDaemon(ctx, pm) // Summoning daemons :)
-	// -----------------------------
+	startDaemon(ctx, pm)
 
-	dbPing := InitDB()
-	if dbPing != nil {
+	// --- DB
+	if err := InitDB(); err != nil {
 		Warn("Bad db")
 	}
-	// -----------------------------
 
-	rules := fileSystemInit()
-	appRules = rules
-
-	barcodeText, err := scanBarCode("./barcodes/one.png")
-	if err != nil {
-		Warn("Unable to process barcodes " + err.Error())
+	// --- Filesystem / Barcode
+	fileSystemInit()
+	if barcodeText, err := scanBarCode("./barcodes/one.png"); err != nil {
+		Warn("Unable to process barcodes: " + err.Error())
+	} else {
+		Debug(barcodeText)
 	}
-	Debug(barcodeText)
 
-	// dbFunction()
+	// --- Server
 	Debug("server starting")
-
-	// ----------------------------- Server setup
 	r := gin.New()
-
-	// -------------------------
-	// Core middleware
-	// -------------------------
-	r.Use(gin.Recovery())
-	r.Use(gin.Logger())
-	//r.Use(PrometheusMiddleware())
-
-	p := ginprometheus.NewWithConfig(ginprometheus.Config{
-		Subsystem: "gin",
-	})
-	p.Use(r)
-	// Limit multipart uploads
 	r.MaxMultipartMemory = maxFileSize
 
-	// -------------------------
-	// Rate limiting (GLOBAL)
-	// -------------------------
-	limiter := rate.NewLimiter(1, 5)
+	// Core middleware
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
 
+	// Prometheus
+	p := ginprometheus.NewWithConfig(ginprometheus.Config{Subsystem: "gin"})
+	p.Use(r)
+
+	// Rate limiter
+	limiter := rate.NewLimiter(1, 5)
 	r.Use(func(c *gin.Context) {
 		if !limiter.Allow() {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "too many requests",
-			})
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
 			return
 		}
 		c.Next()
 	})
 
-	// -------------------------
-	// 404 handler
-	// -------------------------
+	// 404
 	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{
-			"code":    "PAGE_NOT_FOUND",
-			"message": "page not found",
-		})
+		c.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "page not found"})
 	})
 
-	// -------------------------
-	// Routes
-	// -------------------------
-	r.GET("/", index)
-
-	r.GET("/admin", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "adminportal.html", nil)
+	// Routes with plugin context
+	api := r.Group("/")
+	api.Use(func(c *gin.Context) {
+		c.Set("plugins", pm)
+		c.Next()
 	})
+	{
+		api.GET("/", index)
+		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
+		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
+		api.POST("/upload", uploadFile)
+		api.GET("/files/:filename/:meta", getFile)
+		api.GET("/files", listFiles)
+		api.DELETE("/files/:filename", deleteFile)
+		api.GET("/admin/dumpCache", triggerCacheDump)
+	}
 
-	r.GET("/settings", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "settings.html", nil)
-	})
-
-	r.POST("/upload", uploadFile)
-	r.GET("/files/:filename/:meta", getFile)
-	r.GET("/files", listFiles)
-	r.DELETE("/files/:filename", deleteFile)
-	r.GET("/admin/dumpCache", triggerCacheDump)
-	//r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
-	// -------------------------
-	// Start server
-	// -------------------------
-	r.Run(":8080")
 	Debug("server running on port " + portNumber)
-
 	if err := r.Run(":" + portNumber); err != nil {
 		Fatal(err.Error())
 	}
+
 }

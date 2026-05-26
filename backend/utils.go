@@ -9,6 +9,8 @@ import (
 	"archive/zip"
 	"context"
 	"path/filepath"
+
+	"github.com/gin-gonic/gin"
 )
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
@@ -187,4 +189,16 @@ func save() error {
 		_, err = io.Copy(writer, file)
 		return err
 	})
+}
+
+func PluginMiddleware() gin.HandlerFunc {
+	pm := NewPluginManager()
+	pm.LoadPlugins()
+	pm.RunPlugins("init")
+
+	return func(c *gin.Context) {
+		Debug("Loading plugins...")
+		c.Set("plugins", pm)
+		c.Next()
+	}
 }

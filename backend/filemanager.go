@@ -1,65 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 )
 
 // var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
 
-type Config struct {
-	Version string `json:"version"`
-	Level   string `json:"level"`
-	Rules   []Rule `json:"rules"`
-}
-
-type Rule struct {
-	NameMatch       string `json:"name_match"`
-	Action          string `json:"action"`
-	Meta            []Meta `json:"meta"`
-	TargetDirectory string `json:"target_directory"`
-}
-
-type Meta struct {
-	Tag1 string `json:"tag1"`
-}
-
-// loadFilters loads the master filter configuration from disk.
-//
-// Behavior:
-//   - Reads rulesDir/master.json
-//   - Strictly decodes JSON (no unknown fields allowed)
-//   - Panics (Fatal) if config cannot be loaded
-//
-// Returns:
-//   - *Config: parsed filter configuration
-func loadFilters() *Config {
-	Debug("attempting to load filters")
-
-	path := filepath.Join(rulesDir, "rules.json")
-
-	file, err := os.Open(path)
-	if err != nil {
-		Fatal("failed to open config: " + err.Error())
-	}
-	defer file.Close()
-
-	var cfg Config
-
-	decoder := json.NewDecoder(file)
-	decoder.DisallowUnknownFields()
-
-	if err := decoder.Decode(&cfg); err != nil {
-		Fatal("invalid config JSON: " + err.Error())
-	}
-
-	Debug("filter configuration loaded successfully")
-	FiltersLoadings++
-	return &cfg
+// Holder struct for a file database entry
+type DBEntry struct {
+	Filename string
+	Act      string
+	Hash     string
+	Path     string
+	Meta     string
 }
 
 // fileSystemInit ensures required filesystem directories exist before server start.
@@ -69,7 +25,7 @@ func loadFilters() *Config {
 //   - Creates base storage directory
 //   - Initiate the loading of filter rules
 //   - Fails fast if any directory cannot be created
-func fileSystemInit() *Config {
+func fileSystemInit() {
 	dirs := []string{
 		uploadDir,
 		fileSystemBaseDir,
@@ -81,56 +37,53 @@ func fileSystemInit() *Config {
 		}
 	}
 
-	config := loadFilters()
-	if config == nil {
-		Fatal("Unable to load configs")
-	}
-
 	Debug("filesystem initialization complete")
-	return config
 }
 
-func idAndSort(path string, hash string, filename string) {
-	FileSorts++
+func idAndSort(pm *PluginManager, path string, hash string, filename string) {
+	FileSorts++ // Move this to the end of the function after all checks are done
+
+	entry := DBEntry{
+		Filename: filename,
+		Act:      "ACTS_00N", // Placeholder, should be determined by filter rules
+		Hash:     hash,
+		Path:     path,
+		Meta:     "11111111111111111111111111111111", // Placeholder, should be determined by filter rules
+	}
+
+	runFilter := pm.RunPlugins("filter")
+	entry, err := runFilter(entry)
+	if err != nil {
+		Fatal(err.Error())
+	}
 
 	//  barcodeText := scanBarCode(path)
 
 	//-------------------------------
-	// Perform name match rule
+	// Run run
 	//-------------------------------
-	for _, pattern := range appRules.Rules {
-		Debug("Attempting match with regex: " + pattern.NameMatch)
-		re := regexp.MustCompile(pattern.NameMatch)
-		if re.MatchString(path) {
-			Debug("Match on pattern: " + pattern.NameMatch)
-			Debug("Action: " + pattern.Action)
-			Debug("Target dir: " + pattern.TargetDirectory)
 
-			err := os.MkdirAll(fileSystemBaseDir+pattern.TargetDirectory, 0600)
-			if err != nil {
-				Warn("Failed to create directory for uploaded file " + err.Error())
-			}
+	// 		Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
 
-			Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
+	//good code below
+	// 		new_path := filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path)
+	// 		err = CopyFile(
+	// 			filepath.Join(uploadDir, path),
+	// 			new_path,
+	// 		)
 
-			new_path := filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path)
-			err = CopyFile(
-				filepath.Join(uploadDir, path),
-				new_path,
-			)
+	// 		createNewFileRecord(filename, "ACTS_00N", hash, new_path, "11111111111111111111111111111111")
 
-			createNewFileRecord(filename, "ACTS_00N", hash, new_path, "11111111111111111111111111111111")
+	// 		if err != nil {
+	// 			Warn(err.Error())
+	// 			return
+	// 		}
 
-			if err != nil {
-				Warn(err.Error())
-				return
-			}
-
-			return
-		} else {
-			Debug("No match")
-		}
-	}
+	// 		return
+	// 	} else {
+	// 		Debug("No match")
+	// 	}
+	// }
 	// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash", "./")
 	// Determine where the file needs to go
 	// Create and store db entry
