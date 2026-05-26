@@ -49,10 +49,8 @@ func (pm *PluginManager) LoadPlugins() {
 			panic(err)
 		}
 
-		// 2. Retrieve the function
+		// Identify the type and salience of the plugin
 		whoAmIFunc := pm.L.GetGlobal("WhoAmI")
-
-		// 3. Call the function
 		err = pm.L.CallByParam(lua.P{
 			Fn:      whoAmIFunc,
 			NRet:    2, // Number of return values
@@ -62,7 +60,7 @@ func (pm *PluginManager) LoadPlugins() {
 			Fatal(err.Error())
 		}
 
-		// 4. Retrieve return value, using magic numbers
+		// Yes these are magic numbers don't touch them
 		pluginType := pm.L.Get(-2).String()
 		salienceLV := pm.L.Get(-1)
 
