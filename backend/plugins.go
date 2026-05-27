@@ -36,17 +36,19 @@ func (pm *PluginManager) Close() {
 	pm.L.Close()
 }
 
-func (pm *PluginManager) LoadPlugins() {
+func (pm *PluginManager) LoadPlugins() error {
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
-		Fatal("Unable to read plugin directory: " + err.Error())
+		Warn("Unable to read plugin directory: " + err.Error())
+		return err // Return the error as it is a fatal error
 	}
 
 	for _, entry := range entries {
 		Debug(entry.Name())
 
 		if err := pm.L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
-			panic(err)
+			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
+			continue // Just skip this plugin and move on to the next one
 		}
 
 		// Identify the type and salience of the plugin
@@ -57,7 +59,7 @@ func (pm *PluginManager) LoadPlugins() {
 			Protect: true,
 		})
 		if err != nil {
-			Fatal(err.Error())
+			Warn("Unable to call WhoAmI: " + err.Error())
 		}
 
 		// Yes these are magic numbers don't touch them
@@ -67,6 +69,7 @@ func (pm *PluginManager) LoadPlugins() {
 		sVal, ok := salienceLV.(lua.LNumber)
 		if !ok {
 			Warn(fmt.Sprintf("plugin %s: salience must be a number, got %s", entry.Name(), salienceLV.Type()))
+			sVal = 0 // Default to 0 if not a number
 			continue
 		}
 		salience := int(sVal)
@@ -82,6 +85,7 @@ func (pm *PluginManager) LoadPlugins() {
 			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
 		}
 	}
+	return nil
 }
 
 func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry, error) {

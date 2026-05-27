@@ -32,8 +32,9 @@ func fileSystemInit() {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0600); err != nil {
-			Fatal("failed to create directory " + dir + ": " + err.Error())
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			Warn("failed to create directory " + dir + ": " + err.Error())
+			return
 		}
 	}
 
@@ -54,64 +55,43 @@ func idAndSort(pm *PluginManager, path string, hash string, filename string) {
 	runFilter := pm.RunPlugins("filter")
 	entry, err := runFilter(entry)
 	if err != nil {
-		Fatal(err.Error())
+		Warn("Failed to run filter " + err.Error())
 	}
-
-	//  barcodeText := scanBarCode(path)
-
-	//-------------------------------
-	// Run run
-	//-------------------------------
-
-	// 		Debug("Placing file at " + fileSystemBaseDir + "/" + pattern.TargetDirectory + "/" + path)
-
-	//good code below
-	// 		new_path := filepath.Join(fileSystemBaseDir, pattern.TargetDirectory, path)
-	// 		err = CopyFile(
-	// 			filepath.Join(uploadDir, path),
-	// 			new_path,
-	// 		)
-
-	// 		createNewFileRecord(filename, "ACTS_00N", hash, new_path, "11111111111111111111111111111111")
-
-	// 		if err != nil {
-	// 			Warn(err.Error())
-	// 			return
-	// 		}
-
-	// 		return
-	// 	} else {
-	// 		Debug("No match")
-	// 	}
-	// }
-	// createNewFileRecord("dummy.txt", "ACTS_004", "totally a hash", "./")
-	// Determine where the file needs to go
-	// Create and store db entry
-	// Store file bytes and dn entry route
+	new_path := filepath.Join(fileSystemBaseDir, entry.Path, path)
+	err = CopyFile(
+		filepath.Join(uploadDir, path),
+		new_path,
+	)
+	entry.Hash = hash // Overide the hash value
+	createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
 }
 
 func CopyFile(src, dst string) error {
 	// open source
 	srcFile, err := os.Open(src)
 	if err != nil {
+		Warn("Failed to open source file: " + err.Error())
 		return err
 	}
 	defer srcFile.Close()
 
 	// ensure destination directory exists
-	if err := os.MkdirAll(filepath.Dir(dst), 0600); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0700); err != nil {
+		Warn("Failed to create directory: " + err.Error())
 		return err
 	}
 
 	// create destination file
 	dstFile, err := os.Create(dst)
 	if err != nil {
+		Warn("Failed to create directory: " + err.Error())
 		return err
 	}
 	defer dstFile.Close()
 
 	// copy content
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		Warn("Failed to copy: " + err.Error())
 		return err
 	}
 
@@ -150,7 +130,7 @@ func searchAndReturn(filename string, pullMeta string) string {
 				Debug("Found file in cache")
 
 				FileRetrievals++
-				return uploadDir + "/" + file.Name()
+				return filepath.Join(uploadDir, file.Name())
 			}
 		}
 
