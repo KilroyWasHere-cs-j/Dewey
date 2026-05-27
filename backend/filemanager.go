@@ -52,7 +52,7 @@ func idAndSort(pm *PluginManager, path string, hash string, filename string, act
 		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
 	}
 
-	runFilter := pm.RunPlugins("filter")
+	runFilter := pm.RunPlugins(Filter)
 	entry, err := runFilter(entry)
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())

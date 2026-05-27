@@ -8,9 +8,19 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+type PluginType string
+
+const (
+	Filter PluginType = "filter"
+	Init   PluginType = "init"
+	Script PluginType = "script"
+	Tick   PluginType = "tick"
+)
+
 type Plugin struct {
-	salience int
-	name     string
+	salience   int
+	name       string
+	pluigntype PluginType
 }
 
 type PluginManager struct {
@@ -76,21 +86,21 @@ func (pm *PluginManager) LoadPlugins() error {
 
 		switch pluginType {
 		case "filter":
-			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Filter}
 		case "script":
-			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Script}
 		case "init":
-			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Init}
 		case "tick":
-			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Tick}
 		}
 	}
 	return nil
 }
 
-func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry, error) {
+func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEntry, error) {
 	switch targetBucket {
-	case "filter":
+	case Filter:
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.FilterMap {
 				Debug(fmt.Sprintf("Running filter plugin: %s", plugin.name))
@@ -106,7 +116,7 @@ func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry,
 			return entry, nil
 		}
 
-	case "script":
+	case Script:
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.ScriptMap {
 				Debug(fmt.Sprintf("Running script plugin: %s", plugin.name))
@@ -122,13 +132,13 @@ func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry,
 			return entry, nil
 		}
 
-	case "init":
+	case Init:
 		return func(entry DBEntry) (DBEntry, error) {
 			// one-time setup logic
 			return entry, nil
 		}
 
-	case "tick":
+	case Tick:
 		return func(entry DBEntry) (DBEntry, error) {
 			// periodic logic
 			return entry, nil

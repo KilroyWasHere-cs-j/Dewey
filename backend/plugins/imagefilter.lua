@@ -18,6 +18,8 @@ function Begin(entry)
     print("Meta     : " .. tostring(entry.Meta))
     print("===============")
 
-    entry.Act = "uuuugggg"
+    if entry.filename:match("%.jpg$") or entry.filename:match("%.png$") then
+        entry.Filename = "./image/" .. entry.filename
+    end
     return entry
 end

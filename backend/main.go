@@ -24,7 +24,7 @@ func main() {
 		Warn("Failed to load plugins: " + err.Error())
 	}
 	pm.ListPlugins()
-	pm.RunPlugins("init")
+	pm.RunPlugins(Init)
 
 	// --- Daemon
 	ctx, cancel := context.WithCancel(context.Background())

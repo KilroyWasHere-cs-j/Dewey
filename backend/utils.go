@@ -99,7 +99,7 @@ func startDaemon(ctx context.Context, pm *PluginManager) {
 					}()
 					dumpCache()
 					save()
-					pm.RunPlugins("tick")
+					pm.RunPlugins(Tick)
 				}()
 
 			case <-ctx.Done():
