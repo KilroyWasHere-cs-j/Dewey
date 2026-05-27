@@ -41,15 +41,15 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
-func idAndSort(pm *PluginManager, path string, hash string, filename string) {
+func idAndSort(pm *PluginManager, path string, hash string, filename string, acts string) {
 	FileSorts++ // Move this to the end of the function after all checks are done
 
 	entry := DBEntry{
 		Filename: filename,
-		Act:      "ACTS_00N", // Placeholder, should be determined by filter rules
+		Act:      acts,
 		Hash:     hash,
 		Path:     path,
-		Meta:     "11111111111111111111111111111111", // Placeholder, should be determined by filter rules
+		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
 	}
 
 	runFilter := pm.RunPlugins("filter")
@@ -62,7 +62,10 @@ func idAndSort(pm *PluginManager, path string, hash string, filename string) {
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
-	entry.Hash = hash // Overide the hash value
+
+	// Overide the entry values to ensure the filters didn't change anything
+	entry.Hash = hash
+	entry.Act = acts
 	createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
 }
 
