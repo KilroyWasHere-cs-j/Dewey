@@ -10,7 +10,7 @@ end
 -- Receives a table representing DBEntry, modifies and prints it
 function Begin(entry)
     -- Print all fields
-    print("=== DBEntry plugin ===")
+    print("=== DBEntry plugin testing plugin ===")
     print("Filename : " .. tostring(entry.Filename))
     print("Act      : " .. tostring(entry.Act))
     print("Hash     : " .. tostring(entry.Hash))

@@ -176,9 +176,8 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
 
-	entry.Act = result.RawGetString("Act").String()
 	entry.Meta = result.RawGetString("Meta").String()
-	Debug(fmt.Sprintf("Plugin modified entry: Act=%s, Meta=%s", entry.Act, entry.Meta))
+	entry.Filename = result.RawGetString("Filename").String()
 	return entry, nil
 }
 

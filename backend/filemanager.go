@@ -57,15 +57,12 @@ func idAndSort(pm *PluginManager, path string, hash string, filename string, act
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())
 	}
-	new_path := filepath.Join(fileSystemBaseDir, entry.Path, path)
+	new_path := filepath.Join(fileSystemBaseDir, entry.Filename)
 	err = CopyFile(
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
 
-	// Overide the entry values to ensure the filters didn't change anything
-	entry.Hash = hash
-	entry.Act = acts
 	createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
 }
 
