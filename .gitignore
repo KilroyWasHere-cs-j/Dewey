@@ -30,6 +30,8 @@ go.work.sum
 # App directories
 ./backend/store
 ./backend/logs
+./backend/cache
+./backend/backup
 
 # Mac file
 .DS_Store
