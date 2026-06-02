@@ -1,0 +1,336 @@
+[2026-06-02 17:18:26] [DEBUG] Loading plugins...
+[2026-06-02 17:18:26] [DEBUG] Apluginsinit.lua
+[2026-06-02 17:18:26] [DEBUG] imagefilter.lua
+[2026-06-02 17:18:26] [DEBUG] namefilter.lua
+[2026-06-02 17:18:26] [DEBUG] testingfilter.lua
+[2026-06-02 17:18:26] [DEBUG] textfilter.lua
+[2026-06-02 17:18:26] [DEBUG] tickMacro.lua
+[2026-06-02 17:18:26] [DEBUG] 
+[2026-06-02 17:18:26] [DEBUG] ====================
+[2026-06-02 17:18:26] [DEBUG] 4 filter plugins loaded
+[2026-06-02 17:18:26] [DEBUG] 0 script plugins loaded
+[2026-06-02 17:18:26] [DEBUG] 1 init plugins loaded
+[2026-06-02 17:18:26] [DEBUG] 1 tick plugins loaded
+[2026-06-02 17:18:26] [DEBUG] ====================
+[2026-06-02 17:18:26] [DEBUG] 
+[2026-06-02 17:18:26] [DEBUG] filesystem initialization complete
+[2026-06-02 17:18:27] [DEBUG] 20115
+[2026-06-02 17:18:27] [DEBUG] server starting
+[2026-06-02 17:18:27] [DEBUG] server running on port 8080
+[2026-06-02 17:19:21] [DEBUG] index
+[2026-06-02 17:19:21] [DEBUG] uploadFile
+[2026-06-02 17:19:21] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:19:21] [DEBUG] data: somedata
+[2026-06-02 17:19:21] [DEBUG] checking formats
+[2026-06-02 17:19:21] [DEBUG] Vaild file type
+[2026-06-02 17:19:21] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:19:21] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:19:21] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:19:21] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:19:21] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:19:21] [WARN] no such table: files
+[2026-06-02 17:19:23] [DEBUG] uploadFile
+[2026-06-02 17:19:23] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:19:23] [DEBUG] data: somedata
+[2026-06-02 17:19:23] [DEBUG] checking formats
+[2026-06-02 17:19:23] [DEBUG] Vaild file type
+[2026-06-02 17:19:23] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:19:23] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:19:23] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:19:23] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:19:23] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:19:23] [WARN] no such table: files
+[2026-06-02 17:19:25] [DEBUG] uploadFile
+[2026-06-02 17:19:25] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:19:25] [DEBUG] data: somedata
+[2026-06-02 17:19:25] [DEBUG] checking formats
+[2026-06-02 17:19:25] [DEBUG] Vaild file type
+[2026-06-02 17:19:25] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:19:25] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:19:25] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:19:25] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:19:25] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:19:25] [WARN] no such table: files
+[2026-06-02 17:19:27] [DEBUG] uploadFile
+[2026-06-02 17:19:27] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:19:27] [DEBUG] data: somedata
+[2026-06-02 17:19:27] [DEBUG] checking formats
+[2026-06-02 17:19:27] [DEBUG] Vaild file type
+[2026-06-02 17:19:27] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:19:27] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:19:27] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:19:27] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:19:27] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:19:27] [WARN] no such table: files
+[2026-06-02 17:19:29] [DEBUG] uploadFile
+[2026-06-02 17:19:29] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:19:29] [DEBUG] data: somedata
+[2026-06-02 17:19:29] [DEBUG] checking formats
+[2026-06-02 17:19:29] [WARN] invalid file type: 
+[2026-06-02 17:20:44] [DEBUG] index
+[2026-06-02 17:20:44] [DEBUG] uploadFile
+[2026-06-02 17:20:44] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:20:44] [DEBUG] data: somedata
+[2026-06-02 17:20:44] [DEBUG] checking formats
+[2026-06-02 17:20:44] [DEBUG] Vaild file type
+[2026-06-02 17:20:44] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:20:44] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:20:44] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:20:44] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:20:44] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:20:44] [WARN] no such table: files
+[2026-06-02 17:20:46] [DEBUG] uploadFile
+[2026-06-02 17:20:46] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:20:46] [DEBUG] data: somedata
+[2026-06-02 17:20:46] [DEBUG] checking formats
+[2026-06-02 17:20:46] [DEBUG] Vaild file type
+[2026-06-02 17:20:46] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:20:46] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:20:46] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:20:46] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:20:46] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:20:46] [WARN] no such table: files
+[2026-06-02 17:20:48] [DEBUG] uploadFile
+[2026-06-02 17:20:48] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:20:48] [DEBUG] data: somedata
+[2026-06-02 17:20:48] [DEBUG] checking formats
+[2026-06-02 17:20:48] [DEBUG] Vaild file type
+[2026-06-02 17:20:48] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:20:48] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:20:48] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:20:48] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:20:48] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:20:48] [WARN] no such table: files
+[2026-06-02 17:20:50] [DEBUG] uploadFile
+[2026-06-02 17:20:50] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:20:50] [DEBUG] data: somedata
+[2026-06-02 17:20:50] [DEBUG] checking formats
+[2026-06-02 17:20:50] [DEBUG] Vaild file type
+[2026-06-02 17:20:50] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:20:50] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:20:50] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:20:50] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:20:50] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:20:50] [WARN] no such table: files
+[2026-06-02 17:20:52] [DEBUG] uploadFile
+[2026-06-02 17:20:52] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:20:52] [DEBUG] data: somedata
+[2026-06-02 17:20:52] [DEBUG] checking formats
+[2026-06-02 17:20:52] [WARN] invalid file type: 
+[2026-06-02 17:26:12] [DEBUG] index
+[2026-06-02 17:26:12] [DEBUG] uploadFile
+[2026-06-02 17:26:12] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:26:12] [DEBUG] data: somedata
+[2026-06-02 17:26:12] [DEBUG] checking formats
+[2026-06-02 17:26:12] [DEBUG] Vaild file type
+[2026-06-02 17:26:12] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:26:12] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:12] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:12] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:12] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:12] [WARN] no such table: files
+[2026-06-02 17:26:14] [DEBUG] uploadFile
+[2026-06-02 17:26:14] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:26:14] [DEBUG] data: somedata
+[2026-06-02 17:26:14] [DEBUG] checking formats
+[2026-06-02 17:26:14] [DEBUG] Vaild file type
+[2026-06-02 17:26:14] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:26:14] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:14] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:14] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:14] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:14] [WARN] no such table: files
+[2026-06-02 17:26:16] [DEBUG] uploadFile
+[2026-06-02 17:26:16] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:26:16] [DEBUG] data: somedata
+[2026-06-02 17:26:16] [DEBUG] checking formats
+[2026-06-02 17:26:16] [DEBUG] Vaild file type
+[2026-06-02 17:26:16] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:26:16] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:16] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:16] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:16] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:16] [WARN] no such table: files
+[2026-06-02 17:26:18] [DEBUG] uploadFile
+[2026-06-02 17:26:18] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:26:18] [DEBUG] data: somedata
+[2026-06-02 17:26:18] [DEBUG] checking formats
+[2026-06-02 17:26:18] [DEBUG] Vaild file type
+[2026-06-02 17:26:18] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:26:18] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:18] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:18] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:18] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:18] [WARN] no such table: files
+[2026-06-02 17:26:20] [DEBUG] uploadFile
+[2026-06-02 17:26:20] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:26:20] [DEBUG] data: somedata
+[2026-06-02 17:26:20] [DEBUG] checking formats
+[2026-06-02 17:26:20] [WARN] invalid file type: 
+[2026-06-02 17:26:33] [DEBUG] index
+[2026-06-02 17:26:33] [DEBUG] uploadFile
+[2026-06-02 17:26:33] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:26:33] [DEBUG] data: somedata
+[2026-06-02 17:26:33] [DEBUG] checking formats
+[2026-06-02 17:26:33] [DEBUG] Vaild file type
+[2026-06-02 17:26:33] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:26:33] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:33] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:33] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:33] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:33] [WARN] no such table: files
+[2026-06-02 17:26:35] [DEBUG] uploadFile
+[2026-06-02 17:26:35] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:26:35] [DEBUG] data: somedata
+[2026-06-02 17:26:35] [DEBUG] checking formats
+[2026-06-02 17:26:35] [DEBUG] Vaild file type
+[2026-06-02 17:26:35] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:26:35] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:35] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:35] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:35] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:35] [WARN] no such table: files
+[2026-06-02 17:26:37] [DEBUG] uploadFile
+[2026-06-02 17:26:37] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:26:37] [DEBUG] data: somedata
+[2026-06-02 17:26:37] [DEBUG] checking formats
+[2026-06-02 17:26:37] [DEBUG] Vaild file type
+[2026-06-02 17:26:37] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:26:37] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:37] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:37] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:37] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:37] [WARN] no such table: files
+[2026-06-02 17:26:39] [DEBUG] uploadFile
+[2026-06-02 17:26:39] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:26:39] [DEBUG] data: somedata
+[2026-06-02 17:26:39] [DEBUG] checking formats
+[2026-06-02 17:26:39] [DEBUG] Vaild file type
+[2026-06-02 17:26:39] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:26:39] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:26:39] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:26:39] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:26:39] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:26:39] [WARN] no such table: files
+[2026-06-02 17:26:41] [DEBUG] uploadFile
+[2026-06-02 17:26:41] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:26:41] [DEBUG] data: somedata
+[2026-06-02 17:26:41] [DEBUG] checking formats
+[2026-06-02 17:26:41] [WARN] invalid file type: 
+[2026-06-02 17:32:16] [DEBUG] Loading plugins...
+[2026-06-02 17:32:16] [DEBUG] Apluginsinit.lua
+[2026-06-02 17:32:16] [DEBUG] imagefilter.lua
+[2026-06-02 17:32:16] [DEBUG] namefilter.lua
+[2026-06-02 17:32:16] [DEBUG] testingfilter.lua
+[2026-06-02 17:32:16] [DEBUG] textfilter.lua
+[2026-06-02 17:32:16] [DEBUG] tickMacro.lua
+[2026-06-02 17:32:16] [DEBUG] 
+[2026-06-02 17:32:16] [DEBUG] ====================
+[2026-06-02 17:32:16] [DEBUG] 4 filter plugins loaded
+[2026-06-02 17:32:16] [DEBUG] 0 script plugins loaded
+[2026-06-02 17:32:16] [DEBUG] 1 init plugins loaded
+[2026-06-02 17:32:16] [DEBUG] 1 tick plugins loaded
+[2026-06-02 17:32:16] [DEBUG] ====================
+[2026-06-02 17:32:16] [DEBUG] 
+[2026-06-02 17:32:16] [DEBUG] filesystem initialization complete
+[2026-06-02 17:32:17] [DEBUG] 20115
+[2026-06-02 17:32:17] [DEBUG] server starting
+[2026-06-02 17:32:17] [DEBUG] server running on port 8080
+[2026-06-02 17:32:18] [DEBUG] index
+[2026-06-02 17:32:18] [DEBUG] uploadFile
+[2026-06-02 17:32:18] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:32:18] [DEBUG] data: somedata
+[2026-06-02 17:32:18] [DEBUG] checking formats
+[2026-06-02 17:32:18] [DEBUG] Vaild file type
+[2026-06-02 17:32:18] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:32:18] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:32:18] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:32:18] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:32:18] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:32:18] [WARN] no such table: files
+[2026-06-02 17:32:20] [DEBUG] uploadFile
+[2026-06-02 17:32:20] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:32:20] [DEBUG] data: somedata
+[2026-06-02 17:32:20] [DEBUG] checking formats
+[2026-06-02 17:32:20] [DEBUG] Vaild file type
+[2026-06-02 17:32:20] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:32:20] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:32:20] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:32:20] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:32:20] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:32:20] [WARN] no such table: files
+[2026-06-02 17:32:22] [DEBUG] uploadFile
+[2026-06-02 17:32:22] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:32:22] [DEBUG] data: somedata
+[2026-06-02 17:32:22] [DEBUG] checking formats
+[2026-06-02 17:32:22] [DEBUG] Vaild file type
+[2026-06-02 17:32:22] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:32:22] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:32:22] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:32:22] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:32:22] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:32:22] [WARN] no such table: files
+[2026-06-02 17:32:24] [DEBUG] uploadFile
+[2026-06-02 17:32:24] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:32:24] [DEBUG] data: somedata
+[2026-06-02 17:32:24] [DEBUG] checking formats
+[2026-06-02 17:32:24] [DEBUG] Vaild file type
+[2026-06-02 17:32:24] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:32:24] [DEBUG] Running filter plugin: textfilter.lua
+[2026-06-02 17:32:24] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:32:24] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:32:24] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:32:24] [WARN] no such table: files
+[2026-06-02 17:32:26] [DEBUG] uploadFile
+[2026-06-02 17:32:27] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:32:27] [DEBUG] data: somedata
+[2026-06-02 17:32:27] [DEBUG] checking formats
+[2026-06-02 17:32:27] [WARN] invalid file type: 
+[2026-06-02 17:35:20] [DEBUG] index
+[2026-06-02 17:35:20] [DEBUG] uploadFile
+[2026-06-02 17:35:20] [DEBUG] ACTS_ID ACTS_001
+[2026-06-02 17:35:20] [DEBUG] data: somedata
+[2026-06-02 17:35:20] [DEBUG] checking formats
+[2026-06-02 17:35:20] [DEBUG] Vaild file type
+[2026-06-02 17:35:20] [DEBUG] SHA256: 7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f
+[2026-06-02 17:35:20] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:35:20] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:35:20] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:35:20] [WARN] Failed to run filter open plugins/testingfilter.lua: no such file or directory
+[2026-06-02 17:35:20] [WARN] no such table: files
+[2026-06-02 17:35:22] [DEBUG] uploadFile
+[2026-06-02 17:35:22] [DEBUG] ACTS_ID ACTS_002
+[2026-06-02 17:35:22] [DEBUG] data: somedata
+[2026-06-02 17:35:22] [DEBUG] checking formats
+[2026-06-02 17:35:22] [DEBUG] Vaild file type
+[2026-06-02 17:35:22] [DEBUG] SHA256: 387fbf2c8a2fa85bab01343d34acd5b18bebe6d507cfd6af7fb00c18a3b18014
+[2026-06-02 17:35:22] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:35:22] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:35:22] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:35:22] [WARN] Failed to run filter open plugins/testingfilter.lua: no such file or directory
+[2026-06-02 17:35:22] [WARN] no such table: files
+[2026-06-02 17:35:24] [DEBUG] uploadFile
+[2026-06-02 17:35:24] [DEBUG] ACTS_ID ACTS_003
+[2026-06-02 17:35:24] [DEBUG] data: somedata
+[2026-06-02 17:35:24] [DEBUG] checking formats
+[2026-06-02 17:35:24] [DEBUG] Vaild file type
+[2026-06-02 17:35:24] [DEBUG] SHA256: 1dfb94274815041cc59ac7f620449be897d296fb76c737c2ec3efd42745fb2eb
+[2026-06-02 17:35:24] [DEBUG] Running filter plugin: imagefilter.lua
+[2026-06-02 17:35:24] [DEBUG] Running filter plugin: namefilter.lua
+[2026-06-02 17:35:24] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:35:24] [WARN] Failed to run filter open plugins/testingfilter.lua: no such file or directory
+[2026-06-02 17:35:24] [WARN] no such table: files
+[2026-06-02 17:35:26] [DEBUG] uploadFile
+[2026-06-02 17:35:26] [DEBUG] ACTS_ID ACTS_004
+[2026-06-02 17:35:26] [DEBUG] data: somedata
+[2026-06-02 17:35:26] [DEBUG] checking formats
+[2026-06-02 17:35:26] [DEBUG] Vaild file type
+[2026-06-02 17:35:26] [DEBUG] SHA256: 27052339536a08543f16b5fa0deb4ce554a70b697b27ee0143302d7e6ec4fe2f
+[2026-06-02 17:35:26] [DEBUG] Running filter plugin: testingfilter.lua
+[2026-06-02 17:35:26] [WARN] Failed to run filter open plugins/testingfilter.lua: no such file or directory
+[2026-06-02 17:35:26] [WARN] no such table: files
+[2026-06-02 17:35:28] [DEBUG] uploadFile
+[2026-06-02 17:35:28] [DEBUG] ACTS_ID ACTS_005
+[2026-06-02 17:35:28] [DEBUG] data: somedata
+[2026-06-02 17:35:28] [DEBUG] checking formats
+[2026-06-02 17:35:28] [WARN] invalid file type: 

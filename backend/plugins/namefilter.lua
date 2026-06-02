@@ -18,8 +18,12 @@ function Begin(entry)
     print("Meta     : " .. tostring(entry.Meta))
     print("===============")
 
-    if entry.Path:match("%.jpg$") or entry.Path:match("%.png$") then
-        entry.Path = "./image/" .. entry.Path
+    if entry.Path:match("lenna") then
+        entry.Path = "./Swedish/" .. entry.Path
+    end
+
+    if entry.Path:match("test") then
+        entry.Path = "./testingFiles/" .. entry.Path
     end
     return entry
 end

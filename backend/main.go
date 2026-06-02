@@ -19,9 +19,12 @@ func main() {
 	Debug("Loading plugins...")
 	pm := NewPluginManager()
 	defer pm.Close()
-	pm.LoadPlugins()
+	err := pm.LoadPlugins()
+	if err != nil {
+		Warn("Failed to load plugins: " + err.Error())
+	}
 	pm.ListPlugins()
-	pm.RunPlugins("init")
+	pm.RunPlugins(Init)
 
 	// --- Daemon
 	ctx, cancel := context.WithCancel(context.Background())

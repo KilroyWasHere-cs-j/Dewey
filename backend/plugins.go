@@ -8,9 +8,19 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+type PluginType string
+
+const (
+	Filter PluginType = "filter"
+	Init   PluginType = "init"
+	Script PluginType = "script"
+	Tick   PluginType = "tick"
+)
+
 type Plugin struct {
-	salience int
-	name     string
+	salience   int
+	name       string
+	pluigntype PluginType
 }
 
 type PluginManager struct {
@@ -36,17 +46,19 @@ func (pm *PluginManager) Close() {
 	pm.L.Close()
 }
 
-func (pm *PluginManager) LoadPlugins() {
+func (pm *PluginManager) LoadPlugins() error {
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
-		Fatal("Unable to read plugin directory: " + err.Error())
+		Warn("Unable to read plugin directory: " + err.Error())
+		return err // Return the error as it is a fatal error
 	}
 
 	for _, entry := range entries {
 		Debug(entry.Name())
 
 		if err := pm.L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
-			panic(err)
+			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
+			continue // Just skip this plugin and move on to the next one
 		}
 
 		// Identify the type and salience of the plugin
@@ -57,7 +69,7 @@ func (pm *PluginManager) LoadPlugins() {
 			Protect: true,
 		})
 		if err != nil {
-			Fatal(err.Error())
+			Warn("Unable to call WhoAmI: " + err.Error())
 		}
 
 		// Yes these are magic numbers don't touch them
@@ -67,26 +79,28 @@ func (pm *PluginManager) LoadPlugins() {
 		sVal, ok := salienceLV.(lua.LNumber)
 		if !ok {
 			Warn(fmt.Sprintf("plugin %s: salience must be a number, got %s", entry.Name(), salienceLV.Type()))
+			sVal = 0 // Default to 0 if not a number
 			continue
 		}
 		salience := int(sVal)
 
 		switch pluginType {
 		case "filter":
-			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Filter}
 		case "script":
-			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Script}
 		case "init":
-			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Init}
 		case "tick":
-			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience}
+			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Tick}
 		}
 	}
+	return nil
 }
 
-func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry, error) {
+func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEntry, error) {
 	switch targetBucket {
-	case "filter":
+	case Filter:
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.FilterMap {
 				Debug(fmt.Sprintf("Running filter plugin: %s", plugin.name))
@@ -102,7 +116,7 @@ func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry,
 			return entry, nil
 		}
 
-	case "script":
+	case Script:
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.ScriptMap {
 				Debug(fmt.Sprintf("Running script plugin: %s", plugin.name))
@@ -118,13 +132,13 @@ func (pm *PluginManager) RunPlugins(targetBucket string) func(DBEntry) (DBEntry,
 			return entry, nil
 		}
 
-	case "init":
+	case Init:
 		return func(entry DBEntry) (DBEntry, error) {
 			// one-time setup logic
 			return entry, nil
 		}
 
-	case "tick":
+	case Tick:
 		return func(entry DBEntry) (DBEntry, error) {
 			// periodic logic
 			return entry, nil
@@ -162,9 +176,9 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
 
-	entry.Act = result.RawGetString("Act").String()
+	// TODO - have the returned values change based on the plugin type
 	entry.Meta = result.RawGetString("Meta").String()
-	Debug(fmt.Sprintf("Plugin modified entry: Act=%s, Meta=%s", entry.Act, entry.Meta))
+	entry.Path = result.RawGetString("Path").String()
 	return entry, nil
 }
 

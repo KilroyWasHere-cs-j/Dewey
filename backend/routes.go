@@ -157,10 +157,10 @@ func uploadFile(c *gin.Context) {
 	}
 
 	// Get form fields
-	name := c.PostForm("name")
+	acts_id := c.PostForm("ACTS_ID")
 	data := c.PostForm("data")
 
-	Debug("name: " + name)
+	Debug("ACTS_ID " + acts_id)
 	Debug("data: " + data)
 
 	// Get file
@@ -264,14 +264,14 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Post-processing
 	// -------------------------
-	idAndSort(pm, safeFilename, hashString, safeFilename)
+	idAndSort(pm, safeFilename, hashString, safeFilename, acts_id)
 
 	// -------------------------
 	// Response
 	// -------------------------
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File uploaded successfully",
-		"name":     name,
+		"acts_id":  acts_id,
 		"data":     data,
 		"filename": safeFilename,
 		"original": fileHeader.Filename,
