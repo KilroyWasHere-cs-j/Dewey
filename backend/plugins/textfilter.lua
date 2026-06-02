@@ -18,8 +18,8 @@ function Begin(entry)
     print("Meta     : " .. tostring(entry.Meta))
     print("===============")
 
-    if entry.Filename:match("%.txt$") or entry.Filename:match("%.md$") then
-        entry.Filename = "./text/" .. entry.Filename
+    if entry.Path:match("%.txt$") or entry.Path:match("%.md$") then
+        entry.Path = "./text/" .. entry.Path
     end
     return entry
 end

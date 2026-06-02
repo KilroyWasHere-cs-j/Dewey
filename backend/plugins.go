@@ -176,8 +176,9 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
 
+	// TODO - have the returned values change based on the plugin type
 	entry.Meta = result.RawGetString("Meta").String()
-	entry.Filename = result.RawGetString("Filename").String()
+	entry.Path = result.RawGetString("Path").String()
 	return entry, nil
 }
 
