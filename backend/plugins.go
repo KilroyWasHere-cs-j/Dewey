@@ -108,7 +108,7 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 					return entry, err
 				}
 				var err error
-				entry, err = pm.callBeginWithReturn(entry)
+				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
 				if err != nil {
 					return entry, err
 				}
@@ -124,7 +124,7 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 					return entry, err
 				}
 				var err error
-				entry, err = pm.callBeginWithReturn(entry)
+				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
 				if err != nil {
 					return entry, err
 				}
@@ -151,7 +151,7 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 	}
 }
 
-func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
+func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginType) (DBEntry, error) {
 	t := pm.L.NewTable()
 	pm.L.SetField(t, "Filename", lua.LString(entry.Filename))
 	pm.L.SetField(t, "Act", lua.LString(entry.Act))
@@ -176,9 +176,14 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry) (DBEntry, error) {
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
 
-	// TODO - have the returned values change based on the plugin type
-	entry.Meta = result.RawGetString("Meta").String()
-	entry.Path = result.RawGetString("Path").String()
+	if pluginType == Filter {
+		entry.Path = result.RawGetString("Path").String()
+	}
+
+	if pluginType == Script {
+		entry.Meta = result.RawGetString("Meta").String()
+		entry.Act = result.RawGetString("Act").String()
+	}
 	return entry, nil
 }
 
