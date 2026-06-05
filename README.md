@@ -10,8 +10,8 @@ Dewey is a backend file sorting and storage tool that exposes a RESTful API for 
 - File type and size restrictions
 - Prometheus metrics, custom graphing, and an administration portal
 - HTTP rate limiting
-- (Working) Plugins
-- (Planned) push notifications
+- Plugins
+- (Planned) plugin validation
 - (Planned) self restart and cleanup
 - (Planned) documentation for both developers and administrators
 
