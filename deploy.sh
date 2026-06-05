@@ -6,6 +6,7 @@ echo ""
 echo "==> Creating pod..."
 podman pod create -p 8080:8080 -p 3000:3000 dewey-pod
 
+# ---------------- PROMETHEUS ----------------
 echo ""
 echo "==> Deploying Prometheus..."
 
