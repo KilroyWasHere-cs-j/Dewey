@@ -33,8 +33,7 @@ RUN apk add --no-cache htop
 
 # Copy only the binary from builder
 COPY --from=builder /app/app-binary .
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/rules ./rules
+
 
 
 EXPOSE 8080
