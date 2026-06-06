@@ -1,4 +1,4 @@
-module CrossDocTesting
+module Dewey
 
 go 1.26.1
 
