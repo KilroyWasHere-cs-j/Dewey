@@ -11,6 +11,19 @@ import (
 	_ "github.com/go-sql-driver/mysql" // Assuming MySQL based on your connection string
 )
 
+type MetaData struct {
+	ClaimNumber  string `json:"claim_number`
+	ClaimantName string `json:"claimant_name"`
+	DateOfInjury string `json:"date_of_injury"`
+	Employer     string `json:"employer"`
+	Adjuster     string `json:"adjuster"`
+	Support      string `json:"support"`
+	ClaimType    string `json:"claim_type"`
+	Jurisdiction string `json:"jurisdiction"`
+	PolicyNumber string `json:"policy_number"`
+	ACTsID       string `json:"acts_id"`
+}
+
 // DatabaseManager encapsulates the SQL database connection pool.
 type DatabaseManager struct {
 	db *sql.DB
