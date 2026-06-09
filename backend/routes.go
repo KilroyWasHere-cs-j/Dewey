@@ -54,11 +54,12 @@ func index(c *gin.Context) {
 //   - 404 Not Found: file does not exist
 func getFile(c *gin.Context) {
 	Debug("getFile")
+	dbm := c.MustGet("db").(*DatabaseManager)
 
 	filename := c.Param("filename")
 	metaFlag := c.Param("meta")
 
-	c.File(searchAndReturn(filename, metaFlag))
+	c.File(searchAndReturn(dbm, filename, metaFlag))
 }
 
 // listFiles returns all files stored in the upload directory.
@@ -123,6 +124,7 @@ func listFiles(c *gin.Context) {
 func uploadFile(c *gin.Context) {
 	Debug("uploadFile")
 	pm := c.MustGet("plugins").(*PluginManager)
+	dbm := c.MustGet("db").(*DatabaseManager)
 
 	contentType := c.GetHeader("Content-Type")
 
@@ -264,7 +266,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Post-processing
 	// -------------------------
-	idAndSort(pm, safeFilename, hashString, safeFilename, acts_id)
+	idAndSort(pm, dbm, safeFilename, hashString, safeFilename, acts_id)
 
 	// -------------------------
 	// Response

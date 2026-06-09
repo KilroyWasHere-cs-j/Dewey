@@ -41,7 +41,7 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
-func idAndSort(pm *PluginManager, path string, hash string, filename string, acts string) {
+func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, acts string) {
 	FileSorts++ // Move this to the end of the function after all checks are done
 
 	entry := DBEntry{
@@ -63,7 +63,7 @@ func idAndSort(pm *PluginManager, path string, hash string, filename string, act
 		new_path,
 	)
 
-	createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
+	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
 }
 
 func CopyFile(src, dst string) error {
@@ -114,7 +114,7 @@ func CopyFile(src, dst string) error {
 // Returns:
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
-func searchAndReturn(filename string, pullMeta string) string {
+func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) string {
 
 	/// Search cache and return if found
 
@@ -136,7 +136,7 @@ func searchAndReturn(filename string, pullMeta string) string {
 
 		Debug("No file found in cache, searching db")
 
-		path, err := pullRecordByFilename(filename)
+		path, err := dbm.pullRecordByFilename(filename)
 		if err != nil {
 			Warn("pullRecordByFilename failed " + err.Error())
 		}
