@@ -32,8 +32,11 @@ func main() {
 	startDaemon(ctx, pm)
 
 	// --- DB
-	if err := InitDB(); err != nil {
-		Warn("Bad db")
+	dbm, err := NewDatabaseManager()
+
+	if err != nil {
+		// I want a hard fail if the database can't initialize
+		Fatal("Failed to initialize database: " + err.Error())
 	}
 
 	// --- Filesystem / Barcode
@@ -76,6 +79,7 @@ func main() {
 	api := r.Group("/")
 	api.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
+		c.Set("db", dbm)
 		c.Next()
 	})
 	{

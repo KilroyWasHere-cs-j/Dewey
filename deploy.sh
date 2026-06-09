@@ -39,11 +39,24 @@ podman pod create --infra=true \
 
 # ---------------- MYSQL ----------------
 log "info" "Deploying MySQL..."
+
+# 2. Delete the stale data volume
+podman volume rm mysql-data
+
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
   -e MYSQL_ROOT_PASSWORD=dewey \
+  -e MYSQL_DATABASE=deweyRecords \
   -v mysql-data:/var/lib/mysql:Z \
   docker.io/library/mysql:latest
+
+# This is critcal to ensure the database is ready before we start the backend which depends on it
+echo "Waiting for database..."
+while ! podman exec dewey-mysql mysqladmin ping -h localhost --silent; do
+    echo "Still waiting..."
+    sleep 3  # Wait 3 seconds before checking again
+done
+echo "Database is up!"
 
 # ---------------- PROMETHEUS ----------------
 log "info" "Deploying Prometheus..."

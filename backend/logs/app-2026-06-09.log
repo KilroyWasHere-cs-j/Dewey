@@ -1,0 +1,51 @@
+[2026-06-09 10:23:22] [DEBUG] Loading plugins...
+[2026-06-09 10:23:22] [DEBUG] Apluginsinit.lua
+[2026-06-09 10:23:22] [DEBUG] imagefilter.lua
+[2026-06-09 10:23:22] [DEBUG] metaChanger.lua
+[2026-06-09 10:23:22] [DEBUG] namefilter.lua
+[2026-06-09 10:23:22] [DEBUG] server.lua
+[2026-06-09 10:23:22] [WARN] Unable to load plugin server.lua: plugins/server.lua:25: module http.request not found:
+	no field package.preload['http.request']
+	stat ./http/request.lua: no such file or directory
+	stat /usr/local/share/lua/5.1/http/request.lua: no such file or directory
+	stat /usr/local/share/lua/5.1/http/request/init.lua: no such file or directory, 
+stack traceback:
+	[G]: in function 'require'
+	plugins/server.lua:25: in main chunk
+	[G]: ?
+[2026-06-09 10:23:22] [DEBUG] textfilter.lua
+[2026-06-09 10:23:22] [DEBUG] tickMacro.lua
+[2026-06-09 10:23:22] [DEBUG] 
+[2026-06-09 10:23:22] [DEBUG] ====================
+[2026-06-09 10:23:22] [DEBUG] 4 filter plugins loaded
+[2026-06-09 10:23:22] [DEBUG] 0 script plugins loaded
+[2026-06-09 10:23:22] [DEBUG] 1 init plugins loaded
+[2026-06-09 10:23:22] [DEBUG] 1 tick plugins loaded
+[2026-06-09 10:23:22] [DEBUG] ====================
+[2026-06-09 10:23:22] [DEBUG] 
+[2026-06-09 10:23:22] [DEBUG] filesystem initialization complete
+[2026-06-09 10:23:22] [DEBUG] 20115
+[2026-06-09 10:23:22] [DEBUG] server starting
+[2026-06-09 10:23:22] [DEBUG] server running on port 8080
+[2026-06-09 10:23:22] [FATAL] listen tcp :8080: bind: address already in use
+[2026-06-09 10:30:50] [DEBUG] Loading plugins...
+[2026-06-09 10:30:50] [DEBUG] Apluginsinit.lua
+[2026-06-09 10:30:50] [DEBUG] imagefilter.lua
+[2026-06-09 10:30:50] [DEBUG] metaChanger.lua
+[2026-06-09 10:30:50] [DEBUG] namefilter.lua
+[2026-06-09 10:30:50] [DEBUG] textfilter.lua
+[2026-06-09 10:30:50] [DEBUG] tickMacro.lua
+[2026-06-09 10:30:50] [DEBUG] 
+[2026-06-09 10:30:50] [DEBUG] ====================
+[2026-06-09 10:30:50] [DEBUG] 4 filter plugins loaded
+[2026-06-09 10:30:50] [DEBUG] 0 script plugins loaded
+[2026-06-09 10:30:50] [DEBUG] 1 init plugins loaded
+[2026-06-09 10:30:50] [DEBUG] 1 tick plugins loaded
+[2026-06-09 10:30:50] [DEBUG] ====================
+[2026-06-09 10:30:50] [DEBUG] 
+[2026-06-09 10:30:50] [DEBUG] Database connection pool initialized successfully
+[2026-06-09 10:30:50] [DEBUG] filesystem initialization complete
+[2026-06-09 10:30:50] [DEBUG] 20115
+[2026-06-09 10:30:50] [DEBUG] server starting
+[2026-06-09 10:30:50] [DEBUG] server running on port 8080
+[2026-06-09 10:30:50] [FATAL] listen tcp :8080: bind: address already in use
