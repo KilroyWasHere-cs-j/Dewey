@@ -169,3 +169,76 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 
 	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
 }
+
+// Migrate executes the DDL script to ensure the 'files' table and its indexes exist.
+// This is safe to run multiple times ("Just once" setup) because of 'IF NOT EXISTS'.
+func (dm *DatabaseManager) Migrate() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS files (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		filename VARCHAR(255) NOT NULL,
+		acts_id VARCHAR(100) NOT NULL,
+		sha256_hash CHAR(64) NOT NULL,
+		created_at VARCHAR(35) NOT NULL,
+		filepath TEXT NOT NULL,
+		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
+		claimNumber VARCHAR(100) NOT NULL
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+
+	// 1. Create the table
+	_, err := dm.db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to create files table: %w", err)
+	}
+
+	// 2. Create the composite index for filename queries
+	// Note: MySQL doesn't natively support "CREATE INDEX IF NOT EXISTS" cleanly across all versions,
+	// but using standard syntax works reliably if it's running right after an IF NOT EXISTS table definition.
+	_, err = dm.db.Exec(`
+		CREATE INDEX idx_files_filename_deleted
+		ON files (filename, is_deleted)
+	`)
+	if err != nil {
+		// We catch the error silently if it's just complaining that the index already exists
+		// (Error 1061 is MySQL's duplicate key name error code)
+		if !isDuplicateKeyError(err) {
+			return fmt.Errorf("failed to create filename index: %w", err)
+		}
+	}
+
+	// 3. Create the composite index for ACTS number queries
+	_, err = dm.db.Exec(`
+		CREATE INDEX idx_files_acts_deleted
+		ON files (acts_id, is_deleted)
+	`)
+	if err != nil {
+		if !isDuplicateKeyError(err) {
+			return fmt.Errorf("failed to create acts index: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// Helper function to handle duplicate index gracefully in MySQL
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// MySQL error code 1061: Duplicate key name
+	return fmt.Errorf("%w", err).Error() != "" && (contains(err.Error(), "1061") || contains(err.Error(), "Duplicate key"))
+}
+
+// Simple string matcher helper
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || stringContains(s, substr))
+}
+
+func stringContains(s, substr string) bool {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
