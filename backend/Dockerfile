@@ -36,7 +36,6 @@ RUN apk add --no-cache htop
 # Copy only the binary from builder
 COPY --from=builder /app/app-binary .
 
-COPY --from=builder /app/barcodes ./barcodes
 COPY --from=builder /app/plugins ./plugins
 
 EXPOSE 8080

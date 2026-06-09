@@ -6,12 +6,6 @@ import (
 	"path/filepath"
 )
 
-// if barcodeText, err := scanBarCode("./barcodes/one.png"); err != nil {
-// 		Warn("Unable to process barcodes: " + err.Error())
-// 	} else {
-// 		Debug(barcodeText)
-// 	}
-
 // var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
 
