@@ -155,7 +155,7 @@ var (
 			if err != nil {
 				Warn(err.Error())
 			}
-			return float64(count - 1) // This removes out the db file
+			return float64(count)
 		},
 	)
 	filesInBackUp = prometheus.NewGaugeFunc(
