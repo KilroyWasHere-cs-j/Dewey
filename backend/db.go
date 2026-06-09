@@ -150,7 +150,7 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 			Barcode     string `json:"barcode"`
 		}
 
-		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.ClaimNumber)
+		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.ClaimNumber, &r.Barcode)
 		if err != nil {
 			fmt.Printf("  [ERROR] Scanning row %d failed: %v\n", count, err)
 			continue

@@ -13,6 +13,20 @@ curl -i -X POST http://localhost:8080/upload \
 sleep 2
 
 curl -i -X POST http://localhost:8080/upload \
+  -F "ACTS_ID=ACTS_001" \
+  -F "data=somedata" \
+  -F "file=@one.png"
+
+sleep 2
+
+curl -i -X POST http://localhost:8080/upload \
+  -F "ACTS_ID=ACTS_001" \
+  -F "data=somedata" \
+  -F "file=@two.png"
+
+sleep 2
+
+curl -i -X POST http://localhost:8080/upload \
   -F "ACTS_ID=ACTS_002" \
   -F "data=somedata" \
   -F "file=@lenna.jpg"
