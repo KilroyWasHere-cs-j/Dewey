@@ -36,6 +36,7 @@ func fileSystemInit() {
 	dirs := []string{
 		uploadDir,
 		fileSystemBaseDir,
+		backupDir,
 	}
 
 	for _, dir := range dirs {
