@@ -49,12 +49,12 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
-func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, acts string) {
+func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
 	FileSorts++ // Move this to the end of the function after all checks are done
 
 	entry := DBEntry{
 		Filename: filename,
-		Act:      acts,
+		Act:      metaData.ACTsID,
 		Hash:     hash,
 		Path:     path,
 		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
@@ -80,8 +80,9 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		new_path,
 	)
 
+
 	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta, entry.Barcode)
-}
+	dbm.CreateNewMetaDataRecord(metaData)
 
 func CopyFile(src, dst string) error {
 	// open source
