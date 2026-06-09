@@ -170,10 +170,11 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
 }
 
-// Migrate executes the DDL script to ensure the 'files' table and its indexes exist.
-// This is safe to run multiple times ("Just once" setup) because of 'IF NOT EXISTS'.
+// Migrate executes the DDL script to ensure all tables ('files' and 'meta')
+// and their performance indexes exist.
 func (dm *DatabaseManager) Migrate() error {
-	query := `
+	// --- 1. CREATE FILES TABLE ---
+	filesQuery := `
 	CREATE TABLE IF NOT EXISTS files (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		filename VARCHAR(255) NOT NULL,
@@ -182,42 +183,57 @@ func (dm *DatabaseManager) Migrate() error {
 		created_at VARCHAR(35) NOT NULL,
 		filepath TEXT NOT NULL,
 		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
-		claimNumber VARCHAR(100) NOT NULL
+		claimNumber VARCHAR(100) NOT NULL,
+		INDEX idx_acts_id (acts_id) -- Needed for foreign key reference in meta
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
 
-	// 1. Create the table
-	_, err := dm.db.Exec(query)
-	if err != nil {
+	if _, err := dm.db.Exec(filesQuery); err != nil {
 		return fmt.Errorf("failed to create files table: %w", err)
 	}
 
-	// 2. Create the composite index for filename queries
-	// Note: MySQL doesn't natively support "CREATE INDEX IF NOT EXISTS" cleanly across all versions,
-	// but using standard syntax works reliably if it's running right after an IF NOT EXISTS table definition.
-	_, err = dm.db.Exec(`
-		CREATE INDEX idx_files_filename_deleted
-		ON files (filename, is_deleted)
-	`)
-	if err != nil {
-		// We catch the error silently if it's just complaining that the index already exists
-		// (Error 1061 is MySQL's duplicate key name error code)
-		if !isDuplicateKeyError(err) {
-			return fmt.Errorf("failed to create filename index: %w", err)
-		}
+	// --- 2. CREATE META TABLE ---
+	metaQuery := `
+	CREATE TABLE IF NOT EXISTS meta (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		claim_number VARCHAR(100) NOT NULL,
+		claimant_name VARCHAR(255) NOT NULL,
+		date_of_injury DATE NOT NULL,
+		employer VARCHAR(255) NOT NULL,
+		adjuster VARCHAR(255) NOT NULL,
+		support VARCHAR(255) NOT NULL,
+		claim_type VARCHAR(100) NOT NULL,
+		jurisdiction VARCHAR(100) NOT NULL,
+		policy_number VARCHAR(100) NOT NULL,
+		acts_id VARCHAR(100) NOT NULL
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+
+	if _, err := dm.db.Exec(metaQuery); err != nil {
+		return fmt.Errorf("failed to create meta table: %w", err)
 	}
 
-	// 3. Create the composite index for ACTS number queries
-	_, err = dm.db.Exec(`
-		CREATE INDEX idx_files_acts_deleted
-		ON files (acts_id, is_deleted)
-	`)
-	if err != nil {
-		if !isDuplicateKeyError(err) {
-			return fmt.Errorf("failed to create acts index: %w", err)
-		}
-	}
+	// --- 3. CREATE INDEXES ---
+	// File Table Indexes
+	dm.createIndexSafe("idx_files_filename_deleted", "files (filename, is_deleted)")
+	dm.createIndexSafe("idx_files_acts_deleted", "files (acts_id, is_deleted)")
+
+	// Meta Table Indexes (Optimized for pulling metadata by Claim Number or Acts ID)
+	dm.createIndexSafe("idx_meta_claim_number", "meta (claim_number)")
+	dm.createIndexSafe("idx_meta_acts_id", "meta (acts_id)")
 
 	return nil
+}
+
+// createIndexSafe handles creating an index and gracefully ignores standard
+// MySQL "Duplicate Key Name" errors (Error 1061) if it already exists.
+func (dm *DatabaseManager) createIndexSafe(indexName, tableAndColumns string) {
+	query := fmt.Sprintf("CREATE INDEX %s ON %s", indexName, tableAndColumns)
+	_, err := dm.db.Exec(query)
+	if err != nil {
+		// If it's not a duplicate key error, we log it (or you can return it)
+		if !isDuplicateKeyError(err) {
+			fmt.Printf("[MIGRATION WARNING] Could not create index %s: %v\n", indexName, err)
+		}
+	}
 }
 
 // Helper function to handle duplicate index gracefully in MySQL
