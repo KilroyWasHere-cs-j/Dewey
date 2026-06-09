@@ -158,6 +158,7 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginTyp
 	pm.L.SetField(t, "Hash", lua.LString(entry.Hash))
 	pm.L.SetField(t, "Path", lua.LString(entry.Path))
 	pm.L.SetField(t, "Meta", lua.LString(entry.Meta))
+	pm.L.SetField(t, "Barcode", lua.LString(entry.Barcode))
 
 	beginFunc := pm.L.GetGlobal("Begin")
 	err := pm.L.CallByParam(lua.P{
