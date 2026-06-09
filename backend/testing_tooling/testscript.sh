@@ -4,14 +4,6 @@ echo "Running backend tests..."
 echo "Testing GET request to http://localhost:8080/"
 curl -i http://localhost:8080/
 
-
-curl -i -X POST http://localhost:8080/upload \
-  -F "ACTS_ID=ACTS_001" \
-  -F "data=somedata" \
-  -F "file=@lenna.png"
-
-sleep 2
-
 curl -i -X POST http://localhost:8080/upload \
   -F "ACTS_ID=ACTS_001" \
   -F "data=somedata" \
@@ -37,6 +29,13 @@ curl -i -X POST http://localhost:8080/upload \
   -F "ACTS_ID=ACTS_003" \
   -F "data=somedata" \
   -F "file=@test.pdf"
+
+sleep 2
+
+curl -i -X POST http://localhost:8080/upload \
+  -F "ACTS_ID=ACTS_001" \
+  -F "data=somedata" \
+  -F "file=@lenna.png"
 
 sleep 2
 

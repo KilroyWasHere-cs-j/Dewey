@@ -74,8 +74,10 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 
 	if barcodeText, err := scanBarCode(new_path); err != nil {
 		Warn("Unable to process barcodes: " + err.Error())
+		entry.Barcode = "Nil"
 	} else {
 		Debug("Decoded barcode text to: " + barcodeText)
+		entry.Barcode = barcodeText
 	}
 
 	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta, entry.Barcode)
