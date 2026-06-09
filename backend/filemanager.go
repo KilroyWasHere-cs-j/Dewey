@@ -6,6 +6,12 @@ import (
 	"path/filepath"
 )
 
+// if barcodeText, err := scanBarCode("./barcodes/one.png"); err != nil {
+// 		Warn("Unable to process barcodes: " + err.Error())
+// 	} else {
+// 		Debug(barcodeText)
+// 	}
+
 // var filters *Config
 // PDF files should be treated as seperate files for each page with there own records
 
@@ -16,6 +22,7 @@ type DBEntry struct {
 	Hash     string
 	Path     string
 	Meta     string
+	Barcode  string
 }
 
 // fileSystemInit ensures required filesystem directories exist before server start.
@@ -29,6 +36,7 @@ func fileSystemInit() {
 	dirs := []string{
 		uploadDir,
 		fileSystemBaseDir,
+		backupDir,
 	}
 
 	for _, dir := range dirs {
@@ -50,6 +58,15 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		Hash:     hash,
 		Path:     path,
 		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
+		Barcode:  "barcode",                         // Placeholder, should be determined by barcode scanning
+	}
+
+	if barcodeText, err := scanBarCode(uploadDir + "/" + entry.Path); err != nil { // TODO make this a join() instead of string concat
+		Warn("Unable to process barcodes: " + err.Error())
+		entry.Barcode = "Nil"
+	} else {
+		Debug("Decoded barcode text to: " + barcodeText)
+		entry.Barcode = barcodeText
 	}
 
 	runFilter := pm.RunPlugins(Filter)
@@ -63,7 +80,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		new_path,
 	)
 
-	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
+	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta, entry.Barcode)
 }
 
 func CopyFile(src, dst string) error {

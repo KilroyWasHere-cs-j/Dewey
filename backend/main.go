@@ -42,13 +42,8 @@ func main() {
 	dbm.Migrate()
 	dbm.DebugPrintAllRecords() // At somepoint remove this
 
-	// --- Filesystem / Barcode
+	// --- Filesystem
 	fileSystemInit()
-	if barcodeText, err := scanBarCode("./barcodes/one.png"); err != nil {
-		Warn("Unable to process barcodes: " + err.Error())
-	} else {
-		Debug(barcodeText)
-	}
 
 	// --- Server
 	Debug("server starting")
