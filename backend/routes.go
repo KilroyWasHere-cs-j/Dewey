@@ -173,6 +173,8 @@ func uploadFile(c *gin.Context) {
 		ACTsID:       c.PostForm("acts_id"),
 	}
 
+	fmt.Print("metadata: " + fmt.Sprintf("%+v\n", metadata))
+
 	data := c.PostForm("data")
 
 	Debug("data: " + data)

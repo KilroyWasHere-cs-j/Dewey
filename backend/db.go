@@ -12,7 +12,7 @@ import (
 )
 
 type MetaData struct {
-	ClaimNumber  string `json:"claim_number`
+	ClaimNumber  string `json:"claim_number"`
 	ClaimantName string `json:"claimant_name"`
 	DateOfInjury string `json:"date_of_injury"`
 	Employer     string `json:"employer"`
