@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // Assuming MySQL based on your connection string
@@ -43,6 +45,7 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 // createNewFileRecord manages writing a new record safely within a database transaction.
 func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, filepath, claimNumber string) {
 	tx, err := dm.db.Begin()
+	dm.DebugPrintAllRecords()
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
 		return
@@ -118,4 +121,51 @@ func (dm *DatabaseManager) deleteFileRecord(filename string) error {
 	}
 
 	return nil
+}
+
+func (dm *DatabaseManager) DebugPrintAllRecords() {
+	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber FROM files`
+
+	rows, err := dm.db.Query(query)
+	if err != nil {
+		fmt.Printf("[DEBUG ERROR] Failed to query records: %v\n", err)
+		return
+	}
+	defer rows.Close()
+
+	fmt.Println("\n--- DEBUG: ALL FILE RECORDS ---")
+	count := 0
+
+	for rows.Next() {
+		count++
+		var r struct {
+			ID          int    `json:"id"`
+			Filename    string `json:"filename"`
+			ActsID      string `json:"acts_id"`
+			Sha256Hash  string `json:"sha256_hash"`
+			CreatedAt   string `json:"created_at"`
+			Filepath    string `json:"filepath"`
+			IsDeleted   int    `json:"is_deleted"`
+			ClaimNumber string `json:"claim_number"`
+		}
+
+		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.ClaimNumber)
+		if err != nil {
+			fmt.Printf("  [ERROR] Scanning row %d failed: %v\n", count, err)
+			continue
+		}
+
+		// Print nicely formatted JSON for readability
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("  ", "  ")
+		if err := encoder.Encode(r); err != nil {
+			fmt.Printf("  [ERROR] Encoding json for row %d: %v\n", count, err)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		fmt.Printf("[DEBUG ERROR] Row iteration error: %v\n", err)
+	}
+
+	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
 }

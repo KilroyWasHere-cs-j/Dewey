@@ -38,6 +38,7 @@ func main() {
 		// I want a hard fail if the database can't initialize
 		Fatal("Failed to initialize database: " + err.Error())
 	}
+	dbm.DebugPrintAllRecords() // At somepoint remove this
 
 	// --- Filesystem / Barcode
 	fileSystemInit()
