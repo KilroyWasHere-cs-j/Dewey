@@ -16,6 +16,8 @@ RUN go mod download
 # Copy the full project (not just *.go)
 COPY . .
 
+
+
 # Build binary
 ARG CGO_CFLAGS="-Wno-discarded-qualifiers"
 ENV CGO_CFLAGS=${CGO_CFLAGS}
@@ -34,7 +36,8 @@ RUN apk add --no-cache htop
 # Copy only the binary from builder
 COPY --from=builder /app/app-binary .
 
-
+COPY --from=builder /app/barcodes ./barcodes
+COPY --from=builder /app/plugins ./plugins
 
 EXPOSE 8080
 
