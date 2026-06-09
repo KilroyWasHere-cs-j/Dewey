@@ -49,3 +49,24 @@ stack traceback:
 [2026-06-09 10:30:50] [DEBUG] server starting
 [2026-06-09 10:30:50] [DEBUG] server running on port 8080
 [2026-06-09 10:30:50] [FATAL] listen tcp :8080: bind: address already in use
+[2026-06-09 15:22:25] [DEBUG] Loading plugins...
+[2026-06-09 15:22:25] [DEBUG] Apluginsinit.lua
+[2026-06-09 15:22:25] [DEBUG] imagefilter.lua
+[2026-06-09 15:22:25] [DEBUG] metaChanger.lua
+[2026-06-09 15:22:25] [DEBUG] namefilter.lua
+[2026-06-09 15:22:25] [DEBUG] textfilter.lua
+[2026-06-09 15:22:25] [DEBUG] tickMacro.lua
+[2026-06-09 15:22:25] [DEBUG] 
+[2026-06-09 15:22:25] [DEBUG] ====================
+[2026-06-09 15:22:25] [DEBUG] 4 filter plugins loaded
+[2026-06-09 15:22:25] [DEBUG] 0 script plugins loaded
+[2026-06-09 15:22:25] [DEBUG] 1 init plugins loaded
+[2026-06-09 15:22:25] [DEBUG] 1 tick plugins loaded
+[2026-06-09 15:22:25] [DEBUG] ====================
+[2026-06-09 15:22:25] [DEBUG] 
+[2026-06-09 15:22:25] [DEBUG] Database connection pool initialized successfully
+[2026-06-09 15:22:25] [INFO] Creating files table if it doesn't exist...
+[2026-06-09 15:22:25] [DEBUG] filesystem initialization complete
+[2026-06-09 15:22:25] [DEBUG] server starting
+[2026-06-09 15:22:25] [DEBUG] server running on port 8080
+[2026-06-09 15:22:25] [FATAL] listen tcp :8080: bind: address already in use
