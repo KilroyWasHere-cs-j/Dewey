@@ -61,6 +61,14 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		Barcode:  "barcode",                         // Placeholder, should be determined by barcode scanning
 	}
 
+	if barcodeText, err := scanBarCode(uploadDir + "/" + entry.Path); err != nil { // TODO make this a join() instead of string concat
+		Warn("Unable to process barcodes: " + err.Error())
+		entry.Barcode = "Nil"
+	} else {
+		Debug("Decoded barcode text to: " + barcodeText)
+		entry.Barcode = barcodeText
+	}
+
 	runFilter := pm.RunPlugins(Filter)
 	entry, err := runFilter(entry)
 	if err != nil {
@@ -71,14 +79,6 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
-
-	if barcodeText, err := scanBarCode(new_path); err != nil {
-		Warn("Unable to process barcodes: " + err.Error())
-		entry.Barcode = "Nil"
-	} else {
-		Debug("Decoded barcode text to: " + barcodeText)
-		entry.Barcode = barcodeText
-	}
 
 	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta, entry.Barcode)
 }
