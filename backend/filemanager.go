@@ -64,6 +64,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 	)
 
 	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta)
+	dbm.CreateNewMetaDataRecord(metaData)
 }
 
 func CopyFile(src, dst string) error {

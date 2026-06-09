@@ -84,6 +84,34 @@ func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, fil
 	}
 }
 
+func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
+	dm.debugPrintMetaRecords()
+	tx, err := dm.db.Begin()
+
+	if err != nil {
+		Warn("Failed to start transaction: " + err.Error())
+		return
+	}
+	// Deferring Rollback ensures resources are cleaned up if any step fails.
+	// If tx.Commit() succeeds, Rollback() does nothing.
+	defer tx.Rollback()
+
+	query := `INSERT INTO meta (claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	_, err = tx.Exec(query, metaData.ClaimNumber, metaData.ClaimantName, metaData.DateOfInjury, metaData.Employer, metaData.Adjuster, metaData.Support, metaData.ClaimType, metaData.Jurisdiction, metaData.PolicyNumber, metaData.ACTsID)
+
+	if err != nil {
+		Warn("Transaction execution failed: " + err.Error())
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		Warn("Failed to commit transaction: " + err.Error())
+		return
+	}
+}
+
 // pullRecordByFilename pulls a single filepath.
 func (dm *DatabaseManager) pullRecordByFilename(fileName string) (string, error) {
 	var filepath string
@@ -181,6 +209,66 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 	}
 
 	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
+}
+
+func (dm *DatabaseManager) debugPrintMetaRecords() {
+	query := `SELECT id, claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id FROM meta`
+
+	rows, err := dm.db.Query(query)
+	if err != nil {
+		fmt.Printf("[DEBUG ERROR] Failed to query meta records: %v\n", err)
+		return
+	}
+	defer rows.Close()
+
+	fmt.Println("\n--- DEBUG: ALL META RECORDS ---")
+	count := 0
+
+	for rows.Next() {
+		count++
+		var r struct {
+			ID           int    `json:"id"`
+			ClaimNumber  string `json:"claim_number"`
+			ClaimantName string `json:"claimant_name"`
+			DateOfInjury string `json:"date_of_injury"`
+			Employer     string `json:"employer"`
+			Adjuster     string `json:"adjuster"`
+			Support      string `json:"support"`
+			ClaimType    string `json:"claim_type"`
+			Jurisdiction string `json:"jurisdiction"`
+			PolicyNumber string `json:"policy_number"`
+			ActsID       string `json:"acts_id"`
+		}
+
+		err := rows.Scan(
+			&r.ID,
+			&r.ClaimNumber,
+			&r.ClaimantName,
+			&r.DateOfInjury,
+			&r.Employer,
+			&r.Adjuster,
+			&r.Support,
+			&r.ClaimType,
+			&r.Jurisdiction,
+			&r.PolicyNumber,
+			&r.ActsID,
+		)
+		if err != nil {
+			fmt.Printf("  [ERROR] Scanning meta row %d failed: %v\n", count, err)
+			continue
+		}
+
+		// Print nicely formatted JSON for readability
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("  ", "  ")
+		if err := encoder.Encode(r); err != nil {
+			fmt.Printf("  [ERROR] Encoding json for meta row %d: %v\n", count, err)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		fmt.Printf("[DEBUG ERROR] Error encountered during iteration: %v\n", err)
+	}
 }
 
 // Migrate executes the DDL script to ensure all tables ('files' and 'meta')
