@@ -56,7 +56,7 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 }
 
 // createNewFileRecord manages writing a new record safely within a database transaction.
-func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, filepath, claimNumber string) {
+func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, filepath, claimNumber string, barcode string) {
 	tx, err := dm.db.Begin()
 	dm.DebugPrintAllRecords()
 	if err != nil {
@@ -69,10 +69,10 @@ func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, fil
 
 	now := time.Now().Format(time.RFC3339)
 
-	query := `INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber)
-	          VALUES (?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber, barcode)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err = tx.Exec(query, filename, actsID, sha256Hash, now, filepath, 0, claimNumber)
+	_, err = tx.Exec(query, filename, actsID, sha256Hash, now, filepath, 0, claimNumber, barcode)
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
 		return
@@ -165,7 +165,7 @@ func (dm *DatabaseManager) deleteFileRecord(filename string) error {
 }
 
 func (dm *DatabaseManager) DebugPrintAllRecords() {
-	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber FROM files`
+	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber, barcode FROM files`
 
 	rows, err := dm.db.Query(query)
 	if err != nil {
@@ -188,9 +188,10 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 			Filepath    string `json:"filepath"`
 			IsDeleted   int    `json:"is_deleted"`
 			ClaimNumber string `json:"claim_number"`
+			Barcode     string `json:"barcode"`
 		}
 
-		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.ClaimNumber)
+		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.ClaimNumber, &r.Barcode)
 		if err != nil {
 			fmt.Printf("  [ERROR] Scanning row %d failed: %v\n", count, err)
 			continue
@@ -285,6 +286,7 @@ func (dm *DatabaseManager) Migrate() error {
 		filepath TEXT NOT NULL,
 		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
 		claimNumber VARCHAR(100) NOT NULL,
+		barcode VARCHAR(100) NOT NULL,
 		INDEX idx_acts_id (acts_id) -- Needed for foreign key reference in meta
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
 

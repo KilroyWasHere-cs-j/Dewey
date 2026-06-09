@@ -16,6 +16,7 @@ function Begin(entry)
     print("Hash     : " .. tostring(entry.Hash))
     print("Path     : " .. tostring(entry.Path))
     print("Meta     : " .. tostring(entry.Meta))
+    print("Barcode  : " .. tostring(entry.Barcode))
     print("===============")
 
     if entry.Path:match("%.jpg$") or entry.Path:match("%.png$") then

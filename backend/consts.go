@@ -5,6 +5,7 @@ package main
 // File system specific constants
 const uploadDir = "./cache"         // temp dir for storing files after files post upload and for fast query access
 const fileSystemBaseDir = "./store" // base directory where all stored files start from
+const backupDir = "./backup"        // directory where backup files are stored
 const daemonTickTime = 1            // system tick interval in hours (note don't try and set this to a float as it won't compile)
 
 // Server specific constants

@@ -4,8 +4,13 @@ echo "Running backend tests..."
 echo "Testing GET request to http://localhost:8080/"
 curl -i http://localhost:8080/
 
-# --- Test Case 1: PNG Upload ---
-echo "Uploading lenna.png..."
+curl -i -X POST http://localhost:8080/upload \
+  -F "ACTS_ID=ACTS_001" \
+  -F "data=somedata" \
+  -F "file=@one.png"
+
+sleep 2
+
 curl -i -X POST http://localhost:8080/upload \
   -F "claim_number=CLM-10001" \
   -F "claimant_name=John Doe" \
@@ -18,7 +23,7 @@ curl -i -X POST http://localhost:8080/upload \
   -F "policy_number=POL-998877" \
   -F "acts_id=ACTS_001" \
   -F "data=somedata" \
-  -F "file=@lenna.png"
+  -F "file=@two.png"
 
 sleep 2
 
@@ -61,16 +66,14 @@ sleep 2
 # --- Test Case 4: TXT Upload ---
 echo "Uploading bee_moive_script.txt..."
 curl -i -X POST http://localhost:8080/upload \
-  -F "claim_number=CLM-10004" \
-  -F "claimant_name=Barry Benson" \
-  -F "date_of_injury=2026-04-12" \
-  -F "employer=Honex Industries" \
-  -F "adjuster=Vanessa Bloome" \
-  -F "support=Legal" \
-  -F "claim_type=Personal Injury" \
-  -F "jurisdiction=Texas" \
-  -F "policy_number=POL-778899" \
-  -F "acts_id=ACTS_004" \
+  -F "ACTS_ID=ACTS_001" \
+  -F "data=somedata" \
+  -F "file=@lenna.png"
+
+sleep 2
+
+curl -i -X POST http://localhost:8080/upload \
+  -F "ACTS_ID=ACTS_004" \
   -F "data=somedata" \
   -F "file=@bee_moive_script.txt"
 
