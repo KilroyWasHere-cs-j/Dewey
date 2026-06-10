@@ -58,7 +58,8 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 // createNewFileRecord manages writing a new record safely within a database transaction.
 func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, filepath, claimNumber string, barcode string) {
 	tx, err := dm.db.Begin()
-	dm.DebugPrintAllRecords()
+
+
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
 		return
@@ -85,7 +86,6 @@ func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, fil
 }
 
 func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
-	dm.debugPrintMetaRecords()
 	tx, err := dm.db.Begin()
 
 	if err != nil {

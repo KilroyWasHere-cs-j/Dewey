@@ -40,8 +40,7 @@ podman pod create --infra=true \
 # ---------------- MYSQL ----------------
 log "info" "Deploying MySQL..."
 
-# 2. Delete the stale data volume
-podman volume rm mysql-data
+podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data # Remove for prod
 
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
