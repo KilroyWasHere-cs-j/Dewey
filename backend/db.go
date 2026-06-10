@@ -96,6 +96,10 @@ func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
 	// If tx.Commit() succeeds, Rollback() does nothing.
 	defer tx.Rollback()
 
+	if metaData.DateOfInjury == "" {
+		metaData.DateOfInjury = "1900-01-01"
+	}
+
 	query := `INSERT INTO meta (claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
