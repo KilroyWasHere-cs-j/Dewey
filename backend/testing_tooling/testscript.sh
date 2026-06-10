@@ -5,13 +5,6 @@ echo "Testing GET request to http://localhost:8080/"
 curl -i http://localhost:8080/
 
 curl -i -X POST http://localhost:8080/upload \
-  -F "ACTS_ID=ACTS_001" \
-  -F "data=somedata" \
-  -F "file=@one.png"
-
-sleep 2
-
-curl -i -X POST http://localhost:8080/upload \
   -F "claim_number=CLM-10001" \
   -F "claimant_name=John Doe" \
   -F "date_of_injury=2026-01-15" \
@@ -63,19 +56,12 @@ curl -i -X POST http://localhost:8080/upload \
 
 sleep 2
 
-# --- Test Case 4: TXT Upload ---
-echo "Uploading bee_moive_script.txt..."
-curl -i -X POST http://localhost:8080/upload \
-  -F "ACTS_ID=ACTS_001" \
-  -F "data=somedata" \
-  -F "file=@lenna.png"
+# sleep 2
 
-sleep 2
-
-curl -i -X POST http://localhost:8080/upload \
-  -F "ACTS_ID=ACTS_004" \
-  -F "data=somedata" \
-  -F "file=@bee_moive_script.txt"
+# curl -i -X POST http://localhost:8080/upload \
+#   -F "ACTS_ID=ACTS_004" \
+#   -F "data=somedata" \
+#   -F "file=@bee_moive_script.txt"
 
 sleep 2
 

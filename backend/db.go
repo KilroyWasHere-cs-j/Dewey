@@ -58,7 +58,8 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 // createNewFileRecord manages writing a new record safely within a database transaction.
 func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, filepath, claimNumber string, barcode string) {
 	tx, err := dm.db.Begin()
-	dm.DebugPrintAllRecords()
+
+
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
 		return
@@ -85,7 +86,6 @@ func (dm *DatabaseManager) createNewFileRecord(filename, actsID, sha256Hash, fil
 }
 
 func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
-	dm.debugPrintMetaRecords()
 	tx, err := dm.db.Begin()
 
 	if err != nil {
@@ -95,10 +95,6 @@ func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
 	// Deferring Rollback ensures resources are cleaned up if any step fails.
 	// If tx.Commit() succeeds, Rollback() does nothing.
 	defer tx.Rollback()
-
-	if metaData.DateOfInjury == "" {
-		metaData.DateOfInjury = "1900-01-01"
-	}
 
 	query := `INSERT INTO meta (claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id)
 		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
