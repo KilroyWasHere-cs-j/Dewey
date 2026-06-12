@@ -96,8 +96,12 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 		return false, err
 	}
 
-	ELFCount++
-	return header == [4]byte{0x7F, 'E', 'L', 'F'}, nil
+	magic := [4]byte{0x7F, 'E', 'L', 'F'}
+	if header == magic {
+		ELFCount++
+		return true, nil
+	}
+	return false, nil
 }
 
 // zeroize overwrites a byte slice with zeros.
