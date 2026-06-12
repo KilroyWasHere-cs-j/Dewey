@@ -1,0 +1,16 @@
+[2026-06-12 11:35:58] [DEBUG] Loading plugins...
+[2026-06-12 11:35:58] [DEBUG] Apluginsinit.lua
+[2026-06-12 11:35:58] [DEBUG] imagefilter.lua
+[2026-06-12 11:35:58] [DEBUG] metaChanger.lua
+[2026-06-12 11:35:58] [DEBUG] namefilter.lua
+[2026-06-12 11:35:58] [DEBUG] textfilter.lua
+[2026-06-12 11:35:58] [DEBUG] tickMacro.lua
+[2026-06-12 11:35:58] [DEBUG] 
+[2026-06-12 11:35:58] [DEBUG] ====================
+[2026-06-12 11:35:58] [DEBUG] 4 filter plugins loaded
+[2026-06-12 11:35:58] [DEBUG] 0 script plugins loaded
+[2026-06-12 11:35:58] [DEBUG] 1 init plugins loaded
+[2026-06-12 11:35:58] [DEBUG] 1 tick plugins loaded
+[2026-06-12 11:35:58] [DEBUG] ====================
+[2026-06-12 11:35:58] [DEBUG] 
+[2026-06-12 11:35:58] [FATAL] Failed to ping database: dial tcp 127.0.0.1:3306: connect: connection refused

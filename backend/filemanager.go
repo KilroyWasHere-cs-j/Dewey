@@ -74,7 +74,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		new_path,
 	)
 
-	dbm.createNewFileRecord(entry.Filename, entry.Act, entry.Hash, new_path, entry.Meta, entry.Barcode)
+	dbm.createNewFileRecord(entry)
 	dbm.CreateNewMetaDataRecord(metaData)
 }
 
