@@ -45,6 +45,7 @@ var (
 		{"lenna.jpg", "lenna.jpg"},
 		{"test.pdf", "test.pdf"},
 		{"CrossDocTesting", "CrossDocTesting"},
+		{"renamedELF.txt", "renamedELF.txt"},
 	}
 	statusMessages = []string{
 		"Dispatching request…",
@@ -206,17 +207,17 @@ func buildCases(base string) []TestCase {
 		idx := i + 1
 		fname := fmt.Sprintf("%s %s", rnd(firstNames), rnd(lastNames))
 		fields := map[string]string{
-			"claim_number":    randClaimNum(),
-			"claimant_name":   fname,
-			"date_of_injury":  randDate(),
-			"employer":        rnd(employers),
-			"adjuster":        rnd(adjusters),
-			"support":         rnd(supportLvls),
-			"claim_type":      rnd(claimTypes),
-			"jurisdiction":    rnd(jurisdicts),
-			"policy_number":   randPolicyNum(),
-			"acts_id":         randActsID(idx),
-			"data":            fmt.Sprintf("run-%d-data-%04x", idx, rand.Intn(0xffff)),
+			"claim_number":   randClaimNum(),
+			"claimant_name":  fname,
+			"date_of_injury": randDate(),
+			"employer":       rnd(employers),
+			"adjuster":       rnd(adjusters),
+			"support":        rnd(supportLvls),
+			"claim_type":     rnd(claimTypes),
+			"jurisdiction":   rnd(jurisdicts),
+			"policy_number":  randPolicyNum(),
+			"acts_id":        randActsID(idx),
+			"data":           fmt.Sprintf("run-%d-data-%04x", idx, rand.Intn(0xffff)),
 		}
 		fCopy := make(map[string]string, len(fields))
 		for k, v := range fields {
