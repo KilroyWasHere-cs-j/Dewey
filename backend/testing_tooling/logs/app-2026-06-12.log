@@ -1,0 +1,3 @@
+[2026-06-12 12:15:32] [WARN] Bad db
+[2026-06-12 12:15:32] [DEBUG] attempting to load filters
+[2026-06-12 12:15:32] [FATAL] failed to open config: open rules/rules.json: no such file or directory
