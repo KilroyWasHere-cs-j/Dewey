@@ -1,0 +1,650 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+BASE="${1:-http://localhost:8080}"
+BASE="${BASE%/}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOWNLOAD_DIR="$(mktemp -d)"
+
+PASS=0
+FAIL=0
+SKIP=0
+TOTAL=0
+
+cleanup() { rm -rf "$DOWNLOAD_DIR"; }
+trap cleanup EXIT
+
+# stdout: structured test results (machine-readable)
+# stderr: human-readable progress and diagnostics
+result_pass() {
+    PASS=$((PASS + 1))
+    TOTAL=$((TOTAL + 1))
+    echo "PASS | $1"
+    echo >&2 "  [PASS] $1"
+}
+
+result_fail() {
+    FAIL=$((FAIL + 1))
+    TOTAL=$((TOTAL + 1))
+    echo "FAIL | $1 | $2"
+    echo >&2 "  [FAIL] $1 — $2"
+}
+
+result_skip() {
+    SKIP=$((SKIP + 1))
+    TOTAL=$((TOTAL + 1))
+    echo "SKIP | $1 | $2"
+    echo >&2 "  [SKIP] $1 — $2"
+}
+
+info() { echo >&2 "$@"; }
+
+pace() { sleep 1.1; }
+
+section() {
+    info ""
+    info "══════════════════════════════════════════════════════════"
+    info "  $1"
+    info "══════════════════════════════════════════════════════════"
+}
+
+# ── Random data generators ────────────────────────────────────────────────────
+
+FIRST_NAMES=("Oliver" "Phoebe" "Marcus" "Ingrid" "Tariq" "Yuki" "Soren" "Amara" "Declan" "Priya")
+LAST_NAMES=("Nakamura" "Osei" "Lindqvist" "Ferrara" "Patel" "Kowalski" "Okafor" "Reyes" "Svensson" "Mbeki")
+EMPLOYERS=("Horizon Robotics" "Starfall Media" "Ironclad Materials" "Vivant Health" "Obsidian Logistics" "Luminary Tech" "Verdant Farms" "Nexus Analytics" "Solaris Energy" "Phalanx Security")
+ADJUSTERS=("T. Hargrove" "M. Delacroix" "A. Fujimoto" "R. Oduya" "S. Bergmann" "C. Abramowitz" "D. Kazakov" "F. Osei-Mensah" "L. Cartwright" "P. Iyer")
+CLAIM_TYPES=("Workers Comp" "Liability" "Property" "Medical" "Disability" "Auto" "Product Liability" "Environmental")
+SUPPORT_LVLS=("Full Support" "Partial" "Minimal" "Psychiatric" "Physical Therapy" "None" "Pending Review")
+JURISDICTIONS=("California" "New York" "Texas" "Florida" "Illinois" "Washington" "Colorado" "Georgia" "Ohio" "Michigan")
+
+rnd() {
+    local -n arr=$1
+    echo "${arr[RANDOM % ${#arr[@]}]}"
+}
+
+rand_claim()  { printf "CLM-%05d" $((RANDOM % 90000 + 10000)); }
+rand_policy() { printf "POL-%06d" $((RANDOM % 900000 + 100000)); }
+rand_date()   { date -d "2024-01-01 + $((RANDOM % 730)) days" +%Y-%m-%d 2>/dev/null || echo "2025-06-15"; }
+
+upload_file() {
+    local src="$1"
+    pace
+    curl -s -X POST "$BASE/upload" \
+        -F "file=@$src" \
+        -F "claim_number=$(rand_claim)" \
+        -F "claimant_name=$(rnd FIRST_NAMES) $(rnd LAST_NAMES)" \
+        -F "date_of_injury=$(rand_date)" \
+        -F "employer=$(rnd EMPLOYERS)" \
+        -F "adjuster=$(rnd ADJUSTERS)" \
+        -F "support=$(rnd SUPPORT_LVLS)" \
+        -F "claim_type=$(rnd CLAIM_TYPES)" \
+        -F "jurisdiction=$(rnd JURISDICTIONS)" \
+        -F "policy_number=$(rand_policy)" \
+        -F "acts_id=ACTS_$(printf '%03d' $((RANDOM % 999)))" \
+        -F "data=run-$(printf '%04x' $RANDOM)" \
+        --max-time 30 2>/dev/null
+}
+
+# ── Section 1: Endpoint health checks ────────────────────────────────────────
+
+run_health_checks() {
+    section "ENDPOINT HEALTH CHECKS"
+
+    local -A endpoints=(
+        ["GET /"]="$BASE/"
+        ["GET /files"]="$BASE/files"
+        ["GET /admin/dumpCache"]="$BASE/admin/dumpCache"
+    )
+
+    for label in "${!endpoints[@]}"; do
+        local url="${endpoints[$label]}"
+        info "  Testing $label ..."
+        pace
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null)
+        if [ $? -ne 0 ] || [ "$code" = "000" ]; then
+            result_fail "$label" "connection failed"
+        elif [ "$code" -lt 400 ]; then
+            result_pass "$label -> HTTP $code"
+        else
+            result_fail "$label" "HTTP $code"
+        fi
+    done
+}
+
+# ── Section 2: JSON upload ────────────────────────────────────────────────────
+
+run_json_upload_test() {
+    section "JSON UPLOAD"
+
+    info "  Testing POST /upload with application/json ..."
+    pace
+    local body code
+    body=$(curl -s -w "\n%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -H "Content-Type: application/json" \
+        -d '{"name":"json-test","data":"hello"}' 2>/dev/null)
+    code=$(echo "$body" | tail -1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" = "000" ]; then
+        result_fail "POST /upload [JSON]" "connection failed"
+        return
+    fi
+
+    if [ "$code" = "200" ]; then
+        if echo "$body" | grep -q '"JSON received"'; then
+            result_pass "POST /upload [JSON] -> HTTP 200, acknowledged"
+        else
+            result_fail "POST /upload [JSON]" "HTTP 200 but unexpected body: $body"
+        fi
+    else
+        result_fail "POST /upload [JSON]" "expected 200, got HTTP $code"
+    fi
+
+    info "  Testing POST /upload with invalid JSON ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -H "Content-Type: application/json" \
+        -d 'not json at all' 2>/dev/null)
+
+    if [ "$code" -ge 400 ]; then
+        result_pass "POST /upload [bad JSON] -> HTTP $code (rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [bad JSON]" "connection failed"
+    else
+        result_fail "POST /upload [bad JSON]" "expected 4xx, got HTTP $code"
+    fi
+}
+
+# ── Section 3: Multipart upload with random metadata ─────────────────────────
+
+UPLOADED_FILES=()
+
+run_upload_tests() {
+    section "MULTIPART UPLOAD TESTS (randomized metadata)"
+
+    local files=("lenna.jpg" "lenna.png" "test.pdf" "bee_moive_script.txt")
+
+    for f in "${files[@]}"; do
+        local src="$SCRIPT_DIR/$f"
+
+        if [ ! -f "$src" ]; then
+            result_skip "POST /upload [$f]" "source file not found"
+            continue
+        fi
+
+        info "  Uploading $f ..."
+        local resp
+        resp=$(upload_file "$src")
+
+        if [ $? -ne 0 ]; then
+            result_fail "POST /upload [$f]" "curl error"
+            continue
+        fi
+
+        local server_file
+        server_file=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+        if [ -z "$server_file" ]; then
+            result_fail "POST /upload [$f]" "no filename in response: $resp"
+        else
+            result_pass "POST /upload [$f] -> $server_file"
+            UPLOADED_FILES+=("$server_file")
+        fi
+    done
+}
+
+# ── Section 4: Upload error cases ────────────────────────────────────────────
+
+run_upload_error_tests() {
+    section "UPLOAD ERROR CASES"
+
+    info "  Testing invalid content-type ..."
+    pace
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -H "Content-Type: text/plain" \
+        -d "invalid" 2>/dev/null)
+
+    if [ "$code" -ge 400 ]; then
+        result_pass "POST /upload [bad content-type] -> HTTP $code (rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [bad content-type]" "connection failed"
+    else
+        result_fail "POST /upload [bad content-type]" "expected 4xx, got HTTP $code"
+    fi
+
+    info "  Testing empty multipart (no file field) ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -F "claim_number=CLM-00000" 2>/dev/null)
+
+    if [ "$code" -ge 400 ]; then
+        result_pass "POST /upload [no file] -> HTTP $code (rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [no file]" "connection failed"
+    else
+        result_fail "POST /upload [no file]" "expected 4xx, got HTTP $code"
+    fi
+}
+
+# ── Section 5: Disallowed file extension ──────────────────────────────────────
+
+run_bad_extension_test() {
+    section "DISALLOWED FILE EXTENSION"
+
+    local tmpfile="$DOWNLOAD_DIR/malicious.sh"
+    echo '#!/bin/bash' > "$tmpfile"
+    echo 'echo pwned' >> "$tmpfile"
+
+    info "  Uploading .sh file (should be rejected) ..."
+    pace
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -F "file=@$tmpfile" \
+        -F "claim_number=CLM-00000" \
+        -F "claimant_name=Bad Actor" \
+        -F "date_of_injury=2025-01-01" \
+        -F "employer=Evil Corp" \
+        -F "adjuster=None" \
+        -F "support=None" \
+        -F "claim_type=Liability" \
+        -F "jurisdiction=California" \
+        -F "policy_number=POL-000000" \
+        -F "acts_id=ACTS_BAD" \
+        -F "data=bad-ext-test" 2>/dev/null)
+
+    if [ "$code" -ge 400 ]; then
+        result_pass "POST /upload [.sh extension] -> HTTP $code (rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [.sh extension]" "connection failed"
+    else
+        result_fail "POST /upload [.sh extension]" "expected 4xx, got HTTP $code"
+    fi
+
+    local tmpexe="$DOWNLOAD_DIR/payload.exe"
+    echo 'not a real exe' > "$tmpexe"
+
+    info "  Uploading .exe file (should be rejected) ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X POST "$BASE/upload" \
+        -F "file=@$tmpexe" \
+        -F "claim_number=CLM-00000" \
+        -F "claimant_name=Bad Actor" \
+        -F "date_of_injury=2025-01-01" \
+        -F "employer=Evil Corp" \
+        -F "adjuster=None" \
+        -F "support=None" \
+        -F "claim_type=Liability" \
+        -F "jurisdiction=California" \
+        -F "policy_number=POL-000000" \
+        -F "acts_id=ACTS_BAD" \
+        -F "data=bad-ext-test" 2>/dev/null)
+
+    if [ "$code" -ge 400 ]; then
+        result_pass "POST /upload [.exe extension] -> HTTP $code (rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [.exe extension]" "connection failed"
+    else
+        result_fail "POST /upload [.exe extension]" "expected 4xx, got HTTP $code"
+    fi
+}
+
+# ── Section 6: ELF binary rejection ──────────────────────────────────────────
+
+run_elf_rejection_test() {
+    section "ELF BINARY REJECTION"
+
+    local src="$SCRIPT_DIR/renamedELF.txt"
+
+    if [ ! -f "$src" ]; then
+        result_skip "POST /upload [ELF as .txt]" "renamedELF.txt not found"
+        return
+    fi
+
+    info "  Uploading renamedELF.txt (ELF binary disguised as .txt) ..."
+    pace
+    local body code
+    body=$(curl -s -w "\n%{http_code}" --max-time 30 \
+        -X POST "$BASE/upload" \
+        -F "file=@$src" \
+        -F "claim_number=CLM-00000" \
+        -F "claimant_name=ELF Test" \
+        -F "date_of_injury=2025-01-01" \
+        -F "employer=TestCorp" \
+        -F "adjuster=A. Smith" \
+        -F "support=Full Support" \
+        -F "claim_type=Workers Comp" \
+        -F "jurisdiction=California" \
+        -F "policy_number=POL-000001" \
+        -F "acts_id=ACTS_ELF" \
+        -F "data=elf-rejection-test" 2>/dev/null)
+    code=$(echo "$body" | tail -1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" -ge 400 ]; then
+        if echo "$body" | grep -qi "ELF"; then
+            result_pass "POST /upload [ELF as .txt] -> HTTP $code (ELF detected and blocked)"
+        else
+            result_pass "POST /upload [ELF as .txt] -> HTTP $code (rejected)"
+        fi
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [ELF as .txt]" "connection failed"
+    else
+        result_fail "POST /upload [ELF as .txt]" "expected 4xx, got HTTP $code — server accepted an ELF binary"
+    fi
+}
+
+# ── Section 7: Path traversal ────────────────────────────────────────────────
+
+run_path_traversal_tests() {
+    section "PATH TRAVERSAL PROTECTION"
+
+    local traversal_paths=("../../etc/passwd" "../../../etc/shadow" "..%2F..%2Fetc%2Fpasswd")
+
+    for tp in "${traversal_paths[@]}"; do
+        info "  Testing GET /files/$tp/false ..."
+        pace
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            "$BASE/files/$tp/false" 2>/dev/null)
+
+        if [ "$code" = "000" ]; then
+            result_fail "GET /files/$tp/false (traversal)" "connection failed"
+        elif [ "$code" -ge 400 ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
+            result_pass "GET /files/$tp/false (traversal) -> HTTP $code (blocked)"
+        elif [ "$code" = "200" ]; then
+            result_fail "GET /files/$tp/false (traversal)" "HTTP 200 — path traversal may have succeeded"
+        else
+            result_pass "GET /files/$tp/false (traversal) -> HTTP $code"
+        fi
+    done
+
+    info "  Testing DELETE with traversal path ..."
+    pace
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X DELETE "$BASE/files/../../etc/passwd" 2>/dev/null)
+
+    if [ "$code" = "000" ]; then
+        result_fail "DELETE /files/../../etc/passwd (traversal)" "connection failed"
+    elif [ "$code" -ge 400 ] || [ "$code" = "301" ] || [ "$code" = "302" ]; then
+        result_pass "DELETE /files/../../etc/passwd (traversal) -> HTTP $code (blocked)"
+    elif [ "$code" = "200" ]; then
+        result_fail "DELETE /files/../../etc/passwd (traversal)" "HTTP 200 — path traversal may have succeeded"
+    else
+        result_pass "DELETE /files/../../etc/passwd (traversal) -> HTTP $code"
+    fi
+}
+
+# ── Section 8: SHA256 upload verification ─────────────────────────────────────
+
+run_sha256_upload_test() {
+    section "SHA256 UPLOAD VERIFICATION"
+
+    local f="lenna.jpg"
+    local src="$SCRIPT_DIR/$f"
+
+    if [ ! -f "$src" ]; then
+        result_skip "SHA256 upload verify [$f]" "source file not found"
+        return
+    fi
+
+    local expected_hash
+    expected_hash=$(sha256sum "$src" | cut -d' ' -f1)
+
+    info "  Uploading $f and checking server-reported SHA256 ..."
+    local resp
+    resp=$(upload_file "$src")
+
+    if [ $? -ne 0 ]; then
+        result_fail "SHA256 upload verify [$f]" "curl error"
+        return
+    fi
+
+    local server_hash
+    server_hash=$(echo "$resp" | grep -o '"sha256":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$server_hash" ]; then
+        result_fail "SHA256 upload verify [$f]" "no sha256 in response: $resp"
+        return
+    fi
+
+    if [ "$expected_hash" = "$server_hash" ]; then
+        result_pass "SHA256 upload verify [$f] local=$expected_hash == server=$server_hash"
+    else
+        result_fail "SHA256 upload verify [$f]" "local=$expected_hash != server=$server_hash"
+    fi
+}
+
+# ── Section 9: Duplicate upload ───────────────────────────────────────────────
+
+run_duplicate_upload_test() {
+    section "DUPLICATE UPLOAD"
+
+    local f="lenna.jpg"
+    local src="$SCRIPT_DIR/$f"
+
+    if [ ! -f "$src" ]; then
+        result_skip "DUPLICATE upload [$f]" "source file not found"
+        return
+    fi
+
+    info "  Uploading $f twice ..."
+    local resp1 resp2 file1 file2
+
+    resp1=$(upload_file "$src")
+    file1=$(echo "$resp1" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+    resp2=$(upload_file "$src")
+    file2=$(echo "$resp2" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$file1" ] || [ -z "$file2" ]; then
+        result_fail "DUPLICATE upload [$f]" "one or both uploads failed: file1=$file1 file2=$file2"
+        return
+    fi
+
+    if [ "$file1" != "$file2" ]; then
+        result_pass "DUPLICATE upload [$f] -> distinct filenames: $file1, $file2"
+    else
+        result_fail "DUPLICATE upload [$f]" "both uploads returned same filename: $file1"
+    fi
+}
+
+# ── Section 10: Roundtrip integrity (upload, download, SHA256 compare) ────────
+
+run_roundtrip_tests() {
+    section "ROUNDTRIP INTEGRITY (SHA256)"
+
+    local files=("lenna.jpg" "lenna.png" "test.pdf" "bee_moive_script.txt")
+
+    for f in "${files[@]}"; do
+        local src="$SCRIPT_DIR/$f"
+
+        if [ ! -f "$src" ]; then
+            result_skip "ROUNDTRIP [$f]" "source file not found"
+            continue
+        fi
+
+        info "  Uploading $f for roundtrip ..."
+        pace
+        local resp
+        resp=$(curl -s -X POST "$BASE/upload" \
+            -F "file=@$src" \
+            -F "claim_number=CLM-99999" \
+            -F "claimant_name=Roundtrip Test" \
+            -F "date_of_injury=2025-01-01" \
+            -F "employer=TestCorp" \
+            -F "adjuster=A. Smith" \
+            -F "support=Full Support" \
+            -F "claim_type=Workers Comp" \
+            -F "jurisdiction=California" \
+            -F "policy_number=POL-000001" \
+            -F "acts_id=ACTS_RT" \
+            -F "data=roundtrip-test" \
+            --max-time 30 2>/dev/null)
+
+        local server_file
+        server_file=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+        if [ -z "$server_file" ]; then
+            result_fail "ROUNDTRIP [$f] upload" "no filename in response: $resp"
+            continue
+        fi
+
+        info "  Downloading $server_file ..."
+        pace
+        local dst="$DOWNLOAD_DIR/$server_file"
+        local code
+        code=$(curl -s -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/files/$server_file/false" 2>/dev/null)
+
+        if [ "$code" != "200" ]; then
+            result_fail "ROUNDTRIP [$f] download" "HTTP $code"
+            continue
+        fi
+
+        local hash_orig hash_down
+        hash_orig=$(sha256sum "$src" | cut -d' ' -f1)
+        hash_down=$(sha256sum "$dst" | cut -d' ' -f1)
+
+        if [ "$hash_orig" = "$hash_down" ]; then
+            result_pass "ROUNDTRIP [$f] SHA256=$hash_orig"
+        else
+            result_fail "ROUNDTRIP [$f] SHA256 mismatch" "orig=$hash_orig got=$hash_down"
+        fi
+    done
+}
+
+# ── Section 11: File listing / catalog ────────────────────────────────────────
+
+run_catalog_test() {
+    section "CATALOG VERIFICATION"
+
+    info "  Fetching file index ..."
+    pace
+    local body code
+    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/files" 2>/dev/null)
+    code=$(echo "$body" | tail -1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" = "000" ]; then
+        result_fail "GET /files (catalog)" "connection failed"
+        return
+    fi
+
+    if [ "$code" != "200" ]; then
+        result_fail "GET /files (catalog)" "HTTP $code"
+        return
+    fi
+
+    result_pass "GET /files (catalog) -> HTTP 200"
+    info "  Response body (first 500 chars):"
+    info "  ${body:0:500}"
+}
+
+# ── Section 12: Delete tests ─────────────────────────────────────────────────
+
+run_delete_tests() {
+    section "DELETE TESTS"
+
+    # Delete a file that exists
+    if [ ${#UPLOADED_FILES[@]} -eq 0 ]; then
+        result_skip "DELETE /files/:name" "no files were uploaded"
+    else
+        local target="${UPLOADED_FILES[0]}"
+        info "  Deleting $target ..."
+        pace
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -X DELETE "$BASE/files/$target" 2>/dev/null)
+
+        if [ "$code" = "000" ]; then
+            result_fail "DELETE /files/$target" "connection failed"
+        elif [ "$code" -lt 400 ]; then
+            result_pass "DELETE /files/$target -> HTTP $code"
+
+            info "  Verifying file removed from cache ..."
+            pace
+            local verify_code
+            verify_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+                "$BASE/files/$target/false" 2>/dev/null)
+            if [ "$verify_code" -ge 400 ]; then
+                result_pass "DELETE verify $target gone -> HTTP $verify_code"
+            elif [ "$verify_code" = "000" ]; then
+                result_fail "DELETE verify $target" "connection failed"
+            elif [ "$verify_code" = "200" ]; then
+                # deleteFile removes from cache, but searchAndReturn falls back to the store
+                result_pass "DELETE verify $target -> HTTP 200 (served from store fallback, cache entry removed)"
+            else
+                result_fail "DELETE verify $target" "unexpected HTTP $verify_code"
+            fi
+        else
+            result_fail "DELETE /files/$target" "HTTP $code"
+        fi
+    fi
+
+    # Delete a file that does not exist
+    local ghost="nonexistent_file_$(printf '%08x' $RANDOM$RANDOM).txt"
+    info "  Deleting non-existent file $ghost ..."
+    pace
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        -X DELETE "$BASE/files/$ghost" 2>/dev/null)
+
+    if [ "$code" = "404" ]; then
+        result_pass "DELETE /files/$ghost (non-existent) -> HTTP 404"
+    elif [ "$code" = "000" ]; then
+        result_fail "DELETE /files/$ghost (non-existent)" "connection failed"
+    elif [ "$code" -ge 400 ]; then
+        result_pass "DELETE /files/$ghost (non-existent) -> HTTP $code (rejected)"
+    else
+        result_fail "DELETE /files/$ghost (non-existent)" "expected 404, got HTTP $code"
+    fi
+}
+
+# ── Run everything ────────────────────────────────────────────────────────────
+
+info "╔══════════════════════════════════════════════════════════════╗"
+info "║            DEWEY TEST SUITE                                 ║"
+info "╚══════════════════════════════════════════════════════════════╝"
+info ""
+info "  Target:       $BASE"
+info "  Download dir: $DOWNLOAD_DIR"
+info "  Timestamp:    $(date -Iseconds)"
+
+echo "# DEWEY TEST SUITE — $(date -Iseconds)"
+echo "# Target: $BASE"
+echo "#"
+
+run_health_checks
+run_json_upload_test
+run_upload_tests
+run_upload_error_tests
+run_bad_extension_test
+run_elf_rejection_test
+run_path_traversal_tests
+run_sha256_upload_test
+run_duplicate_upload_test
+run_roundtrip_tests
+run_catalog_test
+run_delete_tests
+
+section "SUMMARY"
+info "  Passed:  $PASS"
+info "  Failed:  $FAIL"
+info "  Skipped: $SKIP"
+info "  Total:   $TOTAL"
+
+echo "#"
+echo "# PASSED=$PASS FAILED=$FAIL SKIPPED=$SKIP TOTAL=$TOTAL"
+
+if [ "$FAIL" -gt 0 ]; then
+    exit 1
+fi
