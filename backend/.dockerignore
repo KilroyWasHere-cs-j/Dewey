@@ -1,0 +1,12 @@
+.git
+.gitignore
+cache/
+store/
+backup/
+logs/
+testing_tooling/
+*.md
+Dockerfile
+.dockerignore
+.containerignore
+dewey-server
