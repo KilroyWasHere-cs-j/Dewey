@@ -9,7 +9,7 @@ const backupDir = "./backup"        // directory where backup files are stored
 const daemonTickTime = 1            // system tick interval in hours (note don't try and set this to a float as it won't compile)
 
 // Server specific constants
-const maxFileSize = 50 << 2   // maximum file that can be uploaded in bytes (50MB)
+const maxFileSize = 50 << 20  // maximum file that can be uploaded in bytes (50MB)
 const portNumber = "8080"     // port for the server to listen on
 const allowedIP = "127.0.0.1" // Only IP allowed to connect to the server (no worky)
 const loopback = "::1"        // Allows for loopback to work (no worky)

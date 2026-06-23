@@ -59,7 +59,16 @@ func getFile(c *gin.Context) {
 	filename := c.Param("filename")
 	metaFlag := c.Param("meta")
 
-	c.File(searchAndReturn(dbm, filename, metaFlag))
+	path, err := searchAndReturn(dbm, filename, metaFlag)
+	if err != nil {
+		Warn("getFile failed: " + err.Error())
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "File not found",
+		})
+		return
+	}
+
+	c.File(path)
 }
 
 // listFiles returns all files stored in the upload directory.

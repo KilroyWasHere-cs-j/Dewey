@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -73,6 +74,10 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
+	if err != nil {
+		Warn("Failed to copy file to store: " + err.Error())
+		return
+	}
 
 	dbm.createNewFileRecord(entry)
 	dbm.CreateNewMetaDataRecord(metaData)
@@ -126,15 +131,13 @@ func CopyFile(src, dst string) error {
 // Returns:
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
-func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) string {
-
-	/// Search cache and return if found
+func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (string, error) {
 
 	if pullMeta == "false" {
 		Debug("Checking cache")
-		files, err := os.ReadDir(uploadDir) // List current directory
+		files, err := os.ReadDir(uploadDir)
 		if err != nil {
-			Warn("During file reterival os.ReadDir() encoutered " + err.Error())
+			Warn("During file retrieval os.ReadDir() encountered " + err.Error())
 		}
 
 		for _, file := range files {
@@ -142,7 +145,7 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) str
 				Debug("Found file in cache")
 
 				FileRetrievals++
-				return filepath.Join(uploadDir, file.Name())
+				return filepath.Join(uploadDir, file.Name()), nil
 			}
 		}
 
@@ -151,19 +154,25 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) str
 		path, err := dbm.pullRecordByFilename(filename)
 		if err != nil {
 			Warn("pullRecordByFilename failed " + err.Error())
+			return "", err
 		}
 		Debug("Pulled this path from db " + path)
 
-		FileRetrievals++
-		return path
+		fullPath := filepath.Join(fileSystemBaseDir, path)
+		if _, err := os.Stat(fullPath); err != nil {
+			Warn("File not found at stored path: " + fullPath)
+			return "", err
+		}
 
-		// : http.ResponseWriter, r *http.Request
+		FileRetrievals++
+		return fullPath, nil
+
 	} else if pullMeta == "true" {
 		Debug("Would sql search and pull meta")
-		return ""
+		return "", fmt.Errorf("metadata retrieval not implemented")
 	} else {
 		Debug("Unknown meta flag")
-		return "Unknown meta flag"
+		return "", fmt.Errorf("unknown meta flag: %s", pullMeta)
 	}
 }
 
