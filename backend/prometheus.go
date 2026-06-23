@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,11 +13,13 @@ import (
 
 var appName = "crossApp"
 var startTime = time.Now()
-var FileSorts = 0
-var FileRetrievals = 0
-var FileDeletions = 0
-var FiltersLoadings = 0
-var FileCopys = 0
+
+// Atomic counters — safe for concurrent access from HTTP handlers
+var FileSorts int64
+var FileRetrievals int64
+var FileDeletions int64
+var FiltersLoadings int64
+var FileCopys int64
 
 var (
 	fileOps = prometheus.NewCounterVec(
@@ -122,7 +125,7 @@ var (
 		func() float64 {
 			entries, err := os.ReadDir("./cache")
 			if err != nil {
-				panic(err)
+				Warn("Failed to read cache directory: " + err.Error())
 			}
 
 			count := 0
@@ -187,7 +190,7 @@ var (
 			Help: "Number of executable files in the application store",
 		},
 		func() float64 {
-			return float64(PECount + ELFCount)
+			return float64(atomic.LoadInt64(&PECount) + atomic.LoadInt64(&ELFCount))
 		},
 	)
 
@@ -197,7 +200,7 @@ var (
 			Help: "Number of times the filters configuration has been loaded",
 		},
 		func() float64 {
-			return float64(FiltersLoadings)
+			return float64(atomic.LoadInt64(&FiltersLoadings))
 		},
 	)
 
@@ -207,7 +210,7 @@ var (
 			Help: "Number of times a file has been copied",
 		},
 		func() float64 {
-			return float64(FileCopys)
+			return float64(atomic.LoadInt64(&FileCopys))
 		},
 	)
 
@@ -217,7 +220,7 @@ var (
 			Help: "Number of times a file has been retried",
 		},
 		func() float64 {
-			return float64(FileRetrievals)
+			return float64(atomic.LoadInt64(&FileRetrievals))
 		},
 	)
 
@@ -227,7 +230,7 @@ var (
 			Help: "Number of times a file has been sorted",
 		},
 		func() float64 {
-			return float64(FileSorts)
+			return float64(atomic.LoadInt64(&FileSorts))
 		},
 	)
 

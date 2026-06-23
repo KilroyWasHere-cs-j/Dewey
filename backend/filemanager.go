@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 )
 
 // var filters *Config
@@ -45,7 +46,7 @@ func fileSystemInit() {
 }
 
 func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
-	FileSorts++ // Move this to the end of the function after all checks are done
+	atomic.AddInt64(&FileSorts, 1) // Move this to the end of the function after all checks are done
 
 	entry := DBEntry{
 		Filename: filename,
@@ -112,7 +113,7 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	FileCopys++
+	atomic.AddInt64(&FileCopys, 1)
 
 	// flush to disk
 	return dstFile.Sync()
@@ -144,7 +145,7 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (st
 			if file.Name() == filename {
 				Debug("Found file in cache")
 
-				FileRetrievals++
+				atomic.AddInt64(&FileRetrievals, 1)
 				return filepath.Join(uploadDir, file.Name()), nil
 			}
 		}

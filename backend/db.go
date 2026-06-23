@@ -164,7 +164,7 @@ func (dm *DatabaseManager) deleteFileRecord(filename string) error {
 }
 
 func (dm *DatabaseManager) DebugPrintAllRecords() {
-	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber, barcode FROM files`
+	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, barcode FROM files`
 
 	rows, err := dm.db.Query(query)
 	if err != nil {

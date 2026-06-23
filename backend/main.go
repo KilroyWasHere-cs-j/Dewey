@@ -40,7 +40,6 @@ func main() {
 	}
 	Info("Creating files table if it doesn't exist...")
 	dbm.Migrate()
-	dbm.DebugPrintAllRecords() // At somepoint remove this
 
 	// --- Filesystem
 	fileSystemInit()
