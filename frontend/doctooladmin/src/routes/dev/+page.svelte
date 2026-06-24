@@ -62,42 +62,6 @@
 					<Spinner type="orbit" color="rose" />
 				{/if}
 			</div>
-			<div class="max-w-7xl mx-auto py-4 px-6">
-				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
-					{tickRequestInProgress ? "Processing..." : "Request Tick"}
-				</Button>
-				<Tooltip>Refresh dashboard</Tooltip>
-				{#if tickRequestInProgress}
-					<Spinner type="orbit" color="rose" />
-				{/if}
-			</div>
-			<div class="max-w-7xl mx-auto py-4 px-6">
-				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
-					{tickRequestInProgress ? "Processing..." : "Request Tick"}
-				</Button>
-				<Tooltip>Refresh dashboard</Tooltip>
-				{#if tickRequestInProgress}
-					<Spinner type="orbit" color="rose" />
-				{/if}
-			</div>
-			<div class="max-w-7xl mx-auto py-4 px-6">
-				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
-					{tickRequestInProgress ? "Processing..." : "Request Tick"}
-				</Button>
-				<Tooltip>Refresh dashboard</Tooltip>
-				{#if tickRequestInProgress}
-					<Spinner type="orbit" color="rose" />
-				{/if}
-			</div>
-			<div class="max-w-7xl mx-auto py-4 px-6">
-				<Button color="purple" onclick={handleTickRequest} disabled={tickRequestInProgress}>
-					{tickRequestInProgress ? "Processing..." : "Request Tick"}
-				</Button>
-				<Tooltip>Refresh dashboard</Tooltip>
-				{#if tickRequestInProgress}
-					<Spinner type="orbit" color="rose" />
-				{/if}
-			</div>
 		</div>
 
 		<!-- Content Grid -->

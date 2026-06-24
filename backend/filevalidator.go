@@ -104,14 +104,3 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 	}
 	return false, nil
 }
-
-// zeroize overwrites a byte slice with zeros.
-//
-// Note:
-//   - Intended for sensitive in-memory data cleanup (best-effort)
-//   - Not guaranteed against compiler optimizations in all cases
-func zeroize(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
-}

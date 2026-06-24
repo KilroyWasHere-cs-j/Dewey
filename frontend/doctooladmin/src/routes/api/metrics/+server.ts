@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
 export interface AppMetrics {
@@ -95,7 +96,8 @@ const LABELED_METRICS = new Set([
 
 export const GET: RequestHandler = async () => {
 	try {
-		const response = await fetch('http://localhost:8080/metrics');
+		const backendUrl = env.BACKEND_URL ?? 'http://localhost:8080';
+		const response = await fetch(`${backendUrl}/metrics`);
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
 		const text = await response.text();

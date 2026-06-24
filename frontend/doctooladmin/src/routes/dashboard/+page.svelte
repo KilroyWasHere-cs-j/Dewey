@@ -48,7 +48,7 @@
 		Warning: 'Warning',
 		Critical: 'Critical',
 		Dead: 'Dead',
-		Uknown: 'Unknown'
+		Unknown: 'Unknown'
 	} as const;
 
 	type SystemHealth = (typeof SystemHealth)[keyof typeof SystemHealth];

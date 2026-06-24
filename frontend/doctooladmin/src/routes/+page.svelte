@@ -9,28 +9,17 @@
 	let loading = $state(true);
 	let progress = $state(0);
 
-	// Artificial delay to simulate loading hehehe, remove this for amazing and incredible "performance" boosts
-	async function sleep(ms: number): Promise<void> {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
-
 	onMount(() => {
 		async function testMetricsRoute() {
-			progress = 0;
+			progress = 25;
 			try {
-				progress = 25;
-				await sleep(1000);
 				const res = await fetch('/api/metrics');
-				progress = 50;
-				await sleep(1000);
+				progress = 75;
 				if (res.ok) {
-					progress = 75;
-					await sleep(1000);
 					progress = 100;
 					failedToFetchMetrics = false;
 					goto('/dashboard');
 				} else {
-					await sleep(1000);
 					failedToFetchMetrics = true;
 					loading = false;
 				}

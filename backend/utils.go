@@ -1,16 +1,13 @@
 package main
 
 import (
-	"io"
-	"os"
-	"sync"
-	"time"
-
 	"archive/zip"
 	"context"
+	"io"
+	"os"
 	"path/filepath"
-
-	"github.com/gin-gonic/gin"
+	"sync"
+	"time"
 )
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
@@ -119,23 +116,21 @@ func TimeUntilNextTick() time.Duration {
 	return daemonTicker.Remaining()
 }
 
-// runTask executes periodic maintenance logic such as cache cleanup.
+// dumpCache clears all files from the upload cache directory.
 func dumpCache() {
-	// Debug("Running system cache dump")
-	entries, err := os.ReadDir(uploadDir) // Read current directory
+	entries, err := os.ReadDir(uploadDir)
 	if err != nil {
-		// Fatal("Failed to dump cache dir " + err.Error())
+		Warn("Failed to read cache dir: " + err.Error())
+		return
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
-			err := os.Remove(uploadDir + "/" + entry.Name())
-			if err != nil {
-				// Fatal("Failed to remove a file from the cache " + err.Error())
+			if err := os.Remove(filepath.Join(uploadDir, entry.Name())); err != nil {
+				Warn("Failed to remove cached file " + entry.Name() + ": " + err.Error())
 			}
 		}
 	}
-	// Debug("Cache dumped")
 }
 
 func save() error {
@@ -189,16 +184,4 @@ func save() error {
 		_, err = io.Copy(writer, file)
 		return err
 	})
-}
-
-func PluginMiddleware() gin.HandlerFunc {
-	pm := NewPluginManager()
-	pm.LoadPlugins()
-	pm.RunPlugins("init")
-
-	return func(c *gin.Context) {
-		Debug("Loading plugins...")
-		c.Set("plugins", pm)
-		c.Next()
-	}
 }
