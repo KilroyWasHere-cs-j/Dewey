@@ -9,11 +9,12 @@ package main
 import (
 	"encoding/binary"
 	"io"
+	"sync/atomic"
 )
 
-// Number of PE and ELF files detected this is uses for logging and debugging with Prometheus
-var PECount = 0
-var ELFCount = 0
+// Atomic counters for PE and ELF detections — read by Prometheus
+var PECount int64
+var ELFCount int64
 
 // IsPEFile checks whether the provided file is a Windows Portable Executable (PE).
 //
@@ -67,7 +68,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 	if peSig != [4]byte{'P', 'E', 0, 0} {
 		return false, nil
 	}
-	PECount++
+	atomic.AddInt64(&PECount, 1)
 	return true, nil
 }
 
@@ -98,19 +99,8 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 
 	magic := [4]byte{0x7F, 'E', 'L', 'F'}
 	if header == magic {
-		ELFCount++
+		atomic.AddInt64(&ELFCount, 1)
 		return true, nil
 	}
 	return false, nil
-}
-
-// zeroize overwrites a byte slice with zeros.
-//
-// Note:
-//   - Intended for sensitive in-memory data cleanup (best-effort)
-//   - Not guaranteed against compiler optimizations in all cases
-func zeroize(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
 }

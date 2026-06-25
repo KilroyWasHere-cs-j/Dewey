@@ -30,11 +30,16 @@ type DatabaseManager struct {
 }
 
 // NewDatabaseManager initializes and verifies the database connection pool.
+// Reads connection string from DB_DSN env var, falls back to local dev default.
 func NewDatabaseManager() (*DatabaseManager, error) {
-	// 1. Open the database connection pool
-	db, err := sql.Open("mysql", "root:dewey@tcp(127.0.0.1:3306)/deweyRecords")
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		dsn = "root:dewey@tcp(127.0.0.1:3306)/deweyRecords"
+	}
+
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		Fatal("Failed to open database connection: " + err.Error()) // Remove fatal later
+		Warn("Failed to open database connection: " + err.Error())
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
@@ -45,8 +50,8 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 
 	// 3. Verify the connection is actually working
 	if err := db.Ping(); err != nil {
-		db.Close()                                       // Clean up if the ping fails
-		Fatal("Failed to ping database: " + err.Error()) // Remove fatal later
+		db.Close()
+		Warn("Failed to ping database: " + err.Error())
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -164,7 +169,7 @@ func (dm *DatabaseManager) deleteFileRecord(filename string) error {
 }
 
 func (dm *DatabaseManager) DebugPrintAllRecords() {
-	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, claimNumber, barcode FROM files`
+	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, barcode FROM files`
 
 	rows, err := dm.db.Query(query)
 	if err != nil {
@@ -208,66 +213,6 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 	}
 
 	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
-}
-
-func (dm *DatabaseManager) debugPrintMetaRecords() {
-	query := `SELECT id, claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id FROM meta`
-
-	rows, err := dm.db.Query(query)
-	if err != nil {
-		fmt.Printf("[DEBUG ERROR] Failed to query meta records: %v\n", err)
-		return
-	}
-	defer rows.Close()
-
-	fmt.Println("\n--- DEBUG: ALL META RECORDS ---")
-	count := 0
-
-	for rows.Next() {
-		count++
-		var r struct {
-			ID           int    `json:"id"`
-			ClaimNumber  string `json:"claim_number"`
-			ClaimantName string `json:"claimant_name"`
-			DateOfInjury string `json:"date_of_injury"`
-			Employer     string `json:"employer"`
-			Adjuster     string `json:"adjuster"`
-			Support      string `json:"support"`
-			ClaimType    string `json:"claim_type"`
-			Jurisdiction string `json:"jurisdiction"`
-			PolicyNumber string `json:"policy_number"`
-			ActsID       string `json:"acts_id"`
-		}
-
-		err := rows.Scan(
-			&r.ID,
-			&r.ClaimNumber,
-			&r.ClaimantName,
-			&r.DateOfInjury,
-			&r.Employer,
-			&r.Adjuster,
-			&r.Support,
-			&r.ClaimType,
-			&r.Jurisdiction,
-			&r.PolicyNumber,
-			&r.ActsID,
-		)
-		if err != nil {
-			fmt.Printf("  [ERROR] Scanning meta row %d failed: %v\n", count, err)
-			continue
-		}
-
-		// Print nicely formatted JSON for readability
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("  ", "  ")
-		if err := encoder.Encode(r); err != nil {
-			fmt.Printf("  [ERROR] Encoding json for meta row %d: %v\n", count, err)
-		}
-	}
-
-	if err = rows.Err(); err != nil {
-		fmt.Printf("[DEBUG ERROR] Error encountered during iteration: %v\n", err)
-	}
 }
 
 // Migrate executes the DDL script to ensure all tables ('files' and 'meta')

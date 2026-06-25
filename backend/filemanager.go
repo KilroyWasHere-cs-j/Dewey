@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 )
 
 // var filters *Config
@@ -45,8 +46,6 @@ func fileSystemInit() {
 }
 
 func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
-	FileSorts++ // Move this to the end of the function after all checks are done
-
 	entry := DBEntry{
 		Filename: filename,
 		Act:      metaData.ACTsID,
@@ -56,7 +55,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		Barcode:  "barcode",                         // Placeholder, should be determined by barcode scanning
 	}
 
-	if barcodeText, err := scanBarCode(uploadDir + "/" + entry.Path); err != nil { // TODO make this a join() instead of string concat
+	if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
 		Warn("Unable to process barcodes: " + err.Error())
 		entry.Barcode = "Nil"
 	} else {
@@ -69,6 +68,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())
 	}
+
 	new_path := filepath.Join(fileSystemBaseDir, entry.Path)
 	err = CopyFile(
 		filepath.Join(uploadDir, path),
@@ -81,6 +81,8 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 
 	dbm.createNewFileRecord(entry)
 	dbm.CreateNewMetaDataRecord(metaData)
+
+	atomic.AddInt64(&FileSorts, 1)
 }
 
 func CopyFile(src, dst string) error {
@@ -112,7 +114,7 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	FileCopys++
+	atomic.AddInt64(&FileCopys, 1)
 
 	// flush to disk
 	return dstFile.Sync()
@@ -120,18 +122,13 @@ func CopyFile(src, dst string) error {
 
 // searchAndReturn validates that a file exists and returns its absolute path.
 //
-// Behavior:
-//   - Ensures the path exists
-//   - Ensures it is not a directory
-//   - Converts to absolute path
-//
-// Security note:
-//   - Does NOT currently enforce uploadDir containment (important)
-//
 // Returns:
 //   - string: absolute file path
 //   - error: if file does not exist or path is invalid
 func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (string, error) {
+
+	// Strip any directory components to prevent path traversal
+	filename = filepath.Base(filename)
 
 	if pullMeta == "false" {
 		Debug("Checking cache")
@@ -144,7 +141,7 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (st
 			if file.Name() == filename {
 				Debug("Found file in cache")
 
-				FileRetrievals++
+				atomic.AddInt64(&FileRetrievals, 1)
 				return filepath.Join(uploadDir, file.Name()), nil
 			}
 		}
@@ -174,16 +171,4 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (st
 		Debug("Unknown meta flag")
 		return "", fmt.Errorf("unknown meta flag: %s", pullMeta)
 	}
-}
-
-func changeMeta() {
-	// Pull metadata from SQL
-	// Update records according to the uploaded meta
-}
-
-func setFileStatus() {
-	// searchAndReturn()
-
-	// Search up file retrive it's path
-	// Flip the deleted flag
 }
