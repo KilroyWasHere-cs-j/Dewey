@@ -14,38 +14,49 @@ TOTAL=0
 cleanup() { rm -rf "$DOWNLOAD_DIR"; }
 trap cleanup EXIT
 
+# --- COLORS ---
+NC='\033[0m'
+BOLD='\033[1m'
+DIM='\033[2m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
+
 # stdout: structured test results (machine-readable)
 # stderr: human-readable progress and diagnostics
 result_pass() {
     PASS=$((PASS + 1))
     TOTAL=$((TOTAL + 1))
     echo "PASS | $1"
-    echo >&2 "  [PASS] $1"
+    echo >&2 -e "  ${GREEN}${BOLD}✔${NC} ${GREEN}$1${NC}"
 }
 
 result_fail() {
     FAIL=$((FAIL + 1))
     TOTAL=$((TOTAL + 1))
     echo "FAIL | $1 | $2"
-    echo >&2 "  [FAIL] $1 — $2"
+    echo >&2 -e "  ${RED}${BOLD}✘${NC} ${RED}$1${NC} ${DIM}— $2${NC}"
 }
 
 result_skip() {
     SKIP=$((SKIP + 1))
     TOTAL=$((TOTAL + 1))
     echo "SKIP | $1 | $2"
-    echo >&2 "  [SKIP] $1 — $2"
+    echo >&2 -e "  ${YELLOW}${BOLD}○${NC} ${YELLOW}$1${NC} ${DIM}— $2${NC}"
 }
 
-info() { echo >&2 "$@"; }
+info() { echo >&2 -e "$@"; }
 
 pace() { sleep 1.1; }
 
 section() {
     info ""
-    info "══════════════════════════════════════════════════════════"
-    info "  $1"
-    info "══════════════════════════════════════════════════════════"
+    info "  ${DIM}${CYAN}──────────────────────────────────────────────────────────${NC}"
+    info "  ${MAGENTA}${BOLD}◆ $1${NC}"
+    info "  ${DIM}${CYAN}──────────────────────────────────────────────────────────${NC}"
 }
 
 # ── Random data generators ────────────────────────────────────────────────────
@@ -611,13 +622,13 @@ run_delete_tests() {
 
 # ── Run everything ────────────────────────────────────────────────────────────
 
-info "╔══════════════════════════════════════════════════════════════╗"
-info "║            DEWEY TEST SUITE                                 ║"
-info "╚══════════════════════════════════════════════════════════════╝"
+info "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
+info "${CYAN}${BOLD}║${NC}            ${WHITE}${BOLD}DEWEY TEST SUITE${NC}                                 ${CYAN}${BOLD}║${NC}"
+info "${CYAN}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
 info ""
-info "  Target:       $BASE"
-info "  Download dir: $DOWNLOAD_DIR"
-info "  Timestamp:    $(date -Iseconds)"
+info "  ${DIM}Target:${NC}       ${BOLD}$BASE${NC}"
+info "  ${DIM}Download dir:${NC} $DOWNLOAD_DIR"
+info "  ${DIM}Timestamp:${NC}    $(date -Iseconds)"
 
 echo "# DEWEY TEST SUITE — $(date -Iseconds)"
 echo "# Target: $BASE"
@@ -637,10 +648,10 @@ run_catalog_test
 run_delete_tests
 
 section "SUMMARY"
-info "  Passed:  $PASS"
-info "  Failed:  $FAIL"
-info "  Skipped: $SKIP"
-info "  Total:   $TOTAL"
+info "  ${GREEN}${BOLD}Passed:${NC}  $PASS"
+info "  ${RED}${BOLD}Failed:${NC}  $FAIL"
+info "  ${YELLOW}${BOLD}Skipped:${NC} $SKIP"
+info "  ${WHITE}${BOLD}Total:${NC}   $TOTAL"
 
 echo "#"
 echo "# PASSED=$PASS FAILED=$FAIL SKIPPED=$SKIP TOTAL=$TOTAL"
