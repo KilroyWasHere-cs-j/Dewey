@@ -18,7 +18,9 @@ RUN go build -trimpath -ldflags="-s -w" -o app-binary
 # ---- Run stage ----
 FROM alpine:3.21
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# bash and curl are required by the BITs test suite
+RUN apk add --no-cache bash curl \
+    && addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
@@ -27,6 +29,7 @@ RUN mkdir -p cache store backup logs plugins \
 
 COPY --from=builder --chown=appuser:appgroup /app/app-binary .
 COPY --from=builder --chown=appuser:appgroup /app/plugins ./plugins
+COPY --chown=appuser:appgroup testing_tooling ./testing_tooling
 
 USER appuser
 
