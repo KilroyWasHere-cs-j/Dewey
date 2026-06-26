@@ -3,6 +3,18 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# --- TARGET PLATFORM ---
+# Sets the CPU architecture images are built/pulled for.
+# Defaults to the native arch of this machine. Override to cross-build for a
+# different target, e.g.:  TARGET_PLATFORM=linux/arm64 ./deploy.sh
+#
+# This matters for the export bundle: if the deployment server is a different
+# arch than the build machine (e.g. building on amd64, deploying to arm64),
+# containers will fail at startup because the binaries inside won't run.
+# Common values: linux/amd64  linux/arm64
+NATIVE_ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+TARGET_PLATFORM="${TARGET_PLATFORM:-linux/${NATIVE_ARCH}}"
+
 # --- COLOR DEFINITIONS ---
 NC='\033[0m'
 BOLD='\033[1m'
@@ -58,6 +70,7 @@ echo ""
 echo -e "  ${CYAN}${BOLD}\xe2\x94\x8c\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x90${NC}"
 echo -e "  ${CYAN}${BOLD}\xe2\x94\x82${NC}  ${WHITE}${BOLD}DEWEY ${NC}${DIM}Container Deployment${NC}  ${CYAN}${BOLD}\xe2\x94\x82${NC}"
 echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x98${NC}"
+echo -e "  ${DIM}Platform:${NC} ${BOLD}${TARGET_PLATFORM}${NC}"
 
 # --- CLEANUP ---
 section "Cleanup"
@@ -84,6 +97,7 @@ podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data # Re
 
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
+  --platform "$TARGET_PLATFORM" \
   -e MYSQL_ROOT_PASSWORD=dewey \
   -e MYSQL_DATABASE=deweyRecords \
   -v mysql-data:/var/lib/mysql:Z \
@@ -100,11 +114,12 @@ log "success" "Database is up!"
 # ---------------- PROMETHEUS ----------------
 section "Prometheus"
 log "info" "Pulling Prometheus image..."
-podman pull docker.io/prom/prometheus:latest
+podman pull --platform "$TARGET_PLATFORM" docker.io/prom/prometheus:latest
 
 log "info" "Starting Prometheus container..."
 podman run -d --pod dewey-pod \
   --name dewey-prometheus \
+  --platform "$TARGET_PLATFORM" \
   docker.io/prom/prometheus:latest
 
 # Brief pause to let Prometheus spin up internal networking before healthcheck
@@ -120,6 +135,7 @@ fi
 section "Backend"
 log "info" "Building backend image ${DIM}(cross-doc-tool-dev)${NC}..."
 podman build \
+  --platform "$TARGET_PLATFORM" \
   --build-arg CGO_CFLAGS="-Wno-discarded-qualifiers" \
   -t cross-doc-tool-dev ./backend
 
@@ -130,7 +146,9 @@ log "success" "Backend running"
 # ---------------- FRONTEND ----------------
 section "Frontend"
 log "info" "Building frontend image ${DIM}(admin-portal)${NC}..."
-podman build -t admin-portal ./frontend/doctooladmin
+podman build \
+  --platform "$TARGET_PLATFORM" \
+  -t admin-portal ./frontend/doctooladmin
 
 log "info" "Starting Svelte frontend container..."
 podman run -d --pod dewey-pod --name svelte-container admin-portal
