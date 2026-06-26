@@ -225,7 +225,10 @@ echo "Loading images..."
 podman load -i "$DIR/images.tar"
 
 echo "Starting pod..."
-podman kube play "$DIR/dewey-pod.yaml"
+# --pull=never forces podman to use only the images loaded from images.tar above.
+# Without this, podman kube play will pull 'latest' tagged images from the
+# internet, bypassing the bundled versions entirely.
+podman kube play --pull=never "$DIR/dewey-pod.yaml"
 
 echo ""
 echo "Done. Run 'podman pod ps' to check status."
