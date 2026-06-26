@@ -176,11 +176,41 @@ if [[ "${SAVE_CHOICE,,}" == "y" ]]; then
 #!/bin/bash
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+# Remove any existing dewey-pod and its containers before deploying.
+# podman kube play will fail if a pod or container with the same name already
+# exists, or if the host ports are already bound.
+
+echo "Checking for existing dewey-pod..."
+if podman pod exists dewey-pod 2>/dev/null; then
+  echo "  Found existing pod — stopping and removing..."
+  podman pod stop dewey-pod 2>/dev/null || true
+  podman pod rm -f dewey-pod 2>/dev/null || true
+  echo "  Removed."
+else
+  echo "  No existing pod found."
+fi
+
+# Remove any stray containers by name that would conflict with kube play,
+# even if they're not part of the pod (e.g. from a previous failed deploy).
+CONTAINERS=(dewey-mysql dewey-prometheus cross-doc-tool-dev svelte-container)
+for ctr in "${CONTAINERS[@]}"; do
+  if podman container exists "$ctr" 2>/dev/null; then
+    echo "  Removing stray container: $ctr"
+    podman rm -f "$ctr" 2>/dev/null || true
+  fi
+done
+
+# ── Deploy ────────────────────────────────────────────────────────────────────
 echo "Loading images..."
 podman load -i "$DIR/images.tar"
+
 echo "Starting pod..."
 podman kube play "$DIR/dewey-pod.yaml"
-echo "Done. Use 'podman pod ps' to check status."
+
+echo ""
+echo "Done. Run 'podman pod ps' to check status."
 RUNSCRIPT
   chmod +x "${BUNDLE_DIR}/run.sh"
 
