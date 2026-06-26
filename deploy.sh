@@ -137,37 +137,68 @@ podman run -d --pod dewey-pod --name svelte-container admin-portal
 log "success" "Frontend running"
 
 # ---------------- SAVE POD TO FILE ----------------
-# Optionally export all pod images as a single compressed tarball for offline VM deployment
+# Optionally export the full pod as a self-contained bundle: images + pod spec + run script.
+# The resulting .tar.gz can be moved to any server and deployed with a single command.
 section "Export"
 echo ""
-echo -e "  ${DIM}\xe2\x94\x82${NC}  Save the entire pod as a single portable image file?"
-echo -e "  ${DIM}\xe2\x94\x82${NC}  ${DIM}This bundles all 4 images into one .tar.gz for VM deployment.${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC}  Save the entire pod as a single portable bundle?"
+echo -e "  ${DIM}\xe2\x94\x82${NC}  ${DIM}Bundles all images + pod spec into one .tar.gz for VM deployment.${NC}"
 echo -e "  ${DIM}\xe2\x94\x82${NC}"
-read -rp "$(echo -e "  ${DIM}\xe2\x94\x94\xe2\x94\x80${NC} ${WHITE}Export dewey-pod images? [y/N]:${NC} ")" SAVE_CHOICE
+read -rp "$(echo -e "  ${DIM}\xe2\x94\x94\xe2\x94\x80${NC} ${WHITE}Export dewey-pod bundle? [y/N]:${NC} ")" SAVE_CHOICE
 
 if [[ "${SAVE_CHOICE,,}" == "y" ]]; then
   SAVE_DIR="./build-images"
-  SAVE_FILE="${SAVE_DIR}/dewey-pod-all.tar.gz"
-  mkdir -p "$SAVE_DIR"
+  BUNDLE_DIR="${SAVE_DIR}/dewey-bundle"
+  BUNDLE_FILE="${SAVE_DIR}/dewey-bundle.tar.gz"
+  mkdir -p "$BUNDLE_DIR"
 
-  log "info" "Saving all pod images to ${BOLD}${SAVE_FILE}${NC}..."
-
-  # Bundle every image in the pod into a single compressed archive
+  # --- Step 1: Save all container images into one uncompressed tar ---
+  log "info" "Saving container images..."
   podman save \
     cross-doc-tool-dev \
     admin-portal \
     docker.io/library/mysql:latest \
     docker.io/prom/prometheus:latest \
-    | gzip > "$SAVE_FILE" &
+    -o "${BUNDLE_DIR}/images.tar" &
   SAVE_PID=$!
-  spinner "$SAVE_PID" "Compressing images..."
+  spinner "$SAVE_PID" "Exporting images (this takes a while)..."
   wait "$SAVE_PID"
+  log "success" "Images saved"
 
-  FILE_SIZE=$(du -h "$SAVE_FILE" | cut -f1)
-  log "success" "Saved: ${SAVE_FILE} (${FILE_SIZE})"
+  # --- Step 2: Generate a Kubernetes YAML from the running pod ---
+  # This captures the full pod spec: port mappings, env vars, container names, volumes, etc.
+  log "info" "Generating pod spec from running pod..."
+  podman kube generate dewey-pod > "${BUNDLE_DIR}/dewey-pod.yaml"
+  log "success" "Pod spec written to dewey-pod.yaml"
+
+  # --- Step 3: Write a run.sh that loads images and starts the pod ---
+  cat > "${BUNDLE_DIR}/run.sh" << 'RUNSCRIPT'
+#!/bin/bash
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+echo "Loading images..."
+podman load -i "$DIR/images.tar"
+echo "Starting pod..."
+podman kube play "$DIR/dewey-pod.yaml"
+echo "Done. Use 'podman pod ps' to check status."
+RUNSCRIPT
+  chmod +x "${BUNDLE_DIR}/run.sh"
+
+  # --- Step 4: Compress the entire bundle directory ---
+  log "info" "Compressing bundle..."
+  tar -czf "$BUNDLE_FILE" -C "$SAVE_DIR" dewey-bundle &
+  TAR_PID=$!
+  spinner "$TAR_PID" "Compressing..."
+  wait "$TAR_PID"
+
+  # Clean up the staging directory after archiving
+  rm -rf "$BUNDLE_DIR"
+
+  FILE_SIZE=$(du -h "$BUNDLE_FILE" | cut -f1)
+  log "success" "Saved: ${BUNDLE_FILE} (${FILE_SIZE})"
   echo ""
-  echo -e "  ${DIM}To load on a VM:${NC}"
-  echo -e "  ${CYAN}gunzip -c dewey-pod-all.tar.gz | podman load${NC}"
+  echo -e "  ${DIM}To deploy on a server:${NC}"
+  echo -e "  ${CYAN}tar xzf dewey-bundle.tar.gz && dewey-bundle/run.sh${NC}"
 fi
 
 # ---------------- STATUS SUMMARY ----------------
