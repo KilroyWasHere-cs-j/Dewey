@@ -18,7 +18,7 @@
 				if (res.ok) {
 					progress = 100;
 					failedToFetchMetrics = false;
-					goto('/dashboard');
+					goto('/analytics');
 				} else {
 					failedToFetchMetrics = true;
 					loading = false;
