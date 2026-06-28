@@ -1,48 +1,92 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Chart } from '@flowbite-svelte-plugins/chart';
+	import type { ApexOptions } from 'apexcharts';
 
 	interface Props {
-		value: number | undefined;
 		label: string;
+		value: number;
+		unit?: string;
 		color?: string;
-		// How many data points to keep in the rolling window (default: 60)
-		windowSize?: number;
+		// How many historical readings to keep in the sparkline window
+		maxHistory?: number;
+		// Optional custom formatter for the displayed value and tooltip
+		formatter?: (v: number) => string;
 	}
 
-	let { value, label, color = '#3b82f6', windowSize = 60 }: Props = $props();
+	let {
+		label,
+		value = 0,
+		unit = '',
+		color = '#3b82f6',
+		maxHistory = 40,
+		formatter
+	}: Props = $props();
 
-	// Rolling time-series maintained client-side across polls
 	let history = $state<number[]>([]);
+	let timestamps = $state<string[]>([]);
 
+	// Push each new reading into the rolling window.
+	// untrack() is used to read history/timestamps without creating a dependency —
+	// otherwise this effect would re-trigger itself every time it writes.
 	$effect(() => {
-		// Each time the parent updates `value`, append it and trim the window
-		history = [...history.slice(-(windowSize - 1)), value ?? 0];
+		if (typeof value !== 'number' || isNaN(value)) return;
+
+		const v = value;
+		const now = new Date().toLocaleTimeString([], {
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+
+		history = [...untrack(() => history).slice(-(maxHistory - 1)), v];
+		timestamps = [...untrack(() => timestamps).slice(-(maxHistory - 1)), now];
 	});
 
-	let options = $derived({
+	function fmt(v: number): string {
+		if (formatter) return formatter(v);
+		return unit ? `${v} ${unit}` : String(v);
+	}
+
+	// Recomputes whenever history changes — the Chart action picks up new options
+	// and calls chart.updateOptions() automatically via the use:initChart directive.
+	let options = $derived<ApexOptions>({
 		chart: {
-			type: 'line' as const,
+			type: 'area',
+			height: 80,
 			sparkline: { enabled: true },
-			height: 56,
-			// Disable animations so the chart snaps immediately on each poll
-			animations: { enabled: false }
+			animations: {
+				enabled: true,
+				speed: 300,
+				animateGradually: { enabled: false }
+			}
 		},
-		series: [{ name: label, data: history }],
-		stroke: { curve: 'smooth' as const, width: 2 },
+		series: [{ name: label, data: [...history] }],
+		xaxis: { categories: [...timestamps] },
 		colors: [color],
+		stroke: { curve: 'smooth', width: 2 },
+		fill: {
+			type: 'gradient',
+			gradient: {
+				shadeIntensity: 1,
+				opacityFrom: 0.35,
+				opacityTo: 0,
+				stops: [0, 100]
+			}
+		},
 		tooltip: {
-			x: { show: false },
-			y: { formatter: (v: number) => v.toFixed(0) }
+			fixed: { enabled: false },
+			x: { show: true },
+			y: { formatter: (v) => fmt(v) },
+			marker: { show: false }
 		}
 	});
 </script>
 
 <div class="rounded-2xl bg-white p-4 shadow-sm">
-	<p class="text-xs font-medium tracking-wide text-gray-400 uppercase">{label}</p>
-	<p class="mt-1 text-2xl font-semibold text-gray-800">{value ?? 0}</p>
-	{#if history.length > 1}
-		<div class="mt-2">
-			<Chart {options} />
-		</div>
-	{/if}
+	<div class="mb-1 flex items-baseline justify-between">
+		<h3 class="text-sm font-medium text-gray-500">{label}</h3>
+		<span class="text-xl font-bold text-gray-800">{fmt(value)}</span>
+	</div>
+	<Chart {options} />
 </div>

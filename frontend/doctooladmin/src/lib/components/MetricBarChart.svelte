@@ -1,44 +1,59 @@
 <script lang="ts">
 	import { Chart } from '@flowbite-svelte-plugins/chart';
+	import type { ApexOptions } from 'apexcharts';
 
 	interface Props {
-		data: Record<string, number> | undefined;
-		title: string;
-		color?: string;
+		label: string;
+		// Keys become x-axis categories; values become bar heights
+		data: Record<string, number>;
+		colors?: string[];
+		unit?: string;
+		class?: string;
 	}
 
-	let { data, title, color = '#3b82f6' }: Props = $props();
+	let {
+		label,
+		data,
+		colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+		unit = '',
+		class: className = ''
+	}: Props = $props();
 
-	let labels = $derived(Object.keys(data ?? {}));
-	let values = $derived(Object.values(data ?? {}));
-
-	let options = $derived({
+	// Recomputes whenever `data` prop changes — the Chart action calls updateOptions().
+	// `distributed: true` lets each bar take its own color from the colors array.
+	let options = $derived<ApexOptions>({
 		chart: {
-			type: 'bar' as const,
-			height: 200,
+			type: 'bar',
+			height: 160,
 			toolbar: { show: false },
-			animations: { enabled: false }
+			animations: { enabled: true, speed: 300 }
 		},
-		series: [{ name: title, data: values }],
-		xaxis: { categories: labels },
-		colors: [color],
-		dataLabels: { enabled: false },
 		plotOptions: {
-			bar: { borderRadius: 4, horizontal: false }
+			bar: {
+				horizontal: false,
+				borderRadius: 4,
+				distributed: true
+			}
 		},
-		grid: {
-			borderColor: '#f1f5f9'
+		series: [{ name: label, data: Object.values(data) }],
+		xaxis: {
+			categories: Object.keys(data),
+			labels: { style: { fontSize: '11px' } }
+		},
+		colors,
+		dataLabels: { enabled: false },
+		legend: { show: false },
+		tooltip: {
+			y: { formatter: (v) => (unit ? `${v} ${unit}` : String(v)) }
 		}
 	});
 </script>
 
-<div class="rounded-2xl bg-white p-4 shadow-sm">
-	<h3 class="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
-	{#if labels.length > 0}
+<div class="rounded-2xl bg-white p-4 shadow-sm {className}">
+	<h3 class="mb-2 text-sm font-medium text-gray-500">{label}</h3>
+	{#if Object.keys(data).length > 0}
 		<Chart {options} />
 	{:else}
-		<div class="flex h-48 items-center justify-center text-sm text-gray-400">
-			No data yet — waiting for events
-		</div>
+		<div class="flex h-40 items-center justify-center text-sm text-gray-400">No data yet</div>
 	{/if}
 </div>
