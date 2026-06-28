@@ -9,6 +9,7 @@
 
 	// Read sidebar default from settings on first load
 	let sidebarOpen = $state(settings.value.defaultSidebarOpen);
+
 	const toggleSidebar = () => {
 		sidebarOpen = !sidebarOpen;
 	};
@@ -220,12 +221,12 @@
 				</div>
 			</section>
 
-			<!-- Activity Counters -->
+			<!-- Activity Counters — includes new deletions and filter loads from #104 -->
 			<section>
 				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 					Activity
 				</h2>
-				<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
 					<MetricGraph
 						label="File Copies"
 						value={metrics.app_file_copys ?? 0}
@@ -245,9 +246,79 @@
 						maxHistory={settings.value.analyticsHistoryWindow}
 					/>
 					<MetricGraph
+						label="File Deletions"
+						value={metrics.app_file_deletions ?? 0}
+						color="#ef4444"
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
+						label="Filter Loads"
+						value={metrics.app_filters_loadings ?? 0}
+						color={colors[11]}
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
 						label="GC Cycles"
 						value={metrics.app_gc_cycles ?? 0}
-						color={colors[11]}
+						color={colors[0]}
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+				</div>
+			</section>
+
+			<!-- Upload Activity — new in #104 -->
+			<section>
+				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
+					Upload Activity
+				</h2>
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<MetricBarChart
+						label="Rejections by Reason"
+						data={(metrics.app_upload_rejections_total as Record<string, number>) ?? {}}
+						colors={['#f97316', '#ef4444', '#dc2626']}
+					/>
+					<MetricBarChart
+						label="Accepted Uploads by File Type"
+						data={(metrics.app_uploads_by_type_total as Record<string, number>) ?? {}}
+						colors={colors.slice(0, 8)}
+					/>
+				</div>
+			</section>
+
+			<!-- Processing Pipeline — new in #104 -->
+			<section>
+				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
+					Processing Pipeline
+				</h2>
+				<div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+					<MetricGraph
+						label="Barcode Successes"
+						value={metrics.app_barcode_successes ?? 0}
+						color="#22c55e"
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
+						label="Barcode Failures"
+						value={metrics.app_barcode_failures ?? 0}
+						color="#ef4444"
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
+						label="Plugin Runs"
+						value={metrics.app_plugin_runs ?? 0}
+						color={colors[2]}
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
+						label="Plugin Errors"
+						value={metrics.app_plugin_errors ?? 0}
+						color="#f97316"
+						maxHistory={settings.value.analyticsHistoryWindow}
+					/>
+					<MetricGraph
+						label="DB Errors"
+						value={metrics.app_db_errors ?? 0}
+						color="#dc2626"
 						maxHistory={settings.value.analyticsHistoryWindow}
 					/>
 				</div>

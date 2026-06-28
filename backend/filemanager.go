@@ -57,16 +57,20 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 
 	if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
 		Warn("Unable to process barcodes: " + err.Error())
+		atomic.AddInt64(&BarcodeFailures, 1)
 		entry.Barcode = "Nil"
 	} else {
 		Debug("Decoded barcode text to: " + barcodeText)
+		atomic.AddInt64(&BarcodeSuccesses, 1)
 		entry.Barcode = barcodeText
 	}
 
 	runFilter := pm.RunPlugins(Filter)
+	atomic.AddInt64(&PluginRuns, 1)
 	entry, err := runFilter(entry)
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
 	}
 
 	new_path := filepath.Join(fileSystemBaseDir, entry.Path)

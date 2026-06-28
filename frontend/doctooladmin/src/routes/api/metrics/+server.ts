@@ -8,8 +8,10 @@ export interface AppMetrics {
 	app_cpu_count: number;
 	app_exe_count: number;
 	app_file_copys: number;
+	app_file_deletions: number;
 	app_file_retries: number;
 	app_file_sorts: number;
+	app_filters_loadings: number;
 	app_files_in_backup: number;
 	app_files_in_store: number;
 	app_gc_cycles: number;
@@ -17,6 +19,19 @@ export interface AppMetrics {
 	app_ram_usage: number;
 	app_time_til_next_tick: number;
 	app_uptime_seconds: number;
+
+	// Upload tracking (new in #104)
+	app_upload_rejections_total: Record<string, number>;
+	app_uploads_by_type_total: Record<string, number>;
+	app_upload_size_bytes_sum: number;
+	app_upload_size_bytes_count: number;
+
+	// Processing pipeline (new in #104)
+	app_barcode_successes: number;
+	app_barcode_failures: number;
+	app_plugin_runs: number;
+	app_plugin_errors: number;
+	app_db_errors: number;
 
 	// File IO (labeled)
 	file_io_ops_total: Record<string, number>;
@@ -91,7 +106,10 @@ const LABELED_METRICS = new Set([
 	'go_gc_duration_seconds', // has quantile labels
 	'gin_request_size_bytes_bucket',
 	'gin_response_size_bytes_bucket',
-	'promhttp_metric_handler_requests_total' // has code/method labels
+	'promhttp_metric_handler_requests_total', // has code/method labels
+	// new in #104
+	'app_upload_rejections_total',
+	'app_uploads_by_type_total'
 ]);
 
 export const GET: RequestHandler = async () => {
