@@ -20,6 +20,11 @@ var FileRetrievals int64
 var FileDeletions int64
 var FiltersLoadings int64
 var FileCopys int64
+var BarcodeSuccesses int64
+var BarcodeFailures int64
+var PluginRuns int64
+var PluginErrors int64
+var DBErrors int64
 
 var (
 	fileOps = prometheus.NewCounterVec(
@@ -243,15 +248,111 @@ var (
 			return float64(TimeUntilNextTick().Seconds())
 		},
 	)
+
+	// FileDeletions was declared but never registered — wired up here
+	fileDeletions = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_file_deletions",
+			Help: "Number of files deleted since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&FileDeletions))
+		},
+	)
+
+	// Upload rejections broken out by rejection reason
+	uploadRejections = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "app_upload_rejections_total",
+			Help: "Number of upload rejections, labelled by reason",
+		},
+		[]string{"reason"},
+	)
+
+	// Accepted uploads broken out by file extension
+	uploadsByType = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "app_uploads_by_type_total",
+			Help: "Number of accepted uploads, labelled by file extension",
+		},
+		[]string{"ext"},
+	)
+
+	// Distribution of uploaded file sizes in bytes
+	uploadSizeBytes = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "app_upload_size_bytes",
+			Help:    "Distribution of uploaded file sizes",
+			Buckets: []float64{1024, 10240, 102400, 524288, 1048576, 5242880, 10485760, 52428800},
+		},
+	)
+
+	barcodeSuccesses = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_barcode_successes",
+			Help: "Number of successful barcode scans since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&BarcodeSuccesses))
+		},
+	)
+
+	barcodeFailures = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_barcode_failures",
+			Help: "Number of failed barcode scans since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&BarcodeFailures))
+		},
+	)
+
+	pluginRuns = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_plugin_runs",
+			Help: "Number of plugin filter executions since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&PluginRuns))
+		},
+	)
+
+	pluginErrors = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_plugin_errors",
+			Help: "Number of plugin filter errors since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&PluginErrors))
+		},
+	)
+
+	dbErrors = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_db_errors",
+			Help: "Number of database operation errors since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&DBErrors))
+		},
+	)
 )
 
 func init() {
-	prometheus.MustRegister(fileOps, fileBytes, fileDuration, uptime, systemInfo, cpuCount,
-		ramUsage, currentHeap, gcCycles, cacheSize, filesInStore, filesInBackUp, exeCount,
-		fileCopys, fileRetries, fileSorts, timeTilNextTick,
+	prometheus.MustRegister(
+		fileOps, fileBytes, fileDuration,
+		uptime, systemInfo, cpuCount, ramUsage, currentHeap, gcCycles,
+		cacheSize, filesInStore, filesInBackUp, exeCount,
+		fileCopys, fileRetries, fileSorts, filtersLoadings, timeTilNextTick,
+		// new in issue #104
+		fileDeletions,
+		uploadRejections, uploadsByType, uploadSizeBytes,
+		barcodeSuccesses, barcodeFailures,
+		pluginRuns, pluginErrors,
+		dbErrors,
 	)
 
-	// create zero-valued label instances so metrics appear even before traffic
+	// Zero-valued label instances so metrics appear even before any traffic
 	fileBytes.WithLabelValues("read")
 	fileBytes.WithLabelValues("write")
 
@@ -260,4 +361,9 @@ func init() {
 
 	fileDuration.WithLabelValues("read")
 	fileDuration.WithLabelValues("write")
+
+	// Pre-seed all known rejection reasons so they appear in the scrape at zero
+	uploadRejections.WithLabelValues("invalid_ext")
+	uploadRejections.WithLabelValues("pe_blocked")
+	uploadRejections.WithLabelValues("elf_blocked")
 }

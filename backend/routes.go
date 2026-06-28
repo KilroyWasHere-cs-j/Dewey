@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -212,12 +213,16 @@ func uploadFile(c *gin.Context) {
 
 	if _, ok := allowedExts[ext]; !ok {
 		Warn("invalid file type: " + ext)
+		uploadRejections.WithLabelValues("invalid_ext").Inc()
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid file type",
 		})
 		return
 	}
 	Debug("Vaild file type")
+
+	// Track accepted extension so the frontend can show upload distribution
+	uploadsByType.WithLabelValues(ext).Inc()
 
 	// -------------------------
 	// Open file
@@ -236,6 +241,7 @@ func uploadFile(c *gin.Context) {
 	// Security checks
 	// -------------------------
 	if isPE, _ := IsPEFile(file); isPE {
+		uploadRejections.WithLabelValues("pe_blocked").Inc()
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Executable file detected (PE blocked)",
 		})
@@ -245,6 +251,7 @@ func uploadFile(c *gin.Context) {
 	file.Seek(0, io.SeekStart)
 
 	if isELF, _ := IsELFFile(file); isELF {
+		uploadRejections.WithLabelValues("elf_blocked").Inc()
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Executable file detected (ELF blocked)",
 		})
@@ -273,6 +280,9 @@ func uploadFile(c *gin.Context) {
 
 	hashString := hex.EncodeToString(hasher.Sum(nil))
 	Debug("SHA256: " + hashString)
+
+	// Record file size distribution for the histogram
+	uploadSizeBytes.Observe(float64(fileHeader.Size))
 
 	// -------------------------
 	// Save file
@@ -338,6 +348,7 @@ func deleteFile(c *gin.Context) {
 	}
 
 	Debug("file deleted: " + filename)
+	atomic.AddInt64(&FileDeletions, 1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File deleted",

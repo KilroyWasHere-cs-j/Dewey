@@ -136,40 +136,6 @@ log "info" "Starting Svelte frontend container..."
 podman run -d --pod dewey-pod --name svelte-container admin-portal
 log "success" "Frontend running"
 
-# ---------------- SAVE POD TO FILE ----------------
-# Optionally export all pod images as a single compressed tarball for offline VM deployment
-section "Export"
-echo ""
-echo -e "  ${DIM}\xe2\x94\x82${NC}  Save the entire pod as a single portable image file?"
-echo -e "  ${DIM}\xe2\x94\x82${NC}  ${DIM}This bundles all 4 images into one .tar.gz for VM deployment.${NC}"
-echo -e "  ${DIM}\xe2\x94\x82${NC}"
-read -rp "$(echo -e "  ${DIM}\xe2\x94\x94\xe2\x94\x80${NC} ${WHITE}Export dewey-pod images? [y/N]:${NC} ")" SAVE_CHOICE
-
-if [[ "${SAVE_CHOICE,,}" == "y" ]]; then
-  SAVE_DIR="./build-images"
-  SAVE_FILE="${SAVE_DIR}/dewey-pod-all.tar.gz"
-  mkdir -p "$SAVE_DIR"
-
-  log "info" "Saving all pod images to ${BOLD}${SAVE_FILE}${NC}..."
-
-  # Bundle every image in the pod into a single compressed archive
-  podman save \
-    cross-doc-tool-dev \
-    admin-portal \
-    docker.io/library/mysql:latest \
-    docker.io/prom/prometheus:latest \
-    | gzip > "$SAVE_FILE" &
-  SAVE_PID=$!
-  spinner "$SAVE_PID" "Compressing images..."
-  wait "$SAVE_PID"
-
-  FILE_SIZE=$(du -h "$SAVE_FILE" | cut -f1)
-  log "success" "Saved: ${SAVE_FILE} (${FILE_SIZE})"
-  echo ""
-  echo -e "  ${DIM}To load on a VM:${NC}"
-  echo -e "  ${CYAN}gunzip -c dewey-pod-all.tar.gz | podman load${NC}"
-fi
-
 # ---------------- STATUS SUMMARY ----------------
 section "Status"
 echo ""

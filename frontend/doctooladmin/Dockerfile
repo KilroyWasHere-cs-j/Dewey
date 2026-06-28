@@ -1,5 +1,4 @@
 
-
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -16,4 +15,6 @@ COPY --from=build /app/package*.json ./
 RUN npm ci --omit=dev
 
 EXPOSE 3000
-CMD ["node", "build"]
+# Use absolute path — podman kube play doesn't always inherit the image ENV
+# (including PATH) when no ENTRYPOINT is set, so 'node' alone won't resolve.
+CMD ["/usr/local/bin/node", "build"]
