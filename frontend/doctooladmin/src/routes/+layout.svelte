@@ -19,4 +19,12 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+<!-- Visually hidden until focused — lets keyboard users skip past nav to page content -->
+<a
+	href="#main-content"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-gray-900 focus:shadow focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus:bg-gray-800 dark:focus:text-white"
+>
+	Skip to main content
+</a>
+
 {@render children()}
