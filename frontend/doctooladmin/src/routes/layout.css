@@ -43,3 +43,30 @@ html, body {
   height: 100%;
   background-color: #0f172a;
 }
+
+/*
+ * Global keyboard focus ring.
+ * Uses focus-visible so mouse clicks don't trigger the outline —
+ * only keyboard/programmatic focus does. The double-ring (white + blue)
+ * stays visible on both dark and light backgrounds.
+ */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+}
+
+/*
+ * Respect the OS reduced-motion preference.
+ * Collapses all CSS transitions and animations to near-zero so users
+ * who are sensitive to motion (vestibular disorders, epilepsy) aren't
+ * affected by the app's transitions and animated charts.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

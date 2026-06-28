@@ -17,8 +17,13 @@
 	style="border-bottom: 3px solid {accentHex}"
 >
 	<div class="flex items-center gap-4">
-		<button class="text-gray-700 dark:text-gray-300 md:hidden" onclick={toggleSidebar}>
-			☰
+		<button
+			aria-label="Toggle sidebar"
+			aria-expanded={sidebarOpen}
+			class="text-gray-700 dark:text-gray-300 md:hidden"
+			onclick={toggleSidebar}
+		>
+			<span aria-hidden="true">☰</span>
 		</button>
 		<h1 class="text-xl font-semibold text-gray-800 dark:text-white">{settings.value.portalName}</h1>
 	</div>
@@ -38,8 +43,11 @@
 		</button>
 
 		<span class="text-sm text-gray-600 dark:text-gray-300">User</span>
-		<Avatar>
-			<BugOutline />
-		</Avatar>
+		<!-- Decorative placeholder avatar — hidden from assistive tech -->
+		<span aria-hidden="true">
+			<Avatar>
+				<BugOutline />
+			</Avatar>
+		</span>
 	</div>
 </header>

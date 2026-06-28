@@ -62,10 +62,10 @@
 	<!-- Actions -->
 	<div class="mt-8 flex flex-col items-center gap-3 sm:flex-row">
 		<a
-			href="/dashboard"
+			href="/analytics"
 			class="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-slate-100"
 		>
-			Go to dashboard
+			Go to analytics
 		</a>
 		<button
 			onclick={() => history.back()}

@@ -84,9 +84,11 @@
 <!-- Prometheus unreachable banner (toggled in settings) -->
 {#if prometheusDown && settings.value.showPrometheusAlert}
 	<div
+		role="alert"
 		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 	>
 		<svg
+			aria-hidden="true"
 			class="h-4 w-4 shrink-0 text-red-400"
 			fill="none"
 			viewBox="0 0 24 24"
@@ -106,6 +108,7 @@
 <!-- RAM alert -->
 {#if ramAlert}
 	<div
+		role="alert"
 		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-950/90 px-5 py-3 text-sm text-amber-300 shadow-lg backdrop-blur"
 		style="margin-top: {prometheusDown && settings.value.showPrometheusAlert ? '3.5rem' : '0'}"
 	>
@@ -116,6 +119,7 @@
 <!-- Retry alert -->
 {#if retryAlert}
 	<div
+		role="alert"
 		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 		style="margin-top: {(prometheusDown && settings.value.showPrometheusAlert ? 3.5 : 0) + (ramAlert ? 3.5 : 0)}rem"
 	>
@@ -123,13 +127,17 @@
 	</div>
 {/if}
 
+<svelte:head>
+	<title>Analytics — Dewey</title>
+</svelte:head>
+
 <div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
 	<Sidebar open={sidebarOpen} toggle={toggleSidebar} />
 
 	<div class="flex flex-1 flex-col">
 		<Topbar {sidebarOpen} {toggleSidebar} />
 
-		<main class={mainClass}>
+		<main id="main-content" class={mainClass}>
 			<!-- System Resources -->
 			<section>
 				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">

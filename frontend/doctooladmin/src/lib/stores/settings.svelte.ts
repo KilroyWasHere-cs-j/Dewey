@@ -35,12 +35,14 @@ export const DEFAULTS: Settings = {
 
 // Full class strings must be spelled out so Tailwind's scanner doesn't purge them.
 // hex is used for inline styles (sidebar border, topbar strip) where dynamic Tailwind classes aren't safe.
+// text uses a darker shade in light mode and a lighter shade in dark mode so
+// small uppercase headings clear WCAG AA (4.5:1) on both white cards and dark cards.
 export const ACCENT = {
-	yellow: { bg: 'bg-yellow-400', text: 'text-yellow-500', ring: 'ring-yellow-400', hex: '#facc15' },
-	blue:   { bg: 'bg-blue-400',   text: 'text-blue-500',   ring: 'ring-blue-400',   hex: '#60a5fa' },
-	green:  { bg: 'bg-emerald-400', text: 'text-emerald-500', ring: 'ring-emerald-400', hex: '#34d399' },
-	purple: { bg: 'bg-purple-400', text: 'text-purple-500', ring: 'ring-purple-400', hex: '#c084fc' },
-	slate:  { bg: 'bg-slate-500',  text: 'text-slate-500',  ring: 'ring-slate-400',  hex: '#64748b' }
+	yellow: { bg: 'bg-yellow-400', text: 'text-yellow-700 dark:text-yellow-400', ring: 'ring-yellow-400', hex: '#facc15' },
+	blue:   { bg: 'bg-blue-400',   text: 'text-blue-700 dark:text-blue-400',     ring: 'ring-blue-400',   hex: '#60a5fa' },
+	green:  { bg: 'bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-400', ring: 'ring-emerald-400', hex: '#34d399' },
+	purple: { bg: 'bg-purple-400', text: 'text-purple-700 dark:text-purple-400', ring: 'ring-purple-400', hex: '#c084fc' },
+	slate:  { bg: 'bg-slate-500',  text: 'text-slate-700 dark:text-slate-400',   ring: 'ring-slate-400',  hex: '#64748b' }
 } as const;
 
 export const CHART_THEMES: Record<Settings['chartColorTheme'], string[]> = {
