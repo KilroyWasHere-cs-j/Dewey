@@ -123,7 +123,7 @@
 	</div>
 {/if}
 
-<div class="flex min-h-screen bg-gray-100">
+<div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
 	<Sidebar open={sidebarOpen} toggle={toggleSidebar} />
 
 	<div class="flex flex-1 flex-col">
