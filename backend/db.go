@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // Assuming MySQL based on your connection string
@@ -66,6 +67,7 @@ func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) {
 
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 	// Deferring Rollback ensures resources are cleaned up if any step fails.
@@ -80,11 +82,13 @@ func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) {
 	_, err = tx.Exec(query, entry.Filename, entry.Act, entry.Hash, now, entry.Path, 0, entry.Barcode)
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		Warn("Failed to commit transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 }
@@ -94,6 +98,7 @@ func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
 
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 	// Deferring Rollback ensures resources are cleaned up if any step fails.
@@ -107,11 +112,13 @@ func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
 
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		Warn("Failed to commit transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
 		return
 	}
 }
