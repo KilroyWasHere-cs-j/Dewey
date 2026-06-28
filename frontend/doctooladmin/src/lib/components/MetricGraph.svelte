@@ -83,10 +83,10 @@
 	});
 </script>
 
-<div class="rounded-2xl bg-white p-4 shadow-sm">
+<div class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
 	<div class="mb-1 flex items-baseline justify-between">
-		<h3 class="text-sm font-medium text-gray-500">{label}</h3>
-		<span class="text-xl font-bold text-gray-800">{fmt(value)}</span>
+		<h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</h3>
+		<span class="text-xl font-bold text-gray-800 dark:text-white">{fmt(value)}</span>
 	</div>
 	<Chart {options} />
 </div>

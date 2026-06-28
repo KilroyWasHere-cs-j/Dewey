@@ -12,6 +12,7 @@ export interface Settings {
 	ramAlertThresholdMb: number;
 	retryAlertThreshold: number;
 	// Customization
+	darkMode: boolean;
 	accentColor: 'yellow' | 'blue' | 'green' | 'purple' | 'slate';
 	chartColorTheme: 'default' | 'cool' | 'warm' | 'mono';
 	portalName: string;
@@ -25,6 +26,7 @@ export const DEFAULTS: Settings = {
 	defaultSidebarOpen: true,
 	ramAlertThresholdMb: 200,
 	retryAlertThreshold: 10,
+	darkMode: false,
 	accentColor: 'yellow',
 	chartColorTheme: 'default',
 	portalName: 'DEWEY',

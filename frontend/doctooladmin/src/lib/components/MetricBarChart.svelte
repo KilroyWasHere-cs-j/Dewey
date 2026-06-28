@@ -49,11 +49,11 @@
 	});
 </script>
 
-<div class="rounded-2xl bg-white p-4 shadow-sm {className}">
-	<h3 class="mb-2 text-sm font-medium text-gray-500">{label}</h3>
+<div class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800 {className}">
+	<h3 class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{label}</h3>
 	{#if Object.keys(data).length > 0}
 		<Chart {options} />
 	{:else}
-		<div class="flex h-40 items-center justify-center text-sm text-gray-400">No data yet</div>
+		<div class="flex h-40 items-center justify-center text-sm text-gray-400 dark:text-gray-500">No data yet</div>
 	{/if}
 </div>
