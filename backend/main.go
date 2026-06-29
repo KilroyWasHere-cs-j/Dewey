@@ -13,41 +13,40 @@ import (
 
 func main() {
 
-	// --- Logger
 	InitLogger("logs", "app")
 	defer logger.Close()
+	Banner()
 
-	// --- Plugins
-	Debug("Loading plugins...")
+	Section("Plugins")
 	pm := NewPluginManager()
 	defer pm.Close()
-	err := pm.LoadPlugins()
-	if err != nil {
+	if err := pm.LoadPlugins(); err != nil {
 		Warn("Failed to load plugins: " + err.Error())
 	}
 	pm.ListPlugins()
 	pm.RunPlugins(Init)
 
-	// --- Daemon
+	Section("Daemon")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	startDaemon(ctx, pm)
+	Ok("daemon started")
 
-	// --- DB
+	Section("Database")
 	dbm, err := NewDatabaseManager()
-
 	if err != nil {
-		// I want a hard fail if the database can't initialize
 		Fatal("Failed to initialize database: " + err.Error())
 	}
-	Info("Creating files table if it doesn't exist...")
-	dbm.Migrate()
+	if err := dbm.Migrate(); err != nil {
+		Fatal("Failed to run migrations: " + err.Error())
+	}
+	Ok("database ready")
 
-	// --- Filesystem
+	Section("Filesystem")
 	fileSystemInit()
+	Ok("filesystem ready")
 
-	// --- Server
-	Debug("server starting")
+	Section("Server")
 	r := gin.New()
 	r.MaxMultipartMemory = maxFileSize
 
@@ -95,17 +94,18 @@ func main() {
 	// Run BITs in the background so they fire at startup after all init is complete,
 	// without blocking the server from starting.
 	go func() {
-		Debug("---------------------------------------------------------- Running BITs ----------------------------------------------------------")
+		Section("BITs")
 		cmd := exec.Command("/bin/bash", "testing_tooling/test_suite.sh")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		Debug("Running test suite: " + cmd.String())
 		if err := cmd.Run(); err != nil {
 			Warn("BITs failed: " + err.Error())
+		} else {
+			Ok("BITs passed")
 		}
 	}()
 
-	Debug("server running on port " + portNumber)
+	Ok("listening on :" + portNumber)
 	if err := r.Run(":" + portNumber); err != nil {
 		Fatal(err.Error())
 	}
