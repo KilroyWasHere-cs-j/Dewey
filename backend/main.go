@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
-	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -60,14 +59,14 @@ func main() {
 	p.Use(r)
 
 	// Rate limiter
-	limiter := rate.NewLimiter(1, 5)
-	r.Use(func(c *gin.Context) {
-		if !limiter.Allow() {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
-			return
-		}
-		c.Next()
-	})
+	// limiter := rate.NewLimiter(1, 5)
+	// r.Use(func(c *gin.Context) {
+	// 	if !limiter.Allow() {
+	// 		c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
+	// 		return
+	// 	}
+	// 	c.Next()
+	// })
 
 	// 404
 	r.NoRoute(func(c *gin.Context) {
