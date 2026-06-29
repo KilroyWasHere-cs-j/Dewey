@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -12,18 +13,23 @@ import (
 // Log levels
 const (
 	DEBUG = "DEBUG"
-	INFO  = "INFO"
-	WARN  = "WARN"
+	INFO  = "INFO "
+	WARN  = "WARN "
 	FATAL = "FATAL"
 )
 
 // ANSI color codes
 const (
-	ColorReset  = "\033[0m"
-	ColorGray   = "\033[37m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorRed    = "\033[31m"
+	ColorReset = "\033[0m"
+
+	// Source tag — bold cyan so [DEWEY] pops against other log sources in a shared terminal
+	ColorTag = "\033[1;36m"
+
+	// Per-level colors for the terminal badge
+	ColorDebug = "\033[90m"   // dark gray  — low noise
+	ColorInfo  = "\033[32m"   // green
+	ColorWarn  = "\033[1;33m" // bold yellow
+	ColorFatal = "\033[1;31m" // bold red
 )
 
 // Logger struct with rotation support
@@ -103,34 +109,34 @@ func (l *Logger) Close() {
 	}
 }
 
-// Timestamp
-func timestamp() string {
-	return time.Now().Format("2006-01-02 15:04:05")
-}
-
 // Core logging function (thread-safe + rotation)
-func (l *Logger) log(level string, message string, color string) {
+func (l *Logger) log(level, message, color string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Rotate if needed
 	if err := l.rotateIfNeeded(); err != nil {
 		log.Printf("Log rotation failed: %v", err)
 	}
 
-	ts := timestamp()
-	formatted := fmt.Sprintf("[%s] [%s] %s\n", ts, level, message)
+	now := time.Now()
 
-	// Write to file
+	// File: full timestamp, plain text, no ANSI
+	fileLine := fmt.Sprintf("[%s] [%s] %s\n", now.Format("2006-01-02 15:04:05"), level, message)
 	if l.file != nil {
-		_, err := l.file.WriteString(formatted)
-		if err != nil {
+		if _, err := l.file.WriteString(fileLine); err != nil {
 			log.Printf("Error writing to log file: %v", err)
 		}
 	}
 
-	// Console output
-	fmt.Printf("%s%s%s", color, formatted, ColorReset)
+	// Terminal: bold cyan source tag + short time + colored level badge
+	// Format: [DEWEY] 15:04:05  LEVEL  message
+	fmt.Printf(
+		"%s[DEWEY]%s %s  %s%s%s  %s\n",
+		ColorTag, ColorReset,
+		now.Format("15:04:05"),
+		color, level, ColorReset,
+		message,
+	)
 }
 
 // Safety check
@@ -145,27 +151,50 @@ func ensureLogger() bool {
 // Public functions
 func Debug(msg string) {
 	if ensureLogger() {
-		logger.log(DEBUG, msg, ColorGray)
+		logger.log(DEBUG, msg, ColorDebug)
 	}
 }
 
 func Info(msg string) {
 	if ensureLogger() {
-		logger.log(INFO, msg, ColorGreen)
+		logger.log(INFO, msg, ColorInfo)
 	}
 }
 
 func Warn(msg string) {
 	if ensureLogger() {
-		logger.log(WARN, msg, ColorYellow)
+		logger.log(WARN, msg, ColorWarn)
 	}
 }
 
 func Fatal(msg string) {
 	if ensureLogger() {
-		logger.log(FATAL, msg, ColorRed)
+		logger.log(FATAL, msg, ColorFatal)
 		logger.Close()
 	}
 	os.Exit(1)
+}
+
+// Banner prints the Dewey startup header. Call once after InitLogger.
+func Banner() {
+	c := ColorTag
+	r := ColorReset
+	fmt.Println()
+	fmt.Printf("  %s╔══════════════════════════════════╗%s\n", c, r)
+	fmt.Printf("  %s║          D E W E Y               ║%s\n", c, r)
+	fmt.Printf("  %s║   document management system      ║%s\n", c, r)
+	fmt.Printf("  %s╚══════════════════════════════════╝%s\n", c, r)
+	fmt.Println()
+}
+
+// Section prints a labelled divider to visually separate startup phases.
+func Section(title string) {
+	rule := strings.Repeat("─", 16)
+	fmt.Printf("\n  %s%s  %s  %s%s\n\n", ColorTag, rule, strings.ToUpper(title), rule, ColorReset)
+}
+
+// Ok prints a green check with a message — use for key success events (plugin loaded, db ready, etc.).
+func Ok(msg string) {
+	fmt.Printf("  %s✓%s  %s\n", ColorInfo, ColorReset, msg)
 }
 
