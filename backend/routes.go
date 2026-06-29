@@ -356,6 +356,26 @@ func deleteFile(c *gin.Context) {
 	})
 }
 
+func setDaemonTickInterval(c *gin.Context) {
+
+}
+
+func setMaxUploadSize(c *gin.Context) {
+
+}
+
+func setMaxDBOpenConn(c *gin.Context) {
+
+}
+
+func setMaxDBIdleConn(c *gin.Context) {
+
+}
+
+func setDBTimeout(c *gin.Context) {
+
+}
+
 func triggerCacheDump(c *gin.Context) {
 	dumpCache()
 	c.JSON(http.StatusOK, gin.H{

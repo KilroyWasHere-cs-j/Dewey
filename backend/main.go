@@ -74,7 +74,7 @@ func main() {
 		c.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "page not found"})
 	})
 
-	// Routes with plugin context
+	// All routes share plugin and DB context via middleware
 	api := r.Group("/")
 	api.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
@@ -82,14 +82,37 @@ func main() {
 		c.Next()
 	})
 	{
+		// Health check
 		api.GET("/", index)
-		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
+
+		// HTML views
 		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
+
+		// File management
 		api.POST("/upload", uploadFile)
-		api.GET("/files/:filename/:meta", getFile)
-		api.GET("/files", listFiles)
-		api.DELETE("/files/:filename", deleteFile)
-		api.GET("/admin/dumpCache", triggerCacheDump)
+		files := api.Group("/files")
+		{
+			files.GET("", listFiles)
+			files.GET("/:filename/:meta", getFile)
+			files.DELETE("/:filename", deleteFile)
+		}
+
+		// Admin — portal view, cache operations, and runtime config
+		admin := api.Group("/admin")
+		{
+			admin.GET("", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
+			admin.GET("/dumpCache", triggerCacheDump)
+
+			// Runtime settings — each param updates the corresponding backend constant
+			set := admin.Group("/set")
+			{
+				set.GET("/daemonTickInterval/:tickInterval", setDaemonTickInterval)
+				set.GET("/maxUpSize/:size", setMaxUploadSize)
+				set.GET("/maxDBOpenConn/:openCons", setMaxDBOpenConn)
+				set.GET("/maxDBIdleConn/:idleCons", setMaxDBIdleConn)
+				set.GET("/dbTimeout/:dbTimeout", setDBTimeout)
+			}
+		}
 	}
 
 	// Run BITs in the background so they fire at startup after all init is complete,

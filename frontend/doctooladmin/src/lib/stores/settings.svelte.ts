@@ -17,6 +17,12 @@ export interface Settings {
 	chartColorTheme: 'default' | 'cool' | 'warm' | 'mono';
 	portalName: string;
 	layoutDensity: 'comfortable' | 'compact';
+	// System — these mirror backend consts and will be synced via API hooks
+	daemonTickIntervalHours: number;
+	maxFileSizeMb: number;
+	maxOpenDbConnections: number;
+	maxIdleDbConnections: number;
+	dbConnectionTimeoutMinutes: number;
 }
 
 export const DEFAULTS: Settings = {
@@ -30,7 +36,13 @@ export const DEFAULTS: Settings = {
 	accentColor: 'yellow',
 	chartColorTheme: 'default',
 	portalName: 'DEWEY',
-	layoutDensity: 'comfortable'
+	layoutDensity: 'comfortable',
+	// Mirrors defaults in backend/consts.go
+	daemonTickIntervalHours: 1,
+	maxFileSizeMb: 50,
+	maxOpenDbConnections: 10,
+	maxIdleDbConnections: 10,
+	dbConnectionTimeoutMinutes: 2
 };
 
 // Full class strings must be spelled out so Tailwind's scanner doesn't purge them.
