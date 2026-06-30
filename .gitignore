@@ -33,6 +33,9 @@ go.work.sum
 ./backend/cache
 ./backend/backup
 
+# Compiled binary
+./backend/Dewey
+
 # Mac file
 .DS_Store
 
