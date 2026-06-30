@@ -203,7 +203,7 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 
 		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.Barcode)
 		if err != nil {
-			fmt.Printf("  [ERROR] Scanning row %d failed: %v\n", count, err)
+			Warn(fmt.Sprintf("  [ERROR] Scanning row %d failed: %v\n", count, err))
 			continue
 		}
 
@@ -211,7 +211,7 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("  ", "  ")
 		if err := encoder.Encode(r); err != nil {
-			fmt.Printf("  [ERROR] Encoding json for row %d: %v\n", count, err)
+			Warn(fmt.Sprintf("  [ERROR] Encoding json for row %d: %v\n", count, err))
 		}
 	}
 
