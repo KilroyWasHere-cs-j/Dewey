@@ -25,9 +25,10 @@ type Plugin struct {
 }
 
 type PluginManager struct {
-	// pool holds pre-loaded LStates. Each goroutine borrows one, uses it,
-	// then returns it — keeping Lua VM state isolated between concurrent calls.
-	pool      sync.Pool
+	// pools is keyed by plugin filename. Each plugin has its own pool of LStates
+	// loaded only with that plugin's file — this ensures Begin() resolves to the
+	// correct plugin's function rather than whichever plugin happened to load last.
+	pools     map[string]*sync.Pool
 	FilterMap map[string]Plugin
 	ScriptMap map[string]Plugin
 	InitMap   map[string]Plugin
@@ -35,36 +36,16 @@ type PluginManager struct {
 }
 
 func NewPluginManager() *PluginManager {
-	pm := &PluginManager{
+	return &PluginManager{
+		pools:     make(map[string]*sync.Pool),
 		FilterMap: make(map[string]Plugin),
 		ScriptMap: make(map[string]Plugin),
 		InitMap:   make(map[string]Plugin),
 		TickMap:   make(map[string]Plugin),
 	}
-
-	// New is called lazily when the pool has no free state available.
-	// Each state is fully loaded with all plugin files so it is ready to use.
-	pm.pool = sync.Pool{
-		New: func() any {
-			L := lua.NewState()
-			entries, err := os.ReadDir(pluginDir)
-			if err != nil {
-				return L
-			}
-			for _, entry := range entries {
-				if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
-					Warn("pool: failed to load plugin " + entry.Name() + ": " + err.Error())
-				}
-			}
-			return L
-		},
-	}
-
-	return pm
 }
 
-// Close is a no-op under the pool model — sync.Pool does not expose a drain
-// method and pooled states are released by the GC on process exit.
+// Close is a no-op — sync.Pool has no drain method; states are released by the GC.
 func (pm *PluginManager) Close() {}
 
 func (pm *PluginManager) LoadPlugins() error {
@@ -75,7 +56,7 @@ func (pm *PluginManager) LoadPlugins() error {
 	}
 
 	// Temporary state used only for plugin-type discovery; discarded after this call.
-	// Plugins are loaded one at a time so that WhoAmI identifies each file individually.
+	// Plugins are loaded one at a time so WhoAmI identifies each file individually.
 	L := lua.NewState()
 	defer L.Close()
 
@@ -101,6 +82,7 @@ func (pm *PluginManager) LoadPlugins() error {
 		// Yes these are magic numbers don't touch them
 		pluginType := L.Get(-2).String()
 		salienceLV := L.Get(-1)
+		L.Pop(2) // clean WhoAmI return values off the stack
 
 		sVal, ok := salienceLV.(lua.LNumber)
 		if !ok {
@@ -109,6 +91,19 @@ func (pm *PluginManager) LoadPlugins() error {
 			continue
 		}
 		salience := int(sVal)
+
+		// Build a per-plugin state pool. Capturing pluginFile by value in the
+		// closure avoids the loop variable capture bug.
+		pluginFile := filepath.Join(pluginDir, entry.Name())
+		pm.pools[entry.Name()] = &sync.Pool{
+			New: func() any {
+				state := lua.NewState()
+				if err := state.DoFile(pluginFile); err != nil {
+					Warn("pool: failed to load " + pluginFile + ": " + err.Error())
+				}
+				return state
+			},
+		}
 
 		switch pluginType {
 		case "filter":
@@ -131,7 +126,7 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 			for _, plugin := range pm.FilterMap {
 				Debug(fmt.Sprintf("Running filter plugin: %s", plugin.name))
 				var err error
-				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
+				entry, err = pm.callBeginWithReturn(entry, plugin)
 				if err != nil {
 					return entry, err
 				}
@@ -144,7 +139,7 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 			for _, plugin := range pm.ScriptMap {
 				Debug(fmt.Sprintf("Running script plugin: %s", plugin.name))
 				var err error
-				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
+				entry, err = pm.callBeginWithReturn(entry, plugin)
 				if err != nil {
 					return entry, err
 				}
@@ -171,11 +166,16 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 	}
 }
 
-func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginType) (DBEntry, error) {
-	// Borrow an isolated LState from the pool; return it when done so the
-	// next caller can reuse it without racing.
-	L := pm.pool.Get().(*lua.LState)
-	defer pm.pool.Put(L)
+func (pm *PluginManager) callBeginWithReturn(entry DBEntry, plugin Plugin) (DBEntry, error) {
+	// Borrow this plugin's isolated LState from its own pool. Using per-plugin
+	// pools ensures Begin() is the function defined by this plugin, not one
+	// overwritten by a later-loaded plugin in a shared state.
+	pool, ok := pm.pools[plugin.name]
+	if !ok {
+		return entry, fmt.Errorf("no state pool found for plugin: %s", plugin.name)
+	}
+	L := pool.Get().(*lua.LState)
+	defer pool.Put(L)
 
 	t := L.NewTable()
 	L.SetField(t, "Filename", lua.LString(entry.Filename))
@@ -202,11 +202,11 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginTyp
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
 
-	if pluginType == Filter {
+	if plugin.pluigntype == Filter {
 		entry.Path = result.RawGetString("Path").String()
 	}
 
-	if pluginType == Script {
+	if plugin.pluigntype == Script {
 		entry.Meta = result.RawGetString("Meta").String()
 		entry.Act = result.RawGetString("Act").String()
 	}
