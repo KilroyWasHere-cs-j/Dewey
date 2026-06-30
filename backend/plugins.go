@@ -104,9 +104,6 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.FilterMap {
 				Debug(fmt.Sprintf("Running filter plugin: %s", plugin.name))
-				if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-					return entry, err
-				}
 				var err error
 				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
 				if err != nil {
@@ -120,9 +117,6 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 		return func(entry DBEntry) (DBEntry, error) {
 			for _, plugin := range pm.ScriptMap {
 				Debug(fmt.Sprintf("Running script plugin: %s", plugin.name))
-				if err := pm.L.DoFile(filepath.Join(pluginDir, plugin.name)); err != nil {
-					return entry, err
-				}
 				var err error
 				entry, err = pm.callBeginWithReturn(entry, plugin.pluigntype)
 				if err != nil {
