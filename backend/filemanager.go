@@ -165,7 +165,7 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (st
 			return "", err
 		}
 
-		FileRetrievals++
+		atomic.AddInt64(&FileRetrievals, 1)
 		return fullPath, nil
 
 	} else if pullMeta == "true" {
