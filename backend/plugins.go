@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -24,7 +25,9 @@ type Plugin struct {
 }
 
 type PluginManager struct {
-	L         *lua.LState
+	// pool holds pre-loaded LStates. Each goroutine borrows one, uses it,
+	// then returns it — keeping Lua VM state isolated between concurrent calls.
+	pool      sync.Pool
 	FilterMap map[string]Plugin
 	ScriptMap map[string]Plugin
 	InitMap   map[string]Plugin
@@ -32,38 +35,61 @@ type PluginManager struct {
 }
 
 func NewPluginManager() *PluginManager {
-	return &PluginManager{
-		L:         lua.NewState(),
+	pm := &PluginManager{
 		FilterMap: make(map[string]Plugin),
 		ScriptMap: make(map[string]Plugin),
 		InitMap:   make(map[string]Plugin),
 		TickMap:   make(map[string]Plugin),
 	}
+
+	// New is called lazily when the pool has no free state available.
+	// Each state is fully loaded with all plugin files so it is ready to use.
+	pm.pool = sync.Pool{
+		New: func() any {
+			L := lua.NewState()
+			entries, err := os.ReadDir(pluginDir)
+			if err != nil {
+				return L
+			}
+			for _, entry := range entries {
+				if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
+					Warn("pool: failed to load plugin " + entry.Name() + ": " + err.Error())
+				}
+			}
+			return L
+		},
+	}
+
+	return pm
 }
 
-func (pm *PluginManager) Close() {
-	// TODO: call End() on each plugin
-	pm.L.Close()
-}
+// Close is a no-op under the pool model — sync.Pool does not expose a drain
+// method and pooled states are released by the GC on process exit.
+func (pm *PluginManager) Close() {}
 
 func (pm *PluginManager) LoadPlugins() error {
 	entries, err := os.ReadDir(pluginDir)
 	if err != nil {
 		Warn("Unable to read plugin directory: " + err.Error())
-		return err // Return the error as it is a fatal error
+		return err
 	}
+
+	// Temporary state used only for plugin-type discovery; discarded after this call.
+	// Plugins are loaded one at a time so that WhoAmI identifies each file individually.
+	L := lua.NewState()
+	defer L.Close()
 
 	for _, entry := range entries {
 		Debug(entry.Name())
 
-		if err := pm.L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
+		if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
-			continue // Just skip this plugin and move on to the next one
+			continue
 		}
 
 		// Identify the type and salience of the plugin
-		whoAmIFunc := pm.L.GetGlobal("WhoAmI")
-		err = pm.L.CallByParam(lua.P{
+		whoAmIFunc := L.GetGlobal("WhoAmI")
+		err = L.CallByParam(lua.P{
 			Fn:      whoAmIFunc,
 			NRet:    2, // Number of return values
 			Protect: true,
@@ -73,8 +99,8 @@ func (pm *PluginManager) LoadPlugins() error {
 		}
 
 		// Yes these are magic numbers don't touch them
-		pluginType := pm.L.Get(-2).String()
-		salienceLV := pm.L.Get(-1)
+		pluginType := L.Get(-2).String()
+		salienceLV := L.Get(-1)
 
 		sVal, ok := salienceLV.(lua.LNumber)
 		if !ok {
@@ -146,16 +172,21 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 }
 
 func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginType) (DBEntry, error) {
-	t := pm.L.NewTable()
-	pm.L.SetField(t, "Filename", lua.LString(entry.Filename))
-	pm.L.SetField(t, "Act", lua.LString(entry.Act))
-	pm.L.SetField(t, "Hash", lua.LString(entry.Hash))
-	pm.L.SetField(t, "Path", lua.LString(entry.Path))
-	pm.L.SetField(t, "Meta", lua.LString(entry.Meta))
-	pm.L.SetField(t, "Barcode", lua.LString(entry.Barcode))
+	// Borrow an isolated LState from the pool; return it when done so the
+	// next caller can reuse it without racing.
+	L := pm.pool.Get().(*lua.LState)
+	defer pm.pool.Put(L)
 
-	beginFunc := pm.L.GetGlobal("Begin")
-	err := pm.L.CallByParam(lua.P{
+	t := L.NewTable()
+	L.SetField(t, "Filename", lua.LString(entry.Filename))
+	L.SetField(t, "Act", lua.LString(entry.Act))
+	L.SetField(t, "Hash", lua.LString(entry.Hash))
+	L.SetField(t, "Path", lua.LString(entry.Path))
+	L.SetField(t, "Meta", lua.LString(entry.Meta))
+	L.SetField(t, "Barcode", lua.LString(entry.Barcode))
+
+	beginFunc := L.GetGlobal("Begin")
+	err := L.CallByParam(lua.P{
 		Fn:      beginFunc,
 		NRet:    1,
 		Protect: true,
@@ -165,8 +196,8 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry, pluginType PluginTyp
 	}
 
 	// Read back the (possibly modified) table
-	result, ok := pm.L.Get(-1).(*lua.LTable)
-	pm.L.Pop(1)
+	result, ok := L.Get(-1).(*lua.LTable)
+	L.Pop(1)
 	if !ok {
 		return entry, fmt.Errorf("Begin() did not return a table")
 	}
