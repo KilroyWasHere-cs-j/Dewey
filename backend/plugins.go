@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -22,26 +23,28 @@ type Plugin struct {
 	salience   int
 	name       string
 	pluigntype PluginType
+	// pool is this plugin's own LState pool, loaded only with that plugin's
+	// file — this ensures Begin() resolves to the correct plugin's function
+	// rather than whichever plugin happened to load last.
+	pool *sync.Pool
 }
 
 type PluginManager struct {
-	// pools is keyed by plugin filename. Each plugin has its own pool of LStates
-	// loaded only with that plugin's file — this ensures Begin() resolves to the
-	// correct plugin's function rather than whichever plugin happened to load last.
-	pools     map[string]*sync.Pool
-	FilterMap map[string]Plugin
-	ScriptMap map[string]Plugin
-	InitMap   map[string]Plugin
-	TickMap   map[string]Plugin
+	// Each bucket is sorted by salience (highest first) at the end of
+	// LoadPlugins, so RunPlugins executes plugins in salience order instead
+	// of the random order map iteration would give.
+	FilterMap []Plugin
+	ScriptMap []Plugin
+	InitMap   []Plugin
+	TickMap   []Plugin
 }
 
 func NewPluginManager() *PluginManager {
 	return &PluginManager{
-		pools:     make(map[string]*sync.Pool),
-		FilterMap: make(map[string]Plugin),
-		ScriptMap: make(map[string]Plugin),
-		InitMap:   make(map[string]Plugin),
-		TickMap:   make(map[string]Plugin),
+		FilterMap: make([]Plugin, 0),
+		ScriptMap: make([]Plugin, 0),
+		InitMap:   make([]Plugin, 0),
+		TickMap:   make([]Plugin, 0),
 	}
 }
 
@@ -95,7 +98,7 @@ func (pm *PluginManager) LoadPlugins() error {
 		// Build a per-plugin state pool. Capturing pluginFile by value in the
 		// closure avoids the loop variable capture bug.
 		pluginFile := filepath.Join(pluginDir, entry.Name())
-		pm.pools[entry.Name()] = &sync.Pool{
+		pool := &sync.Pool{
 			New: func() any {
 				state := lua.NewState()
 				if err := state.DoFile(pluginFile); err != nil {
@@ -107,15 +110,25 @@ func (pm *PluginManager) LoadPlugins() error {
 
 		switch pluginType {
 		case "filter":
-			pm.FilterMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Filter}
+			pm.FilterMap = append(pm.FilterMap, Plugin{name: entry.Name(), salience: salience, pluigntype: Filter, pool: pool})
 		case "script":
-			pm.ScriptMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Script}
+			pm.ScriptMap = append(pm.ScriptMap, Plugin{name: entry.Name(), salience: salience, pluigntype: Script, pool: pool})
 		case "init":
-			pm.InitMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Init}
+			pm.InitMap = append(pm.InitMap, Plugin{name: entry.Name(), salience: salience, pluigntype: Init, pool: pool})
 		case "tick":
-			pm.TickMap[entry.Name()] = Plugin{name: entry.Name(), salience: salience, pluigntype: Tick}
+			pm.TickMap = append(pm.TickMap, Plugin{name: entry.Name(), salience: salience, pluigntype: Tick, pool: pool})
 		}
 	}
+
+	// Highest salience runs first within each bucket.
+	bySalienceDesc := func(plugins []Plugin) func(i, j int) bool {
+		return func(i, j int) bool { return plugins[i].salience > plugins[j].salience }
+	}
+	sort.Slice(pm.FilterMap, bySalienceDesc(pm.FilterMap))
+	sort.Slice(pm.ScriptMap, bySalienceDesc(pm.ScriptMap))
+	sort.Slice(pm.InitMap, bySalienceDesc(pm.InitMap))
+	sort.Slice(pm.TickMap, bySalienceDesc(pm.TickMap))
+
 	return nil
 }
 
@@ -170,12 +183,8 @@ func (pm *PluginManager) callBeginWithReturn(entry DBEntry, plugin Plugin) (DBEn
 	// Borrow this plugin's isolated LState from its own pool. Using per-plugin
 	// pools ensures Begin() is the function defined by this plugin, not one
 	// overwritten by a later-loaded plugin in a shared state.
-	pool, ok := pm.pools[plugin.name]
-	if !ok {
-		return entry, fmt.Errorf("no state pool found for plugin: %s", plugin.name)
-	}
-	L := pool.Get().(*lua.LState)
-	defer pool.Put(L)
+	L := plugin.pool.Get().(*lua.LState)
+	defer plugin.pool.Put(L)
 
 	t := L.NewTable()
 	L.SetField(t, "Filename", lua.LString(entry.Filename))
