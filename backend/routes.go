@@ -37,22 +37,17 @@ func index(c *gin.Context) {
 	})
 }
 
-// getFile retrieves a file from storage and optionally returns metadata.
+// getFile retrieves a file or its metadata depending on the meta flag.
 //
 // URL Params:
 //   - filename: name of the file to retrieve
-//   - meta: "true" or "false" indicating whether metadata should be included
+//   - meta: "true" returns a JSON metadata record; "false" streams the file
 //
-// Behavior:
-//   - Validates filename to prevent path traversal
-//   - Locates file in upload directory
-//   - If meta=true, includes file metadata in response
-//   - Otherwise returns file content only
-//
-// Returns (HTTP JSON or file stream):
-//   - 200 OK: file content (and optional metadata)
-//   - 400 Bad Request: invalid filename
-//   - 404 Not Found: file does not exist
+// Returns:
+//   - 200 OK + file stream (meta=false)
+//   - 200 OK + JSON MetaData (meta=true)
+//   - 400 Bad Request: unknown meta flag value
+//   - 404 Not Found: file or metadata record does not exist
 func getFile(c *gin.Context) {
 	Debug("getFile")
 	dbm := c.MustGet("db").(*DatabaseManager)
@@ -60,16 +55,30 @@ func getFile(c *gin.Context) {
 	filename := c.Param("filename")
 	metaFlag := c.Param("meta")
 
-	path, err := searchAndReturn(dbm, filename, metaFlag)
-	if err != nil {
-		Warn("getFile failed: " + err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "File not found",
-		})
-		return
-	}
+	switch metaFlag {
+	case "false":
+		// Locate and stream the file; path traversal is stripped inside locateFile
+		path, err := locateFile(dbm, filename)
+		if err != nil {
+			Warn("getFile failed: " + err.Error())
+			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+			return
+		}
+		c.File(path)
 
-	c.File(path)
+	case "true":
+		// Return the metadata record linked to this file as JSON
+		meta, err := dbm.pullMetaByFilename(filename)
+		if err != nil {
+			Warn("getFile metadata failed: " + err.Error())
+			c.JSON(http.StatusNotFound, gin.H{"error": "Metadata not found"})
+			return
+		}
+		c.JSON(http.StatusOK, meta)
+
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown meta flag: %s", metaFlag)})
+	}
 }
 
 // listFiles returns all files stored in the upload directory.

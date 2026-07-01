@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -124,55 +123,41 @@ func CopyFile(src, dst string) error {
 	return dstFile.Sync()
 }
 
-// searchAndReturn validates that a file exists and returns its absolute path.
-//
-// Returns:
-//   - string: absolute file path
-//   - error: if file does not exist or path is invalid
-func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (string, error) {
-
-	// Strip any directory components to prevent path traversal
+// locateFile checks the cache first, then falls back to the DB record.
+// Strips directory components from filename to prevent path traversal.
+// Returns the absolute path to the file on disk.
+func locateFile(dbm *DatabaseManager, filename string) (string, error) {
+	// Prevent path traversal — only the base name is ever used
 	filename = filepath.Base(filename)
-
-	if pullMeta == "false" {
-		Debug("Checking cache")
-		files, err := os.ReadDir(uploadDir)
-		if err != nil {
-			Warn("During file retrieval os.ReadDir() encountered " + err.Error())
-		}
-
-		for _, file := range files {
-			if file.Name() == filename {
-				Debug("Found file in cache")
-
-				atomic.AddInt64(&FileRetrievals, 1)
-				return filepath.Join(uploadDir, file.Name()), nil
-			}
-		}
-
-		Debug("No file found in cache, searching db")
-
-		path, err := dbm.pullRecordByFilename(filename)
-		if err != nil {
-			Warn("pullRecordByFilename failed " + err.Error())
-			return "", err
-		}
-		Debug("Pulled this path from db " + path)
-
-		fullPath := filepath.Join(fileSystemBaseDir, path)
-		if _, err := os.Stat(fullPath); err != nil {
-			Warn("File not found at stored path: " + fullPath)
-			return "", err
-		}
-
-		atomic.AddInt64(&FileRetrievals, 1)
-		return fullPath, nil
-
-	} else if pullMeta == "true" {
-		Debug("Would sql search and pull meta")
-		return "", fmt.Errorf("metadata retrieval not implemented")
-	} else {
-		Debug("Unknown meta flag")
-		return "", fmt.Errorf("unknown meta flag: %s", pullMeta)
+	Debug("Checking cache")
+	files, err := os.ReadDir(uploadDir)
+	if err != nil {
+		Warn("During file retrieval os.ReadDir() encountered " + err.Error())
 	}
+
+	for _, file := range files {
+		if file.Name() == filename {
+			Debug("Found file in cache")
+			atomic.AddInt64(&FileRetrievals, 1)
+			return filepath.Join(uploadDir, file.Name()), nil
+		}
+	}
+
+	Debug("No file found in cache, searching db")
+
+	path, err := dbm.pullRecordByFilename(filename)
+	if err != nil {
+		Warn("pullRecordByFilename failed " + err.Error())
+		return "", err
+	}
+	Debug("Pulled this path from db " + path)
+
+	fullPath := filepath.Join(fileSystemBaseDir, path)
+	if _, err := os.Stat(fullPath); err != nil {
+		Warn("File not found at stored path: " + fullPath)
+		return "", err
+	}
+
+	atomic.AddInt64(&FileRetrievals, 1)
+	return fullPath, nil
 }
