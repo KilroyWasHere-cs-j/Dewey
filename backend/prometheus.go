@@ -366,4 +366,5 @@ func init() {
 	uploadRejections.WithLabelValues("invalid_ext")
 	uploadRejections.WithLabelValues("pe_blocked")
 	uploadRejections.WithLabelValues("elf_blocked")
+	uploadRejections.WithLabelValues("content_mismatch")
 }
