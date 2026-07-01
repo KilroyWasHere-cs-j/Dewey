@@ -149,6 +149,12 @@ func uploadFile(c *gin.Context) {
 	pm := c.MustGet("plugins").(*PluginManager)
 	dbm := c.MustGet("db").(*DatabaseManager)
 
+	// MaxMultipartMemory only controls the in-memory/disk threshold while
+	// parsing — it doesn't cap the request body itself. Without this, a
+	// client can stream an unbounded body regardless of Content-Length,
+	// exhausting disk as gin buffers it. This enforces a hard ceiling.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxFileSize)
+
 	contentType := c.GetHeader("Content-Type")
 
 	// -------------------------
@@ -205,8 +211,28 @@ func uploadFile(c *gin.Context) {
 	// Get file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		// http.MaxBytesReader surfaces as a read error here once the body
+		// cap above is exceeded, rather than as a clean multipart error.
+		if strings.Contains(err.Error(), "too large") {
+			uploadRejections.WithLabelValues("too_large").Inc()
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+				"error": "File exceeds maximum allowed size",
+			})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "file is required",
+		})
+		return
+	}
+
+	// Belt-and-suspenders check against the declared part size, independent
+	// of whatever MaxBytesReader caught at the body-read level.
+	if fileHeader.Size > maxFileSize {
+		Warn(fmt.Sprintf("file too large: %d bytes", fileHeader.Size))
+		uploadRejections.WithLabelValues("too_large").Inc()
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": "File exceeds maximum allowed size",
 		})
 		return
 	}
