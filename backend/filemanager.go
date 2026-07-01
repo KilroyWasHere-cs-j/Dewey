@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -125,8 +124,11 @@ func CopyFile(src, dst string) error {
 }
 
 // locateFile checks the cache first, then falls back to the DB record.
+// Strips directory components from filename to prevent path traversal.
 // Returns the absolute path to the file on disk.
 func locateFile(dbm *DatabaseManager, filename string) (string, error) {
+	// Prevent path traversal — only the base name is ever used
+	filename = filepath.Base(filename)
 	Debug("Checking cache")
 	files, err := os.ReadDir(uploadDir)
 	if err != nil {
@@ -158,33 +160,4 @@ func locateFile(dbm *DatabaseManager, filename string) (string, error) {
 
 	atomic.AddInt64(&FileRetrievals, 1)
 	return fullPath, nil
-}
-
-// searchAndReturn validates that a file exists and returns its absolute path.
-//
-// Returns:
-//   - string: absolute file path
-//   - error: if file does not exist or path is invalid
-func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (string, error) {
-
-	// Strip any directory components to prevent path traversal
-	filename = filepath.Base(filename)
-
-	switch pullMeta {
-	case "false":
-		return locateFile(dbm, filename)
-
-	case "true":
-		Debug("Would sql search and pull meta")
-		path, err := locateFile(dbm, filename)
-		if err != nil {
-			return "", err
-		}
-		// TODO: retrieve and attach metadata
-		return path, fmt.Errorf("metadata retrieval not implemented")
-
-	default:
-		Debug("Unknown meta flag")
-		return "", fmt.Errorf("unknown meta flag: %s", pullMeta)
-	}
 }

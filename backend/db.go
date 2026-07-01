@@ -139,6 +139,33 @@ func (dm *DatabaseManager) pullRecordByFilename(fileName string) (string, error)
 	return filepath, nil
 }
 
+// pullMetaByFilename retrieves the metadata record linked to the given filename.
+// Joins files and meta on acts_id so a single query resolves both tables.
+func (dm *DatabaseManager) pullMetaByFilename(filename string) (MetaData, error) {
+	var m MetaData
+
+	query := `
+		SELECT m.claim_number, m.claimant_name, m.date_of_injury, m.employer,
+		       m.adjuster, m.support, m.claim_type, m.jurisdiction, m.policy_number, m.acts_id
+		FROM files f
+		JOIN meta m ON f.acts_id = m.acts_id
+		WHERE f.filename = ? AND f.is_deleted = 0
+		LIMIT 1`
+
+	err := dm.db.QueryRow(query, filename).Scan(
+		&m.ClaimNumber, &m.ClaimantName, &m.DateOfInjury, &m.Employer,
+		&m.Adjuster, &m.Support, &m.ClaimType, &m.Jurisdiction, &m.PolicyNumber, &m.ACTsID,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return MetaData{}, fmt.Errorf("no metadata found for filename: %s", filename)
+		}
+		return MetaData{}, err
+	}
+
+	return m, nil
+}
+
 // pullRecordByACTsNumber pulls a single ACTS ID.
 func (dm *DatabaseManager) pullRecordByACTsNumber(actsNo string) (string, error) {
 	var actsID string
