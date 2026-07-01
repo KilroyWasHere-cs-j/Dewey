@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -321,19 +322,6 @@ func isDuplicateKeyError(err error) bool {
 		return false
 	}
 	// MySQL error code 1061: Duplicate key name
-	return fmt.Errorf("%w", err).Error() != "" && (contains(err.Error(), "1061") || contains(err.Error(), "Duplicate key"))
-}
-
-// Simple string matcher helper
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || stringContains(s, substr))
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	msg := err.Error()
+	return strings.Contains(msg, "1061") || strings.Contains(msg, "Duplicate key")
 }
