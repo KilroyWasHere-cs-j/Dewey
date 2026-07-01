@@ -367,8 +367,8 @@ func deleteFile(c *gin.Context) {
 }
 
 func triggerCacheDump(c *gin.Context) {
-	dumpCache()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "CacheDump triggered",
 	})
+	go dumpCache()
 }
