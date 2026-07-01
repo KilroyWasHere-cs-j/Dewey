@@ -296,10 +296,10 @@ func (dm *DatabaseManager) removeKnownMachine(ip string) error {
 }
 
 func (dm *DatabaseManager) getKnownMachines() ([]struct {
-	IP       string `json:"ip"`
-	Label    string `json:"label"`
-	AddedAt  string `json:"added_at"`
-	LastSeen string `json:"last_seen_at"`
+	IP       string  `json:"ip"`
+	Label    string  `json:"label"`
+	AddedAt  string  `json:"added_at"`
+	LastSeen *string `json:"last_seen_at"`
 }, error) {
 	query := `SELECT ip, label, added_at, last_seen_at FROM known_machines`
 	rows, err := dm.db.Query(query)
@@ -309,21 +309,28 @@ func (dm *DatabaseManager) getKnownMachines() ([]struct {
 	defer rows.Close()
 
 	var machines []struct {
-		IP       string `json:"ip"`
-		Label    string `json:"label"`
-		AddedAt  string `json:"added_at"`
-		LastSeen string `json:"last_seen_at"`
+		IP       string  `json:"ip"`
+		Label    string  `json:"label"`
+		AddedAt  string  `json:"added_at"`
+		LastSeen *string `json:"last_seen_at"`
 	}
 
 	for rows.Next() {
 		var m struct {
-			IP       string `json:"ip"`
-			Label    string `json:"label"`
-			AddedAt  string `json:"added_at"`
-			LastSeen string `json:"last_seen_at"`
+			IP       string  `json:"ip"`
+			Label    string  `json:"label"`
+			AddedAt  string  `json:"added_at"`
+			LastSeen *string `json:"last_seen_at"`
 		}
-		if err := rows.Scan(&m.IP, &m.Label, &m.AddedAt, &m.LastSeen); err != nil {
+		// last_seen_at is nullable — a machine that's been added but never
+		// yet seen has no value, so scan through sql.NullString rather than
+		// straight into a string, which errors out on NULL.
+		var lastSeen sql.NullString
+		if err := rows.Scan(&m.IP, &m.Label, &m.AddedAt, &lastSeen); err != nil {
 			return nil, fmt.Errorf("failed to scan known machine row: %w", err)
+		}
+		if lastSeen.Valid {
+			m.LastSeen = &lastSeen.String
 		}
 		machines = append(machines, m)
 	}

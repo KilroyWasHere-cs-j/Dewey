@@ -86,7 +86,7 @@ func main() {
 	p.Use(r)
 
 	// Rate limiter
-	limiter := rate.NewLimiter(1, 5)
+	limiter := rate.NewLimiter(rateLimitPerSecond, rateLimitBurst)
 	r.Use(func(c *gin.Context) {
 		if !limiter.Allow() {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})

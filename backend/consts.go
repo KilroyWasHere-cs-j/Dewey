@@ -12,6 +12,13 @@ const daemonTickTime = 1            // system tick interval in hours (note don't
 const maxFileSize = 50 << 20 // maximum file that can be uploaded in bytes (50MB)
 const portNumber = "8080"    // port for the server to listen on
 
+// Rate limiter (global, not per-IP — shared across every client hitting this
+// server). A single dashboard page load fires off several requests (files
+// or machines, metrics, version), so this needs enough headroom for normal
+// navigation, not just a single request.
+const rateLimitPerSecond = 10 // steady-state requests/sec refill rate
+const rateLimitBurst = 20     // burst allowance on top of the refill rate
+
 // Database specific constants
 const maxOpenDBConnections = 10         // maximum allowable open connections
 const maxIdleDBConnections = 10         // maximum allowable idle connections
