@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -249,6 +250,91 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 	fmt.Printf("--- END DEBUG: TOTAL RECORDS FOUND: %d ---\n\n", count)
 }
 
+// checkKnownMachine looks up ip in the known_machines allowlist and returns
+// its label if registered. sql.ErrNoRows means the IP isn't authorized to
+// talk to this server.
+func (dm *DatabaseManager) checkKnownMachine(ip string) (string, error) {
+	var label string
+
+	query := `SELECT label FROM known_machines WHERE ip = ?`
+	err := dm.db.QueryRow(query, ip).Scan(&label)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("machine not registered: %s", ip)
+		}
+		return "", err
+	}
+
+	return label, nil
+}
+
+func (dm *DatabaseManager) logMachineIP(ip string) error {
+	query := `UPDATE known_machines SET last_seen_at = NOW() WHERE ip = ?`
+	_, err := dm.db.Exec(query, ip)
+	if err != nil {
+		return fmt.Errorf("failed to log machine IP: %w", err)
+	}
+	return nil
+}
+
+func (dm *DatabaseManager) addKnownMachine(ip, label string) error {
+	query := `INSERT INTO known_machines (ip, label) VALUES (?, ?)`
+	_, err := dm.db.Exec(query, ip, label)
+	if err != nil {
+		return fmt.Errorf("failed to add known machine: %w", err)
+	}
+	return nil
+}
+
+func (dm *DatabaseManager) removeKnownMachine(ip string) error {
+	query := `DELETE FROM known_machines WHERE ip = ?`
+	_, err := dm.db.Exec(query, ip)
+	if err != nil {
+		return fmt.Errorf("failed to remove known machine: %w", err)
+	}
+	return nil
+}
+
+func (dm *DatabaseManager) getKnownMachines() ([]struct {
+	IP       string `json:"ip"`
+	Label    string `json:"label"`
+	AddedAt  string `json:"added_at"`
+	LastSeen string `json:"last_seen_at"`
+}, error) {
+	query := `SELECT ip, label, added_at, last_seen_at FROM known_machines`
+	rows, err := dm.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve known machines: %w", err)
+	}
+	defer rows.Close()
+
+	var machines []struct {
+		IP       string `json:"ip"`
+		Label    string `json:"label"`
+		AddedAt  string `json:"added_at"`
+		LastSeen string `json:"last_seen_at"`
+	}
+
+	for rows.Next() {
+		var m struct {
+			IP       string `json:"ip"`
+			Label    string `json:"label"`
+			AddedAt  string `json:"added_at"`
+			LastSeen string `json:"last_seen_at"`
+		}
+		if err := rows.Scan(&m.IP, &m.Label, &m.AddedAt, &m.LastSeen); err != nil {
+			return nil, fmt.Errorf("failed to scan known machine row: %w", err)
+		}
+		machines = append(machines, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return machines, nil
+}
+
 // Migrate executes the DDL script to ensure all tables ('files' and 'meta')
 // and their performance indexes exist.
 func (dm *DatabaseManager) Migrate() error {
@@ -290,6 +376,19 @@ func (dm *DatabaseManager) Migrate() error {
 		return fmt.Errorf("failed to create meta table: %w", err)
 	}
 
+	machinesQuery := `
+	CREATE TABLE IF NOT EXISTS known_machines (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ip VARCHAR(45) NOT NULL UNIQUE,
+      label VARCHAR(255) NOT NULL,
+      added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+
+	if _, err := dm.db.Exec(machinesQuery); err != nil {
+		return fmt.Errorf("failed to create known_machines table: %w", err)
+	}
+
 	// --- 3. CREATE INDEXES ---
 	// File Table Indexes
 	dm.createIndexSafe("idx_files_filename_deleted", "files (filename, is_deleted)")
@@ -321,19 +420,6 @@ func isDuplicateKeyError(err error) bool {
 		return false
 	}
 	// MySQL error code 1061: Duplicate key name
-	return fmt.Errorf("%w", err).Error() != "" && (contains(err.Error(), "1061") || contains(err.Error(), "Duplicate key"))
-}
-
-// Simple string matcher helper
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || stringContains(s, substr))
-}
-
-func stringContains(s, substr string) bool {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	msg := err.Error()
+	return strings.Contains(msg, "1061") || strings.Contains(msg, "Duplicate key")
 }

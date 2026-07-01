@@ -17,6 +17,7 @@
 		{ href: '#architecture', label: 'Architecture' },
 		{ href: '#stack', label: 'Tech Stack' },
 		{ href: '#api', label: 'API Reference' },
+		{ href: '#access', label: 'Access Control' },
 		{ href: '#plugins', label: 'Plugin System' },
 		{ href: '#database', label: 'Database' },
 		{ href: '#daemon', label: 'Daemon' },
@@ -139,7 +140,8 @@
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">API Reference</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					All endpoints are served on port <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">8080</code>.
-					Plugin and DB context is injected into every handler via Gin middleware.
+					Plugin and DB context is injected into every handler via Gin middleware. Every route also
+					passes through the <a href="#access" class="underline">Access Control</a> allowlist first.
 				</p>
 
 				<div class="overflow-x-auto">
@@ -167,6 +169,9 @@
 								{ method: 'GET',    path: '/admin/set/maxDBOpenConn/:val',            handler: 'setMaxDBOpenConn',       desc: 'Update the DB connection pool open connection limit.' },
 								{ method: 'GET',    path: '/admin/set/maxDBIdleConn/:val',            handler: 'setMaxDBIdleConn',       desc: 'Update the DB connection pool idle connection limit.' },
 								{ method: 'GET',    path: '/admin/set/dbTimeout/:val',                handler: 'setDBTimeout',           desc: 'Update the DB connection lifetime multiplier (minutes).' },
+								{ method: 'GET',    path: '/machines',                                handler: 'listMachines',           desc: 'List every machine registered in the known_machines allowlist.' },
+								{ method: 'POST',   path: '/machines',                                handler: 'addMachine',             desc: 'Register a new machine. Body: {"ip": "...", "label": "..."}.' },
+								{ method: 'DELETE', path: '/machines/:ip',                            handler: 'deleteMachine',          desc: 'Remove a machine from the allowlist by IP.' },
 							] as row}
 								<tr>
 									<td class="py-2 pr-4">
@@ -234,6 +239,49 @@
 						<span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-gray-700 dark:text-gray-300">{ext}</span>
 					{/each}
 				</div>
+			</section>
+
+			<!-- ── Access Control ── -->
+			<section id="access" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Access Control</h2>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					Dewey runs on a closed network of machines talking to each other — no route is reachable
+					from outside that network. Instead of per-user authentication, access is gated by an
+					IP allowlist: the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">known_machines</code>
+					table, checked by the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">logConnections</code>
+					middleware (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">main.go</code>) ahead of every
+					other handler.
+				</p>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					On each request the middleware looks up <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">c.ClientIP()</code>
+					via <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">checkKnownMachine</code>. An unregistered IP gets
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code> before reaching the route
+					handler. A registered IP proceeds, and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">logMachineIP</code>
+					bumps <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">last_seen_at</code> for it — this doubles as
+					the connection log (who talked to the server, and when).
+				</p>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					The server calls <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">r.SetTrustedProxies(nil)</code> so
+					gin ignores <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">X-Forwarded-For</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">X-Real-IP</code>
+					headers — without this, any machine could set that header and spoof its way past the allowlist,
+					since there's no reverse proxy in front of this pod to strip it.
+				</p>
+				<div class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+					<strong>Scope:</strong> this is IP-based, not identity-based — there's no login or credential.
+					It stops outside machines from reaching the API cold, but anything already on the network
+					that can claim a registered IP (DHCP collision, static IP reuse) gets full access with no
+					further check. That trade-off is intentional given the closed-network threat model; it is
+					not a substitute for real authentication if Dewey is ever exposed more broadly.
+				</div>
+				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Managing the allowlist</h3>
+				<p class="text-sm text-gray-600 dark:text-gray-300">
+					Machines can be listed, added, and removed via the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/machines</code>
+					routes above, or through the Known Machines page in the admin portal. Because those routes are
+					gated by the same allowlist, the very first machine can't bootstrap itself through the API —
+					register it directly against <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">known_machines</code>
+					(a manual <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">INSERT</code>, or a CLI flag if one is added)
+					before anything else can reach the server.
+				</p>
 			</section>
 
 			<!-- ── Plugin System ── -->
@@ -373,11 +421,42 @@ end</code></pre>
 					</table>
 				</div>
 
-				<p class="mt-4 text-sm text-gray-600 dark:text-gray-300">
+				<p class="mt-4 mb-6 text-sm text-gray-600 dark:text-gray-300">
 					Deletes are soft — the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">is_deleted</code> flag is set to
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">1</code> rather than the row being removed.
 					All queries filter on <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">is_deleted = 0</code>.
 				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">known_machines</h3>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					Backs the <a href="#access" class="underline">Access Control</a> allowlist — see that section for how it's used.
+				</p>
+				<div class="overflow-x-auto">
+					<table class="w-full text-xs">
+						<thead>
+							<tr class="border-b border-gray-200 text-left dark:border-gray-700">
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Column</th>
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Type</th>
+								<th class="pb-2 font-semibold text-gray-700 dark:text-gray-200">Notes</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+							{#each [
+								{ col: 'id',           type: 'INT AUTO_INCREMENT', notes: 'Primary key.' },
+								{ col: 'ip',           type: 'VARCHAR(45)',        notes: 'Unique. Source IP checked on every request. Sized for IPv4 and IPv6.' },
+								{ col: 'label',        type: 'VARCHAR(255)',       notes: 'Human-readable name for the machine (e.g. "vm-2").' },
+								{ col: 'added_at',     type: 'DATETIME',           notes: 'Defaults to the time the machine was registered.' },
+								{ col: 'last_seen_at', type: 'DATETIME',           notes: 'Updated on every authorized request from this IP. NULL until first seen.' },
+							] as row}
+								<tr>
+									<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.col}</td>
+									<td class="py-1.5 pr-4 text-gray-500 dark:text-gray-400">{row.type}</td>
+									<td class="py-1.5 text-gray-600 dark:text-gray-400">{row.notes}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</section>
 
 			<!-- ── Daemon ── -->
@@ -514,7 +593,31 @@ end</code></pre>
 				</ul>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Quick deploy</h3>
-				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">bash deploy.sh</code></pre>
+				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">bash deploy.sh
+# Wipe the mysql-data volume before starting (opt-in — normally data persists):
+bash deploy.sh --reset-db</code></pre>
+
+				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Persistence</h3>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> mounts named Podman
+					volumes so data survives a pod recreation instead of living only in a container's
+					writable layer:
+				</p>
+				<ul class="mb-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">mysql-data</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/var/lib/mysql</code></li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-store</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/store</code></li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-cache</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/cache</code></li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-backup</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/backup</code></li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-logs</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/logs</code></li>
+				</ul>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">package.sh</code>'s generated
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">run.sh</code> uses
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">podman play kube --replace</code>, so
+					redeploying a new bundle on the server doesn't require tearing the pod down first — and
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--replace</code> leaves the named
+					volumes untouched, so data carries over between deploys there too.
+				</p>
 
 				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Manual build — backend</h3>
 				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">podman build \

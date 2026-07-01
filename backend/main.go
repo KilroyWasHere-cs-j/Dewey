@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -10,6 +11,29 @@ import (
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"golang.org/x/time/rate"
 )
+
+// logConnections gates every route behind the known_machines allowlist and
+// records each authorized request — this is both the access control and the
+// "who and when" audit trail for the closed network this server runs on.
+func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+
+		label, err := dbm.checkKnownMachine(ip)
+		if err != nil {
+			Warn(fmt.Sprintf("unregistered machine %s hit %s %s", ip, c.Request.Method, c.FullPath()))
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "unregistered machine"})
+			return
+		}
+
+		Debug(fmt.Sprintf("%s (%s) -> %s %s", label, ip, c.Request.Method, c.FullPath()))
+		if err := dbm.logMachineIP(ip); err != nil {
+			Warn("failed to update last_seen_at for " + ip + ": " + err.Error())
+		}
+
+		c.Next()
+	}
+}
 
 func main() {
 
@@ -49,6 +73,9 @@ func main() {
 	Section("Server")
 	r := gin.New()
 	r.MaxMultipartMemory = maxFileSize
+	// No reverse proxy in front of this pod, so don't trust forwarded-for
+	// headers — otherwise a VM could spoof its way past the IP allowlist.
+	r.SetTrustedProxies(nil)
 
 	// Core middleware
 	r.Use(gin.Recovery())
@@ -75,6 +102,7 @@ func main() {
 
 	// Routes with plugin context
 	api := r.Group("/")
+	api.Use(logConnections(dbm))
 	api.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
 		c.Set("db", dbm)
@@ -89,6 +117,9 @@ func main() {
 		api.GET("/files", listFiles)
 		api.DELETE("/files/:filename", deleteFile)
 		api.GET("/admin/dumpCache", triggerCacheDump)
+		api.GET("/machines", listMachines)
+		api.POST("/machines", addMachine)
+		api.DELETE("/machines/:ip", deleteMachine)
 	}
 
 	// Run BITs in the background so they fire at startup after all init is complete,
