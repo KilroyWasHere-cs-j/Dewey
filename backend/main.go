@@ -110,6 +110,7 @@ func main() {
 	})
 	{
 		api.GET("/", index)
+		api.GET("/version", versionInfo)
 		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
 		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
 		api.POST("/upload", uploadFile)

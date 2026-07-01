@@ -11,6 +11,7 @@ const daemonTickTime = 1            // system tick interval in hours (note don't
 // Server specific constants
 const maxFileSize = 50 << 20 // maximum file that can be uploaded in bytes (50MB)
 const portNumber = "8080"    // port for the server to listen on
+const appVersion = "0.1.0"   // app release version, bump by hand before cutting a release
 
 // Rate limiter (global, not per-IP — shared across every client hitting this
 // server). A single dashboard page load fires off several requests (files
