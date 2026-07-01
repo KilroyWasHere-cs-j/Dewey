@@ -83,7 +83,11 @@ cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
 #!/bin/bash
 podman load -i cross-doc-tool-dev.tar
 podman load -i admin-portal.tar
-podman play kube dewey-pod.yaml
+# --replace lets this be re-run against an already-deployed pod without
+# manually tearing it down first. Named volumes (mysql-data, dewey-store,
+# dewey-cache, dewey-backup, dewey-logs) are untouched by --replace, so
+# data from the previous deployment carries over.
+podman play kube --replace dewey-pod.yaml
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
 

@@ -59,6 +59,16 @@ echo -e "  ${CYAN}${BOLD}\xe2\x94\x8c\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x9
 echo -e "  ${CYAN}${BOLD}\xe2\x94\x82${NC}  ${WHITE}${BOLD}DEWEY ${NC}${DIM}Container Deployment${NC}  ${CYAN}${BOLD}\xe2\x94\x82${NC}"
 echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x98${NC}"
 
+# --- ARGUMENT PARSING ---
+# --reset-db wipes the mysql-data volume before this run. Default is to keep
+# it, since podman named volumes are meant to survive pod recreation.
+RESET_DB=false
+for arg in "$@"; do
+  case "$arg" in
+    --reset-db) RESET_DB=true ;;
+  esac
+done
+
 # --- CLEANUP ---
 section "Cleanup"
 log "info" "Removing existing pod..."
@@ -80,7 +90,12 @@ podman pod create --infra=true \
 section "MySQL"
 log "info" "Deploying MySQL..."
 
-podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data # Remove for prod
+if [ "$RESET_DB" = true ]; then
+  log "warn" "Resetting mysql-data volume (--reset-db passed)..."
+  podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data
+else
+  log "info" "Keeping existing mysql-data volume (pass --reset-db to wipe)"
+fi
 
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
@@ -124,7 +139,14 @@ podman build \
   -t cross-doc-tool-dev ./backend
 
 log "info" "Starting backend container..."
-podman run -d --pod dewey-pod --name cross-doc-tool-dev cross-doc-tool-dev
+# Named volumes for store/cache/backup/logs so uploaded files and app logs
+# survive a pod recreation, the same way mysql-data does for the database.
+podman run -d --pod dewey-pod --name cross-doc-tool-dev \
+  -v dewey-store:/app/store:Z \
+  -v dewey-cache:/app/cache:Z \
+  -v dewey-backup:/app/backup:Z \
+  -v dewey-logs:/app/logs:Z \
+  cross-doc-tool-dev
 log "success" "Backend running"
 
 # ---------------- FRONTEND ----------------
