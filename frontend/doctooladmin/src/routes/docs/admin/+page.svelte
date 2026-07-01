@@ -16,6 +16,7 @@
 		{ href: '#overview', label: 'Overview' },
 		{ href: '#uploading', label: 'Uploading Files' },
 		{ href: '#retrieving', label: 'Retrieving Files' },
+		{ href: '#network', label: 'Known Machines' },
 		{ href: '#analytics', label: 'Analytics' },
 		{ href: '#settings', label: 'Settings' },
 		{ href: '#system', label: 'System Config' },
@@ -161,6 +162,27 @@
 					collisions, e.g. <code>1700000000_report.pdf</code>. The original filename is preserved after
 					the prefix. The full timestamped name is returned in the upload response and should be stored
 					by your integration.
+				</div>
+			</section>
+
+			<!-- ── Known Machines ── -->
+			<section id="network" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Known Machines</h2>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					Dewey only accepts requests from machines whose IP address has been registered ahead of
+					time. Anything else — including the file manager portal, if opened from an unregistered
+					machine — gets rejected with <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code>
+					before it reaches any file operation.
+				</p>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					Use the <strong class="text-gray-700 dark:text-gray-200">Known Machines</strong> page in the
+					sidebar to see every registered machine, when it was added, and when it last connected —
+					and to add or remove machines yourself.
+				</p>
+				<div class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+					<strong>Note:</strong> you can only reach the Known Machines page from a machine that's
+					already registered — a brand-new machine can't add itself. The very first entry has to be
+					set up directly against the database by whoever deployed the system.
 				</div>
 			</section>
 
@@ -326,6 +348,14 @@
 								'Barcode images are too small, low resolution, or distorted.',
 							],
 							fix: 'If barcode scanning is not required for your workflow, barcode failures are informational only and do not affect sorting or storage. If barcodes are expected, check the source document quality.'
+						},
+						{
+							problem: '403 Forbidden — "unregistered machine"',
+							causes: [
+								'The request came from an IP address that has not been added to the Known Machines list.',
+								'The machine\'s IP changed (e.g. DHCP reassignment) since it was registered.',
+							],
+							fix: 'From an already-registered machine, open Known Machines in the sidebar and add the new IP with a label. If this is the very first machine being set up, it must be registered directly against the database instead.'
 						},
 						{
 							problem: 'Plugin Errors showing in Analytics',
