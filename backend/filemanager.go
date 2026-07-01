@@ -124,6 +124,42 @@ func CopyFile(src, dst string) error {
 	return dstFile.Sync()
 }
 
+// locateFile checks the cache first, then falls back to the DB record.
+// Returns the absolute path to the file on disk.
+func locateFile(dbm *DatabaseManager, filename string) (string, error) {
+	Debug("Checking cache")
+	files, err := os.ReadDir(uploadDir)
+	if err != nil {
+		Warn("During file retrieval os.ReadDir() encountered " + err.Error())
+	}
+
+	for _, file := range files {
+		if file.Name() == filename {
+			Debug("Found file in cache")
+			atomic.AddInt64(&FileRetrievals, 1)
+			return filepath.Join(uploadDir, file.Name()), nil
+		}
+	}
+
+	Debug("No file found in cache, searching db")
+
+	path, err := dbm.pullRecordByFilename(filename)
+	if err != nil {
+		Warn("pullRecordByFilename failed " + err.Error())
+		return "", err
+	}
+	Debug("Pulled this path from db " + path)
+
+	fullPath := filepath.Join(fileSystemBaseDir, path)
+	if _, err := os.Stat(fullPath); err != nil {
+		Warn("File not found at stored path: " + fullPath)
+		return "", err
+	}
+
+	atomic.AddInt64(&FileRetrievals, 1)
+	return fullPath, nil
+}
+
 // searchAndReturn validates that a file exists and returns its absolute path.
 //
 // Returns:
@@ -134,44 +170,20 @@ func searchAndReturn(dbm *DatabaseManager, filename string, pullMeta string) (st
 	// Strip any directory components to prevent path traversal
 	filename = filepath.Base(filename)
 
-	if pullMeta == "false" {
-		Debug("Checking cache")
-		files, err := os.ReadDir(uploadDir)
-		if err != nil {
-			Warn("During file retrieval os.ReadDir() encountered " + err.Error())
-		}
+	switch pullMeta {
+	case "false":
+		return locateFile(dbm, filename)
 
-		for _, file := range files {
-			if file.Name() == filename {
-				Debug("Found file in cache")
-
-				atomic.AddInt64(&FileRetrievals, 1)
-				return filepath.Join(uploadDir, file.Name()), nil
-			}
-		}
-
-		Debug("No file found in cache, searching db")
-
-		path, err := dbm.pullRecordByFilename(filename)
-		if err != nil {
-			Warn("pullRecordByFilename failed " + err.Error())
-			return "", err
-		}
-		Debug("Pulled this path from db " + path)
-
-		fullPath := filepath.Join(fileSystemBaseDir, path)
-		if _, err := os.Stat(fullPath); err != nil {
-			Warn("File not found at stored path: " + fullPath)
-			return "", err
-		}
-
-		atomic.AddInt64(&FileRetrievals, 1)
-		return fullPath, nil
-
-	} else if pullMeta == "true" {
+	case "true":
 		Debug("Would sql search and pull meta")
-		return "", fmt.Errorf("metadata retrieval not implemented")
-	} else {
+		path, err := locateFile(dbm, filename)
+		if err != nil {
+			return "", err
+		}
+		// TODO: retrieve and attach metadata
+		return path, fmt.Errorf("metadata retrieval not implemented")
+
+	default:
 		Debug("Unknown meta flag")
 		return "", fmt.Errorf("unknown meta flag: %s", pullMeta)
 	}
