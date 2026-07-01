@@ -11,6 +11,7 @@
 		{
 			links: [
 				{ href: '/analytics', label: 'Analytics' },
+				{ href: '/files', label: 'File Management' },
 				{ href: '/settings', label: 'Settings' }
 			]
 		},
