@@ -306,11 +306,6 @@ func uploadFile(c *gin.Context) {
 	}
 
 	// -------------------------
-	// Post-processing
-	// -------------------------
-	idAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
-
-	// -------------------------
 	// Response
 	// -------------------------
 	c.JSON(http.StatusOK, gin.H{
@@ -321,6 +316,12 @@ func uploadFile(c *gin.Context) {
 		"size":     fileHeader.Size,
 		"sha256":   hashString,
 	})
+
+	// -------------------------
+	// Post-processing
+	// -------------------------
+	go idAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
+
 }
 
 // deleteFile removes a file from upload storage by filename.
@@ -366,8 +367,8 @@ func deleteFile(c *gin.Context) {
 }
 
 func triggerCacheDump(c *gin.Context) {
-	dumpCache()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "CacheDump triggered",
 	})
+	go dumpCache()
 }
