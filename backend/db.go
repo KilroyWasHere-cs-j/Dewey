@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -314,6 +316,45 @@ func (dm *DatabaseManager) createIndexSafe(indexName, tableAndColumns string) {
 		}
 	}
 }
+
+func (dm *DatabaseManager) apiAuthKey(key string) (boolean, error) {
+	// Hash the provided key
+	hash := sha256.Sum256([]byte(key))
+	hashHex := hex.EncodeToString(hash[:])
+
+	query := fmt.Sprintf("CREATE INDEX %s ON %s", indexName, tableAndColumns)
+	_, err := dm.db.Exec(query)
+	if err != nil {
+		// If it's not a duplicate key error, we log it (or you can return it)
+		if !isDuplicateKeyError(err) {
+			fmt.Printf("[MIGRATION WARNING] Could not create index %s: %v\n", indexName, err)
+		}
+	}
+}
+
+// func apiKeyAuth() gin.HandlerFunc {
+//     return func(c *gin.Context) {
+//         header := c.GetHeader("Authorization")
+//         const prefix = "Bearer "
+
+//         if !strings.HasPrefix(header, prefix) {
+//             c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing bearer token"})
+//             return
+//         }
+
+//         rawKey := strings.TrimPrefix(header, prefix)
+//         hash := sha256.Sum256([]byte(rawKey))
+//         hashHex := hex.EncodeToString(hash[:])
+
+//         active, err := dbm.isAPIKeyActive(hashHex) // looks up hash, checks revoked flag
+//         if err != nil || !active {
+//             c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid api key"})
+//             return
+//         }
+
+//         c.Next()
+//     }
+// }
 
 // Helper function to handle duplicate index gracefully in MySQL
 func isDuplicateKeyError(err error) bool {
