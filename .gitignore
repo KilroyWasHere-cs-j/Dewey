@@ -28,13 +28,13 @@ go.work.sum
 .env
 
 # App directories
-./backend/store
-./backend/logs
-./backend/cache
-./backend/backup
+backend/store
+backend/logs
+backend/cache
+backend/backup
 
 # Compiled binary
-./backend/Dewey
+backend/Dewey
 
 # Mac file
 .DS_Store
