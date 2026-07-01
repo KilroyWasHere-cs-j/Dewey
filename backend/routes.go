@@ -64,7 +64,11 @@ func getFile(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 			return
 		}
-		c.File(path)
+		// Force a download instead of inline rendering, and stop browsers from
+		// re-sniffing the content type — a stored file whose bytes look like
+		// HTML/script must not be executed just because it's served from here.
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.FileAttachment(path, filepath.Base(filename))
 
 	case "true":
 		// Return the metadata record linked to this file as JSON
@@ -263,6 +267,28 @@ func uploadFile(c *gin.Context) {
 		uploadRejections.WithLabelValues("elf_blocked").Inc()
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Executable file detected (ELF blocked)",
+		})
+		return
+	}
+
+	file.Seek(0, io.SeekStart)
+
+	// Sniff actual content and reject anything that doesn't match what the
+	// extension claims — e.g. a "report.txt" that's really an HTML/script
+	// payload passes the extension allowlist otherwise.
+	matches, err := MatchesDeclaredType(ext, file)
+	if err != nil {
+		Warn("Failed to sniff file content: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to validate file content",
+		})
+		return
+	}
+	if !matches {
+		Warn("file content does not match declared extension: " + ext)
+		uploadRejections.WithLabelValues("content_mismatch").Inc()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "File content does not match its extension",
 		})
 		return
 	}

@@ -9,12 +9,20 @@ package main
 import (
 	"encoding/binary"
 	"io"
+	"net/http"
+	"strings"
 	"sync/atomic"
 )
 
 // Atomic counters for PE and ELF detections — read by Prometheus
 var PECount int64
 var ELFCount int64
+
+// oleMagic is the Compound File Binary Format signature used by legacy
+// Microsoft Office formats (.doc, .xls, .ppt) prior to the OOXML/zip switch.
+// http.DetectContentType has no signature for this format, so it's checked
+// directly.
+var oleMagic = [8]byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 
 // IsPEFile checks whether the provided file is a Windows Portable Executable (PE).
 //
@@ -102,5 +110,65 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 		atomic.AddInt64(&ELFCount, 1)
 		return true, nil
 	}
+	return false, nil
+}
+
+// MatchesDeclaredType sniffs the actual content of f and checks it against
+// what the given extension claims to be. Extension + PE/ELF checks alone
+// still let a script or HTML payload through under an allowed extension
+// (e.g. "notes.txt") — if that file is ever served back, a browser that
+// content-sniffs it as HTML would execute it. This closes that gap.
+//
+// Args:
+//   - ext: lowercase extension including the leading dot (e.g. ".pdf")
+//   - f: seekable file reader (io.ReadSeeker)
+//
+// Returns:
+//   - bool: true if the sniffed content is consistent with ext
+//   - error: I/O error while reading
+func MatchesDeclaredType(ext string, f io.ReadSeeker) (bool, error) {
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+
+	// Legacy binary Office formats (.doc, .xls, .ppt) share the OLE header —
+	// handled separately since http.DetectContentType can't identify them.
+	switch ext {
+	case ".doc", ".xls", ".ppt":
+		var header [8]byte
+		n, err := io.ReadFull(f, header[:])
+		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+			return false, err
+		}
+		return n == len(header) && header == oleMagic, nil
+	}
+
+	// http.DetectContentType only looks at (up to) the first 512 bytes.
+	buf := make([]byte, 512)
+	n, err := io.ReadFull(f, buf)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		return false, err
+	}
+	sniffed := http.DetectContentType(buf[:n])
+
+	switch ext {
+	case ".pdf":
+		return sniffed == "application/pdf", nil
+	case ".png":
+		return sniffed == "image/png", nil
+	case ".jpg", ".jpeg":
+		return sniffed == "image/jpeg", nil
+	case ".docx", ".xlsx":
+		// OOXML formats are zip archives; the sniffer doesn't unpack them
+		// far enough to see the inner content-type manifest.
+		return sniffed == "application/zip", nil
+	case ".txt", ".csv":
+		// Anything that sniffs as something other than plain text here
+		// (e.g. HTML) means the content doesn't match a text declaration —
+		// most likely a payload relying on browser content-sniffing to
+		// render as HTML.
+		return strings.HasPrefix(sniffed, "text/plain"), nil
+	}
+
 	return false, nil
 }
