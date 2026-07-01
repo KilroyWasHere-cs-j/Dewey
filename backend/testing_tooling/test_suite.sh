@@ -533,7 +533,110 @@ run_roundtrip_tests() {
     done
 }
 
-# ── Section 11: File listing / catalog ────────────────────────────────────────
+# ── Section 11: Metadata retrieval (GET /files/:filename/true) ───────────────
+
+run_metadata_tests() {
+    section "METADATA RETRIEVAL (meta=true)"
+
+    local src="$SCRIPT_DIR/lenna.jpg"
+
+    if [ ! -f "$src" ]; then
+        result_skip "METADATA retrieval" "lenna.jpg not found — skipping all metadata tests"
+        return
+    fi
+
+    # Upload a file with known, fixed metadata so we can assert on the response fields
+    info "  Uploading lenna.jpg with fixed metadata ..."
+    pace
+    local resp
+    resp=$(curl -s -X POST "$BASE/upload" \
+        -F "file=@$src" \
+        -F "claim_number=CLM-META-01" \
+        -F "claimant_name=Meta Tester" \
+        -F "date_of_injury=2024-06-01" \
+        -F "employer=TestCorp" \
+        -F "adjuster=M. Inspector" \
+        -F "support=Full Support" \
+        -F "claim_type=Workers Comp" \
+        -F "jurisdiction=California" \
+        -F "policy_number=POL-META-01" \
+        -F "acts_id=ACTS_META_01" \
+        -F "data=metadata-test" \
+        --max-time 30 2>/dev/null)
+
+    local server_file
+    server_file=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$server_file" ]; then
+        result_fail "METADATA upload" "no filename in response: $resp"
+        return
+    fi
+    result_pass "METADATA upload -> $server_file"
+
+    # Fetch metadata and assert HTTP 200 + expected JSON fields
+    info "  Fetching metadata for $server_file ..."
+    pace
+    local body code
+    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/files/$server_file/true" 2>/dev/null)
+    code=$(echo "$body" | tail -1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" = "000" ]; then
+        result_fail "GET /files/$server_file/true" "connection failed"
+        return
+    fi
+
+    if [ "$code" != "200" ]; then
+        result_fail "GET /files/$server_file/true" "expected 200, got HTTP $code"
+        return
+    fi
+    result_pass "GET /files/$server_file/true -> HTTP 200"
+
+    # Check that each known field is present in the JSON response
+    local -A expected_fields=(
+        ["claim_number"]="CLM-META-01"
+        ["claimant_name"]="Meta Tester"
+        ["acts_id"]="ACTS_META_01"
+        ["jurisdiction"]="California"
+    )
+    for field in "${!expected_fields[@]}"; do
+        local value="${expected_fields[$field]}"
+        if echo "$body" | grep -q "\"$value\""; then
+            result_pass "METADATA field $field = $value"
+        else
+            result_fail "METADATA field $field" "expected '$value' not found in: $body"
+        fi
+    done
+
+    # Unknown meta flag should return 400
+    info "  Testing unknown meta flag ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        "$BASE/files/$server_file/maybe" 2>/dev/null)
+    if [ "$code" = "400" ]; then
+        result_pass "GET /files/$server_file/maybe -> HTTP 400 (bad flag rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "GET /files/$server_file/maybe" "connection failed"
+    else
+        result_fail "GET /files/$server_file/maybe" "expected 400, got HTTP $code"
+    fi
+
+    # meta=true for a non-existent file should return 404
+    info "  Testing meta=true for non-existent file ..."
+    pace
+    local ghost="ghost_$(printf '%08x' $RANDOM$RANDOM).jpg"
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+        "$BASE/files/$ghost/true" 2>/dev/null)
+    if [ "$code" = "404" ]; then
+        result_pass "GET /files/$ghost/true -> HTTP 404"
+    elif [ "$code" = "000" ]; then
+        result_fail "GET /files/$ghost/true" "connection failed"
+    else
+        result_fail "GET /files/$ghost/true" "expected 404, got HTTP $code"
+    fi
+}
+
+# ── Section 12: File listing / catalog ───────────────────────────────────────
 
 run_catalog_test() {
     section "CATALOG VERIFICATION"
@@ -560,7 +663,7 @@ run_catalog_test() {
     info "  ${body:0:500}"
 }
 
-# ── Section 12: Delete tests ─────────────────────────────────────────────────
+# ── Section 13: Delete tests ─────────────────────────────────────────────────
 
 run_delete_tests() {
     section "DELETE TESTS"
@@ -591,7 +694,7 @@ run_delete_tests() {
             elif [ "$verify_code" = "000" ]; then
                 result_fail "DELETE verify $target" "connection failed"
             elif [ "$verify_code" = "200" ]; then
-                # deleteFile removes from cache, but searchAndReturn falls back to the store
+                # deleteFile removes from cache, but locateFile falls back to the store
                 result_pass "DELETE verify $target -> HTTP 200 (served from store fallback, cache entry removed)"
             else
                 result_fail "DELETE verify $target" "unexpected HTTP $verify_code"
@@ -644,6 +747,7 @@ run_path_traversal_tests
 run_sha256_upload_test
 run_duplicate_upload_test
 run_roundtrip_tests
+run_metadata_tests
 run_catalog_test
 run_delete_tests
 
