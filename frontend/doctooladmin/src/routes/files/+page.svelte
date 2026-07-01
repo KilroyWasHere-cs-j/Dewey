@@ -31,6 +31,17 @@
 	let listLoading = $state(true);
 	let listError = $state<string | null>(null);
 
+	// ── Search ────────────────────────────────────────────────────────────────
+
+	let searchQuery = $state('');
+
+	// Case-insensitive substring match against filename
+	let filteredFiles = $derived(
+		searchQuery.trim() === ''
+			? files
+			: files.filter((f) => f.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+	);
+
 	async function loadFiles() {
 		listLoading = true;
 		listError = null;
@@ -273,13 +284,27 @@
 
 			<!-- ── File List ──────────────────────────────────────────────────── -->
 			<section class="rounded-2xl bg-white shadow-sm dark:bg-gray-800">
-				<div class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-gray-700">
-					<h2 class="text-xs font-semibold tracking-wider uppercase {headingClass}">
+				<div class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+					<h2 class="shrink-0 text-xs font-semibold tracking-wider uppercase {headingClass}">
 						Stored Files
 					</h2>
+
+					<!-- Search input -->
+					<input
+						type="search"
+						placeholder="Search filenames…"
+						aria-label="Search filenames"
+						bind:value={searchQuery}
+						class="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500 dark:focus:ring-gray-500"
+					/>
+
 					{#if !listLoading}
-						<span class="text-xs text-gray-400 dark:text-gray-500">
-							{files.length} {files.length === 1 ? 'file' : 'files'}
+						<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+							{#if searchQuery.trim()}
+								{filteredFiles.length} of {files.length}
+							{:else}
+								{files.length} {files.length === 1 ? 'file' : 'files'}
+							{/if}
 						</span>
 					{/if}
 				</div>
@@ -295,6 +320,11 @@
 				{:else if files.length === 0}
 					<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">No files stored.</p>
 
+				{:else if filteredFiles.length === 0}
+					<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">
+						No files match <span class="font-medium text-gray-700 dark:text-gray-300">"{searchQuery}"</span>.
+					</p>
+
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="w-full text-sm">
@@ -305,7 +335,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each files as filename (filename)}
+								{#each filteredFiles as filename (filename)}
 									<!-- Main file row -->
 									<tr class="border-b border-gray-50 hover:bg-gray-50/50 dark:border-gray-700/50 dark:hover:bg-gray-700/20">
 										<td class="px-6 py-3 font-mono text-gray-800 dark:text-gray-200">
