@@ -372,3 +372,69 @@ func triggerCacheDump(c *gin.Context) {
 	})
 	go dumpCache()
 }
+
+// listMachines returns every machine registered in the known_machines allowlist.
+//
+// Returns (HTTP JSON):
+//   - 200 OK: list of known machines
+//   - 500 Internal Server Error: query failure
+func listMachines(c *gin.Context) {
+	dbm := c.MustGet("db").(*DatabaseManager)
+
+	machines, err := dbm.getKnownMachines()
+	if err != nil {
+		Warn("listMachines failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve known machines"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"machines": machines})
+}
+
+// addMachine registers a new machine in the known_machines allowlist.
+//
+// Body (JSON): {"ip": "...", "label": "..."}
+//
+// Returns (HTTP JSON):
+//   - 200 OK: machine added
+//   - 400 Bad Request: missing ip or label
+//   - 500 Internal Server Error: insert failure (e.g. ip already registered)
+func addMachine(c *gin.Context) {
+	dbm := c.MustGet("db").(*DatabaseManager)
+
+	var body struct {
+		IP    string `json:"ip"`
+		Label string `json:"label"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil || body.IP == "" || body.Label == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ip and label are required"})
+		return
+	}
+
+	if err := dbm.addKnownMachine(body.IP, body.Label); err != nil {
+		Warn("addMachine failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to add machine"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Machine added", "ip": body.IP, "label": body.Label})
+}
+
+// deleteMachine removes a machine from the known_machines allowlist by IP.
+//
+// Returns (HTTP JSON):
+//   - 200 OK: machine removed
+//   - 500 Internal Server Error: delete failure
+func deleteMachine(c *gin.Context) {
+	dbm := c.MustGet("db").(*DatabaseManager)
+	ip := c.Param("ip")
+
+	if err := dbm.removeKnownMachine(ip); err != nil {
+		Warn("deleteMachine failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to remove machine"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Machine removed", "ip": ip})
+}

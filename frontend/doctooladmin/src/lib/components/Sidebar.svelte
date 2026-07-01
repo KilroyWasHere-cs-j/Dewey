@@ -12,6 +12,7 @@
 			links: [
 				{ href: '/analytics', label: 'Analytics' },
 				{ href: '/files', label: 'File Management' },
+				{ href: '/machines', label: 'Known Machines' },
 				{ href: '/settings', label: 'Settings' }
 			]
 		},
