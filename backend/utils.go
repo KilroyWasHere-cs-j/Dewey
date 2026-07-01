@@ -138,7 +138,6 @@ func save() error {
 
 	sourceDir := "store"
 	// Ensure backup directory exists
-	backupDir := "backup"
 	if err := os.MkdirAll(backupDir, os.ModePerm); err != nil {
 		return err
 	}
