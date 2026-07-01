@@ -37,6 +37,22 @@ func index(c *gin.Context) {
 	})
 }
 
+// versionInfo reports the running binary's release version and the git
+// branch it was built from, so it's possible to confirm what's actually
+// deployed without shelling into the container. See version.go for how
+// GitBranch gets set.
+//
+// Returns (HTTP JSON):
+//   - 200 OK: version + git branch
+func versionInfo(c *gin.Context) {
+	Debug("versionInfo")
+
+	c.JSON(http.StatusOK, gin.H{
+		"version":    appVersion,
+		"git_branch": GitBranch,
+	})
+}
+
 // getFile retrieves a file or its metadata depending on the meta flag.
 //
 // URL Params:

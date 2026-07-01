@@ -86,7 +86,7 @@ func main() {
 	p.Use(r)
 
 	// Rate limiter
-	limiter := rate.NewLimiter(1, 5)
+	limiter := rate.NewLimiter(rateLimitPerSecond, rateLimitBurst)
 	r.Use(func(c *gin.Context) {
 		if !limiter.Allow() {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
@@ -110,6 +110,7 @@ func main() {
 	})
 	{
 		api.GET("/", index)
+		api.GET("/version", versionInfo)
 		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
 		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
 		api.POST("/upload", uploadFile)

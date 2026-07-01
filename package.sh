@@ -50,8 +50,12 @@ fi
 # ---------------- BUILD IMAGES ----------------
 section "Build"
 log "info" "Building backend image ${DIM}(cross-doc-tool-dev)${NC}..."
+# Stamp the binary with the branch it's being packaged from (issue #66) so
+# it's visible via GET /version without needing to shell into the container.
+GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 podman build \
   --build-arg CGO_CFLAGS="-Wno-discarded-qualifiers" \
+  --build-arg GIT_BRANCH="$GIT_BRANCH" \
   -t cross-doc-tool-dev ./backend
 log "success" "Backend image built"
 

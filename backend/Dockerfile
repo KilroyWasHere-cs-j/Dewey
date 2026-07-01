@@ -13,7 +13,12 @@ COPY . .
 
 ARG CGO_CFLAGS="-Wno-discarded-qualifiers"
 ENV CGO_CFLAGS=${CGO_CFLAGS}
-RUN go build -trimpath -ldflags="-s -w" -o app-binary
+
+# GIT_BRANCH is passed in via --build-arg (deploy.sh/package.sh compute it with
+# `git rev-parse --abbrev-ref HEAD` on the host) since .dockerignore excludes
+# .git, so the branch can't be read from inside the build context itself.
+ARG GIT_BRANCH=unknown
+RUN go build -trimpath -ldflags="-s -w -X main.GitBranch=${GIT_BRANCH}" -o app-binary
 
 # ---- Run stage ----
 FROM alpine:3.21
