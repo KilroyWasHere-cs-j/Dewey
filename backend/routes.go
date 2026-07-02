@@ -382,30 +382,50 @@ func uploadFile(c *gin.Context) {
 //   - c (*gin.Context): Gin request context containing the "filename" URL param
 //
 // Behavior:
-//   - Builds a safe filesystem path from uploadDir and filename
-//   - Attempts to delete the file from disk
+//   - Looks up the file's permanent path via the DB record (this is the copy
+//     idAndSort placed under fileSystemBaseDir — deleting only the uploadDir/cache
+//     copy left the store copy, and its DB record, behind forever)
+//   - Removes the store copy from disk and marks the DB record as deleted
+//   - Also clears any leftover cache copy, best-effort
 //   - Returns appropriate HTTP response based on outcome
 //
 // Returns (HTTP JSON):
 //   - 200 OK: file successfully deleted
-//   - 404 Not Found: file does not exist
-//   - 500 Internal Server Error: filesystem deletion failure
+//   - 404 Not Found: no active file record for this filename
+//   - 500 Internal Server Error: filesystem or DB failure
 func deleteFile(c *gin.Context) {
 	filename := filepath.Base(c.Param("filename")) // prevent path traversal
-	path := filepath.Join(uploadDir, filename)
+	dbm := c.MustGet("db").(*DatabaseManager)
 
-	if err := os.Remove(path); err != nil {
-		if os.IsNotExist(err) {
-			Warn("file not found: " + filename)
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "File not found",
-			})
-		} else {
-			Warn("failed to delete file: " + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to delete file",
-			})
-		}
+	storeRelPath, err := dbm.pullRecordByFilename(filename)
+	if err != nil {
+		Warn("file record not found: " + err.Error())
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "File not found",
+		})
+		return
+	}
+
+	storePath := filepath.Join(fileSystemBaseDir, storeRelPath)
+	if err := os.Remove(storePath); err != nil && !os.IsNotExist(err) {
+		Warn("failed to delete file from store: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete file",
+		})
+		return
+	}
+
+	// Cache copy may already be gone (dumpCache runs independently) — not an error either way.
+	cachePath := filepath.Join(uploadDir, filename)
+	if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
+		Warn("failed to delete cached file copy: " + err.Error())
+	}
+
+	if err := dbm.deleteFileRecord(filename); err != nil {
+		Warn("failed to mark file record deleted: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete file",
+		})
 		return
 	}
 

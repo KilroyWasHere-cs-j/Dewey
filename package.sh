@@ -83,10 +83,37 @@ cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
 #!/bin/bash
 podman load -i cross-doc-tool-dev.tar
 podman load -i admin-portal.tar
+
+# By default, wipe the backend data volumes (dewey-store, dewey-cache,
+# dewey-backup, dewey-logs) so each run starts fresh. Metrics like
+# app_files_in_store read these directories live, so leftover files from a
+# previous run made the dashboard look like nothing had reset between runs.
+# Pass --keep-data to preserve them instead (e.g. re-running against real
+# data you don't want to lose). mysql-data is never touched by this script.
+KEEP_DATA=false
+for arg in "$@"; do
+  case "$arg" in
+    --keep-data) KEEP_DATA=true ;;
+  esac
+done
+
+# Remove any existing pod first so its containers release the volumes
+# before we try to remove them — a volume in use by a running container
+# can't be removed.
+podman pod rm -f dewey-pod 2>/dev/null || true
+
+if [ "$KEEP_DATA" = true ]; then
+  echo "Keeping existing store/cache/backup/logs volumes (--keep-data passed)"
+else
+  echo "Resetting store/cache/backup/logs volumes (default; pass --keep-data to preserve)..."
+  for vol in dewey-store dewey-cache dewey-backup dewey-logs; do
+    podman volume inspect "$vol" &>/dev/null && podman volume rm "$vol"
+  done
+fi
+
 # --replace lets this be re-run against an already-deployed pod without
-# manually tearing it down first. Named volumes (mysql-data, dewey-store,
-# dewey-cache, dewey-backup, dewey-logs) are untouched by --replace, so
-# data from the previous deployment carries over.
+# manually tearing it down first (the pod removal above already handles
+# that for us, but --replace keeps this safe to re-run either way).
 podman play kube --replace dewey-pod.yaml
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
