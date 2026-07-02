@@ -62,10 +62,19 @@ echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x9
 # --- ARGUMENT PARSING ---
 # --reset-db wipes the mysql-data volume before this run. Default is to keep
 # it, since podman named volumes are meant to survive pod recreation.
+#
+# --keep-data preserves the backend data volumes (dewey-store, dewey-cache,
+# dewey-backup, dewey-logs) instead of the default behavior, which wipes them
+# on every deploy. Default is to wipe: metrics like app_files_in_store read
+# these directories live, so leftover files from a previous deployment made
+# the dashboard look like nothing had reset between deploys.
 RESET_DB=false
+KEEP_DATA=false
+KEEP_DATA_SET=false
 for arg in "$@"; do
   case "$arg" in
     --reset-db) RESET_DB=true ;;
+    --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
   esac
 done
 
@@ -133,6 +142,27 @@ fi
 
 # ---------------- BACKEND ----------------
 section "Backend"
+
+# Ask interactively unless --keep-data already answered the question, or
+# there's no TTY to ask on (e.g. running from CI/automation) — in which
+# case the default (wipe) stands, same as before this prompt existed.
+if [ "$KEEP_DATA_SET" = false ] && [ -t 0 ]; then
+  read -r -p "  Wipe store/cache/backup/logs volumes before this deploy? [Y/n] " wipe_answer
+  case "$wipe_answer" in
+    [nN]*) KEEP_DATA=true ;;
+    *) KEEP_DATA=false ;;
+  esac
+fi
+
+if [ "$KEEP_DATA" = true ]; then
+  log "info" "Keeping existing store/cache/backup/logs volumes"
+else
+  log "warn" "Resetting store/cache/backup/logs volumes (default; pass --keep-data to preserve)..."
+  for vol in dewey-store dewey-cache dewey-backup dewey-logs; do
+    podman volume inspect "$vol" &>/dev/null && podman volume rm "$vol"
+  done
+fi
+
 log "info" "Building backend image ${DIM}(cross-doc-tool-dev)${NC}..."
 # Stamp the binary with the branch it's being deployed from (issue #66) so
 # it's visible via GET /version without needing to shell into the container.
@@ -143,8 +173,9 @@ podman build \
   -t cross-doc-tool-dev ./backend
 
 log "info" "Starting backend container..."
-# Named volumes for store/cache/backup/logs so uploaded files and app logs
-# survive a pod recreation, the same way mysql-data does for the database.
+# Named volumes for store/cache/backup/logs. By default these are wiped above
+# on every deploy; pass --keep-data to let them survive pod recreation instead,
+# the same way mysql-data does for the database.
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
   -v dewey-store:/app/store:Z \
   -v dewey-cache:/app/cache:Z \
