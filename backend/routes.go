@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -486,7 +487,8 @@ func listMachines(c *gin.Context) {
 // Returns (HTTP JSON):
 //   - 200 OK: machine added
 //   - 400 Bad Request: missing ip or label
-//   - 500 Internal Server Error: insert failure (e.g. ip already registered)
+//   - 409 Conflict: ip already registered
+//   - 500 Internal Server Error: insert failure
 func addMachine(c *gin.Context) {
 	dbm := c.MustGet("db").(*DatabaseManager)
 
@@ -501,6 +503,10 @@ func addMachine(c *gin.Context) {
 	}
 
 	if err := dbm.addKnownMachine(body.IP, body.Label); err != nil {
+		if errors.Is(err, ErrMachineExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Machine already registered"})
+			return
+		}
 		Warn("addMachine failed: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to add machine"})
 		return

@@ -10,8 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql" // Assuming MySQL based on your connection string
+	"github.com/go-sql-driver/mysql"
 )
+
+// ErrMachineExists is returned by addKnownMachine when the ip is already
+// registered, so callers can distinguish "already exists" from a genuine
+// DB failure and respond accordingly (409 vs 500).
+var ErrMachineExists = errors.New("machine already registered")
 
 type MetaData struct {
 	ClaimNumber  string `json:"claim_number"`
@@ -281,6 +286,12 @@ func (dm *DatabaseManager) addKnownMachine(ip, label string) error {
 	query := `INSERT INTO known_machines (ip, label) VALUES (?, ?)`
 	_, err := dm.db.Exec(query, ip, label)
 	if err != nil {
+		// MySQL error 1062: duplicate entry — ip is UNIQUE, so this means
+		// the machine is already registered, not a real failure.
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+			return ErrMachineExists
+		}
 		return fmt.Errorf("failed to add known machine: %w", err)
 	}
 	return nil
