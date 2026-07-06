@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -32,13 +31,25 @@ const (
 	ColorFatal = "\033[1;31m" // bold red
 )
 
-// Logger struct with rotation support
+// logEntry is one queued log line, produced by a request-handling goroutine
+// and consumed by the single writer goroutine in Logger.run().
+type logEntry struct {
+	level   string
+	message string
+	color   string
+}
+
+// Logger struct with rotation support.
+// file/curDate are only ever touched by the run() goroutine, so no mutex is
+// needed for them — entries is the sole handoff point between callers
+// (Debug/Info/Warn/Fatal) and the writer.
 type Logger struct {
 	dir      string
 	baseName string
 	file     *os.File
 	curDate  string
-	mu       sync.Mutex
+	entries  chan logEntry
+	done     chan struct{}
 }
 
 // Global logger
@@ -54,12 +65,32 @@ func NewLogger(dir, baseName string) *Logger {
 	l := &Logger{
 		dir:      dir,
 		baseName: baseName,
+		// Buffered so request-handling goroutines don't block on disk I/O
+		// under normal load; only blocks if the writer falls badly behind.
+		entries: make(chan logEntry, 4096),
+		done:    make(chan struct{}),
 	}
 	err := l.rotateIfNeeded()
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
+
+	go l.run()
 	return l
+}
+
+// run owns the log file and stdout for the lifetime of the logger. It is the
+// only goroutine that writes to disk, which removes the need for a lock on
+// the hot request path.
+func (l *Logger) run() {
+	for e := range l.entries {
+		l.writeEntry(e)
+	}
+
+	if l.file != nil {
+		l.file.Close()
+	}
+	close(l.done)
 }
 
 // Create filename like: logs/app-2026-04-07.log
@@ -99,21 +130,24 @@ func (l *Logger) rotateIfNeeded() error {
 	return nil
 }
 
-// Close logger
+// Close logger. Closing the entries channel signals run() to drain any
+// queued lines (in order, including a preceding Fatal) before it closes the
+// file, so Close() blocks until that drain completes rather than racing it.
 func (l *Logger) Close() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if l.file != nil {
-		l.file.Close()
-	}
+	close(l.entries)
+	<-l.done
 }
 
-// Core logging function (thread-safe + rotation)
+// Core logging function — just hands the line to the writer goroutine.
+// This is the request-path hot spot the mutex + synchronous write used to
+// serialize on; queuing to a buffered channel keeps it non-blocking.
 func (l *Logger) log(level, message, color string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	l.entries <- logEntry{level: level, message: message, color: color}
+}
 
+// writeEntry does the actual rotation check, disk write, and stdout print.
+// Only ever called from run(), so it's the single owner of file/curDate.
+func (l *Logger) writeEntry(e logEntry) {
 	if err := l.rotateIfNeeded(); err != nil {
 		log.Printf("Log rotation failed: %v", err)
 	}
@@ -121,7 +155,7 @@ func (l *Logger) log(level, message, color string) {
 	now := time.Now()
 
 	// File: full timestamp, plain text, no ANSI
-	fileLine := fmt.Sprintf("[%s] [%s] %s\n", now.Format("2006-01-02 15:04:05"), level, message)
+	fileLine := fmt.Sprintf("[%s] [%s] %s\n", now.Format("2006-01-02 15:04:05"), e.level, e.message)
 	if l.file != nil {
 		if _, err := l.file.WriteString(fileLine); err != nil {
 			log.Printf("Error writing to log file: %v", err)
@@ -134,8 +168,8 @@ func (l *Logger) log(level, message, color string) {
 		"%s[DEWEY]%s %s  %s%s%s  %s\n",
 		ColorTag, ColorReset,
 		now.Format("15:04:05"),
-		color, level, ColorReset,
-		message,
+		e.color, e.level, ColorReset,
+		e.message,
 	)
 }
 
