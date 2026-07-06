@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -94,8 +95,14 @@ func startDaemon(ctx context.Context, pm *PluginManager) {
 							// Warn("daemon panic recovered")
 						}
 					}()
-					dumpCache()
-					save()
+					if err := dumpCache(); err != nil {
+						Warn("Cache clear incomplete: " + err.Error())
+					}
+
+					err := save()
+					if err == nil {
+						atomic.AddInt64(&FilesInBackUp, 1)
+					}
 					pm.RunPlugins(Tick)
 				}()
 
@@ -116,21 +123,35 @@ func TimeUntilNextTick() time.Duration {
 	return daemonTicker.Remaining()
 }
 
-// dumpCache clears all files from the upload cache directory.
-func dumpCache() {
+// dumpCache clears all files from the upload cache directory. Best-effort:
+// a failure removing one entry doesn't stop it from attempting the rest, so
+// one stuck file can't block cleanup forever. FilesInCache is decremented
+// per file actually removed rather than reset in bulk, so it can't be
+// clobbered by a file uploaded concurrently with this pass (which wouldn't
+// have been in the directory snapshot below anyway). Returns the first
+// error encountered, if any, so the caller knows the clear was incomplete.
+func dumpCache() error {
 	entries, err := os.ReadDir(uploadDir)
 	if err != nil {
 		Warn("Failed to read cache dir: " + err.Error())
-		return
+		return err
 	}
 
+	var firstErr error
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			if err := os.Remove(filepath.Join(uploadDir, entry.Name())); err != nil {
-				Warn("Failed to remove cached file " + entry.Name() + ": " + err.Error())
-			}
+		if entry.IsDir() {
+			continue
 		}
+		if err := os.Remove(filepath.Join(uploadDir, entry.Name())); err != nil {
+			Warn("Failed to remove cached file " + entry.Name() + ": " + err.Error())
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		atomic.AddInt64(&FilesInCache, -1)
 	}
+	return firstErr
 }
 
 func save() error {
