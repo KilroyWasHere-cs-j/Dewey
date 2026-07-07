@@ -11,9 +11,6 @@ RUN go mod download
 
 COPY . .
 
-ARG CGO_CFLAGS="-Wno-discarded-qualifiers"
-ENV CGO_CFLAGS=${CGO_CFLAGS}
-
 # GIT_BRANCH is passed in via --build-arg (deploy.sh/package.sh compute it with
 # `git rev-parse --abbrev-ref HEAD` on the host) since .dockerignore excludes
 # .git, so the branch can't be read from inside the build context itself.
