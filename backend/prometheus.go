@@ -91,12 +91,15 @@ var (
 	ramUsage = prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "app_ram_usage",
-			Help: "RAM usage of the application",
+			Help: "Total memory obtained from the OS by the application (bytes, converted to MB)",
 		},
 		func() float64 {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			return float64(m.TotalAlloc / 1024 / 1024)
+			// Sys is total memory obtained from the OS — unlike TotalAlloc
+			// (cumulative allocations since start, never decreases), this
+			// reflects actual current RAM footprint.
+			return float64(m.Sys / 1024 / 1024)
 		},
 	)
 
