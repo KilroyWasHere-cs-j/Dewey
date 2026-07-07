@@ -78,6 +78,15 @@ for arg in "$@"; do
   esac
 done
 
+# Nothing bounded the pod's CPU/RAM before this (issue #168) — a burst of
+# uploads, barcode scans, backup zipping, and Prometheus scrapes all at once
+# could consume the whole host or get OOM-killed unpredictably instead of
+# failing gracefully. Defaults are conservative; override for the actual
+# target host's capacity, e.g.:
+#   DEWEY_POD_CPUS=8 DEWEY_POD_MEMORY=8g ./deploy.sh
+POD_CPUS="${DEWEY_POD_CPUS:-4}"
+POD_MEMORY="${DEWEY_POD_MEMORY:-4g}"
+
 # --- CLEANUP ---
 section "Cleanup"
 log "info" "Removing existing pod..."
@@ -87,8 +96,11 @@ log "success" "Clean slate ready"
 # --- POD CREATION ---
 section "Pod Creation"
 log "info" "Creating dewey-pod..."
+log "info" "Resource limits: ${POD_CPUS} CPUs, ${POD_MEMORY} memory (override via DEWEY_POD_CPUS/DEWEY_POD_MEMORY)"
 # Added 9090 here so Prometheus is accessible externally
 podman pod create --infra=true \
+  --cpus "$POD_CPUS" \
+  --memory "$POD_MEMORY" \
   -p 8080:8080 \
   -p 3000:3000 \
   -p 3306:3306 \
