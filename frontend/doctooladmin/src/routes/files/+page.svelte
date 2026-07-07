@@ -149,7 +149,15 @@
 
 		try {
 			const res = await fetch('/api/files', { method: 'POST', body: form });
-			const body = await res.json();
+			// Body-size-limit rejections (and similar) return a non-JSON response,
+			// so .json() must be guarded rather than called unconditionally.
+			let body: any = null;
+			try {
+				body = await res.json();
+			} catch {
+				uploadError = `HTTP ${res.status}: server returned a non-JSON response`;
+				return;
+			}
 			if (!res.ok) {
 				uploadError = body.error ?? `HTTP ${res.status}`;
 				return;

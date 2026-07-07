@@ -190,7 +190,11 @@ log "info" "Building frontend image ${DIM}(admin-portal)${NC}..."
 podman build -t admin-portal ./frontend/doctooladmin
 
 log "info" "Starting Svelte frontend container..."
-podman run -d --pod dewey-pod --name svelte-container admin-portal
+# adapter-node defaults BODY_SIZE_LIMIT to 512K; raise it to match backend's
+# maxFileSize (consts.go) so uploads aren't killed before reaching +server.ts.
+podman run -d --pod dewey-pod --name svelte-container \
+  -e BODY_SIZE_LIMIT=52428800 \
+  admin-portal
 log "success" "Frontend running"
 
 # ---------------- STATUS SUMMARY ----------------
