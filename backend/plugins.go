@@ -31,7 +31,7 @@ type Plugin struct {
 
 type PluginManager struct {
 	// Each bucket is sorted by salience (highest first) at the end of
-	// LoadPlugins, so RunPlugins executes plugins in salience order instead
+	// LoadPlugins, so RunEntryPlugins/RunInit/RunTick execute plugins in salience order instead
 	// of the random order map iteration would give.
 	FilterMap []Plugin
 	ScriptMap []Plugin
@@ -132,7 +132,12 @@ func (pm *PluginManager) LoadPlugins() error {
 	return nil
 }
 
-func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEntry, error) {
+// RunEntryPlugins returns a closure that runs every plugin in the given
+// bucket against a DBEntry, threading the (possibly modified) entry through
+// each plugin in salience order. Only Filter and Script plugins operate on
+// a DBEntry — Init/Tick are argless, side-effecting only, and run via
+// RunInit/RunTick instead.
+func (pm *PluginManager) RunEntryPlugins(targetBucket PluginType) func(DBEntry) (DBEntry, error) {
 	switch targetBucket {
 	case Filter:
 		return func(entry DBEntry) (DBEntry, error) {
@@ -160,23 +165,47 @@ func (pm *PluginManager) RunPlugins(targetBucket PluginType) func(DBEntry) (DBEn
 			return entry, nil
 		}
 
-	case Init:
-		return func(entry DBEntry) (DBEntry, error) {
-			// one-time setup logic
-			return entry, nil
-		}
-
-	case Tick:
-		return func(entry DBEntry) (DBEntry, error) {
-			// periodic logic
-			return entry, nil
-		}
-
 	default:
 		return func(entry DBEntry) (DBEntry, error) {
 			return entry, fmt.Errorf("unknown plugin bucket: %s", targetBucket)
 		}
 	}
+}
+
+// runArglessPlugins calls Begin() with no arguments on every plugin in the
+// given bucket, in salience order. Used for Init/Tick plugins, which have
+// nothing to do with DBEntry — Init runs once at startup, Tick once per
+// daemon cycle (see startDaemon in utils.go). One plugin failing is logged
+// and doesn't stop the rest of the bucket from running.
+func (pm *PluginManager) runArglessPlugins(bucketName string, plugins []Plugin) {
+	for _, plugin := range plugins {
+		Debug(fmt.Sprintf("Running %s plugin: %s", bucketName, plugin.name))
+
+		L := plugin.pool.Get().(*lua.LState)
+		beginFunc := L.GetGlobal("Begin")
+		err := L.CallByParam(lua.P{
+			Fn:      beginFunc,
+			NRet:    0,
+			Protect: true,
+		})
+		plugin.pool.Put(L)
+
+		if err != nil {
+			Warn(fmt.Sprintf("%s plugin %s failed: %s", bucketName, plugin.name, err.Error()))
+		}
+	}
+}
+
+// RunInit calls Begin() on every init plugin. Meant to run once at startup,
+// before any files are processed.
+func (pm *PluginManager) RunInit() {
+	pm.runArglessPlugins("init", pm.InitMap)
+}
+
+// RunTick calls Begin() on every tick plugin. Meant to run once per daemon
+// cycle, alongside cache cleanup and the backup pass.
+func (pm *PluginManager) RunTick() {
+	pm.runArglessPlugins("tick", pm.TickMap)
 }
 
 func (pm *PluginManager) callBeginWithReturn(entry DBEntry, plugin Plugin) (DBEntry, error) {

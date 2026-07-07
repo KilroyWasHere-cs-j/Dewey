@@ -103,7 +103,7 @@ func startDaemon(ctx context.Context, pm *PluginManager) {
 					if err == nil {
 						atomic.AddInt64(&FilesInBackUp, 1)
 					}
-					pm.RunPlugins(Tick)
+					pm.RunTick()
 				}()
 
 			case <-ctx.Done():

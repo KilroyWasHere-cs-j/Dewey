@@ -64,7 +64,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		entry.Barcode = barcodeText
 	}
 
-	runFilter := pm.RunPlugins(Filter)
+	runFilter := pm.RunEntryPlugins(Filter)
 	atomic.AddInt64(&PluginRuns, 1)
 	entry, err := runFilter(entry)
 	if err != nil {
