@@ -131,6 +131,15 @@
 		data: ''
 	});
 
+	function resetUploadForm() {
+		if (fileInput) fileInput.value = '';
+		uploadFields = {
+			claim_number: '', claimant_name: '', date_of_injury: '',
+			employer: '', adjuster: '', support: '', claim_type: '',
+			jurisdiction: '', policy_number: '', acts_id: '', data: ''
+		};
+	}
+
 	async function submitUpload() {
 		if (!fileInput?.files?.[0]) {
 			uploadError = 'Please select a file.';
@@ -163,13 +172,7 @@
 				return;
 			}
 			uploadSuccess = body.filename ?? 'File uploaded successfully.';
-			// Reset file input and fields
-			if (fileInput) fileInput.value = '';
-			uploadFields = {
-				claim_number: '', claimant_name: '', date_of_injury: '',
-				employer: '', adjuster: '', support: '', claim_type: '',
-				jurisdiction: '', policy_number: '', acts_id: '', data: ''
-			};
+			resetUploadForm();
 			// Refresh list to include the new file
 			await loadFiles();
 		} catch (e) {
@@ -206,7 +209,12 @@
 						class="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors {uploadOpen
 							? 'bg-gray-600 hover:bg-gray-700'
 							: 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600'}"
-						onclick={() => { uploadOpen = !uploadOpen; uploadError = null; uploadSuccess = null; }}
+						onclick={() => {
+							uploadOpen = !uploadOpen;
+							uploadError = null;
+							uploadSuccess = null;
+							resetUploadForm();
+						}}
 					>
 						{uploadOpen ? 'Cancel Upload' : 'Upload File'}
 					</button>
