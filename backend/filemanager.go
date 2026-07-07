@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync/atomic"
 )
 
@@ -19,6 +20,14 @@ type DBEntry struct {
 	Meta     string
 	Barcode  string
 }
+
+// barcodeCandidateExt matches upload extensions scanBarCode can plausibly
+// decode. scanBarCode only calls image.Decode, which has PNG/JPEG decoders
+// registered (backend/barcode.go) — no PDF decoder is wired in, so .pdf
+// stays out of this set until that's actually implemented, and the other
+// extensions listed are limited to what the upload allowlist (routes.go)
+// even accepts, since anything else can never occur.
+var barcodeCandidateExt = regexp.MustCompile(`(?i)\.(png|jpe?g)$`)
 
 // fileSystemInit ensures required filesystem directories exist before server start.
 //
@@ -53,15 +62,18 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
 		Barcode:  "barcode",                         // Placeholder, should be determined by barcode scanning
 	}
-
-	if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
-		Warn("Unable to process barcodes: " + err.Error())
-		atomic.AddInt64(&BarcodeFailures, 1)
-		entry.Barcode = "Nil"
+	if barcodeCandidateExt.MatchString(filename) {
+		if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
+			Warn("Unable to process barcodes: " + err.Error())
+			atomic.AddInt64(&BarcodeFailures, 1)
+			entry.Barcode = "Nil"
+		} else {
+			Debug("Decoded barcode text to: " + barcodeText)
+			atomic.AddInt64(&BarcodeSuccesses, 1)
+			entry.Barcode = barcodeText
+		}
 	} else {
-		Debug("Decoded barcode text to: " + barcodeText)
-		atomic.AddInt64(&BarcodeSuccesses, 1)
-		entry.Barcode = barcodeText
+		entry.Barcode = "Nil"
 	}
 
 	runFilter := pm.RunPlugins(Filter)
