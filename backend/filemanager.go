@@ -131,17 +131,11 @@ func locateFile(dbm *DatabaseManager, filename string) (string, error) {
 	// Prevent path traversal — only the base name is ever used
 	filename = filepath.Base(filename)
 	Debug("Checking cache")
-	files, err := os.ReadDir(uploadDir)
-	if err != nil {
-		Warn("During file retrieval os.ReadDir() encountered " + err.Error())
-	}
-
-	for _, file := range files {
-		if file.Name() == filename {
-			Debug("Found file in cache")
-			atomic.AddInt64(&FileRetrievals, 1)
-			return filepath.Join(uploadDir, file.Name()), nil
-		}
+	cachePath := filepath.Join(uploadDir, filename)
+	if _, err := os.Stat(cachePath); err == nil {
+		Debug("Found file in cache")
+		atomic.AddInt64(&FileRetrievals, 1)
+		return cachePath, nil
 	}
 
 	Debug("No file found in cache, searching db")
