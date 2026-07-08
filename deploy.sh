@@ -78,6 +78,15 @@ for arg in "$@"; do
   esac
 done
 
+# Nothing bounded the pod's CPU/RAM before this (issue #168) — a burst of
+# uploads, barcode scans, backup zipping, and Prometheus scrapes all at once
+# could consume the whole host or get OOM-killed unpredictably instead of
+# failing gracefully. Defaults are conservative; override for the actual
+# target host's capacity, e.g.:
+#   DEWEY_POD_CPUS=8 DEWEY_POD_MEMORY=8g ./deploy.sh
+POD_CPUS="${DEWEY_POD_CPUS:-4}"
+POD_MEMORY="${DEWEY_POD_MEMORY:-4g}"
+
 # --- CLEANUP ---
 section "Cleanup"
 log "info" "Removing existing pod..."
@@ -87,8 +96,11 @@ log "success" "Clean slate ready"
 # --- POD CREATION ---
 section "Pod Creation"
 log "info" "Creating dewey-pod..."
+log "info" "Resource limits: ${POD_CPUS} CPUs, ${POD_MEMORY} memory (override via DEWEY_POD_CPUS/DEWEY_POD_MEMORY)"
 # Added 9090 here so Prometheus is accessible externally
 podman pod create --infra=true \
+  --cpus "$POD_CPUS" \
+  --memory "$POD_MEMORY" \
   -p 8080:8080 \
   -p 3000:3000 \
   -p 3306:3306 \
@@ -190,7 +202,11 @@ log "info" "Building frontend image ${DIM}(admin-portal)${NC}..."
 podman build -t admin-portal ./frontend/doctooladmin
 
 log "info" "Starting Svelte frontend container..."
-podman run -d --pod dewey-pod --name svelte-container admin-portal
+# adapter-node defaults BODY_SIZE_LIMIT to 512K; raise it to match backend's
+# maxFileSize (consts.go) so uploads aren't killed before reaching +server.ts.
+podman run -d --pod dewey-pod --name svelte-container \
+  -e BODY_SIZE_LIMIT=52428800 \
+  admin-portal
 log "success" "Frontend running"
 
 # ---------------- STATUS SUMMARY ----------------
@@ -203,4 +219,66 @@ podman ps --format "{{.Names}}\t{{.Status}}" --filter pod=dewey-pod \
   | while IFS=$'\t' read -r name status; do
     echo -e "  ${DIM}\xe2\x94\x82${NC} ${BOLD}${name}${NC}\t${DIM}${status}${NC}"
   done
+echo ""
+
+# ---------------- POST-DEPLOYMENT INFO ----------------
+section "Post-Deployment Info"
+
+# Prefer the machine's primary LAN IP so these URLs are reachable from other
+# devices on the network, not just this host — falls back to localhost if
+# none is found (e.g. an isolated CI runner).
+HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+[ -z "$HOST_IP" ] && HOST_IP="localhost"
+
+echo ""
+log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"
+echo ""
+echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
+echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         ${HOST_IP}:3306"
+echo ""
+
+# --- HEALTH CHECKS ---
+# check_health reports whether a service answered at all rather than
+# requiring a 200 — the backend's routes other than /metrics sit behind the
+# known_machines IP allowlist, so a 403 there still proves the service is up.
+check_health() {
+  local label="$1"
+  local url="$2"
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null || true)
+  if [ -n "$code" ] && [ "$code" != "000" ]; then
+    log "success" "${label} is responding (HTTP ${code})"
+  else
+    log "warn" "${label} did not respond"
+  fi
+}
+
+# Backend's /metrics is registered directly on the gin engine, outside the
+# logConnections IP-allowlist group, so it's reachable without first
+# registering this host in known_machines.
+check_health "Frontend"   "http://localhost:3000"
+check_health "Backend"    "http://localhost:8080/metrics"
+check_health "Prometheus" "http://localhost:9090/-/healthy"
+
+# --- KEY METRICS SNAPSHOT ---
+echo ""
+log "info" "Backend metrics snapshot:"
+BACKEND_METRICS="$(curl -s --max-time 5 http://localhost:8080/metrics 2>/dev/null || true)"
+if [ -n "$BACKEND_METRICS" ]; then
+  for metric in app_uptime_seconds app_ram_usage app_heap_usage app_files_in_store app_files_in_backup app_db_errors; do
+    value=$(echo "$BACKEND_METRICS" | awk -v m="$metric" '$1 == m {print $2}')
+    [ -n "$value" ] && echo -e "  ${DIM}\xe2\x94\x82${NC} ${BOLD}${metric}${NC}\t${value}"
+  done
+else
+  log "warn" "Could not reach backend /metrics for a snapshot"
+fi
+
+# --- NEXT STEPS ---
+echo ""
+log "info" "Next steps:"
+echo -e "  ${DIM}\xe2\x94\x82${NC} List running containers:      ${CYAN}podman ps --pod${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f cross-doc-tool-dev${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach cross-doc-tool-dev${NC}"
 echo ""

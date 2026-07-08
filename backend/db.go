@@ -407,6 +407,15 @@ func (dm *DatabaseManager) Migrate() error {
 		return fmt.Errorf("failed to create known_machines table: %w", err)
 	}
 
+	// Seed the loopback addresses so the server can talk to itself (e.g. the
+	// test suite hitting the API from the same pod) without a manual
+	// addMachine call first. INSERT IGNORE keeps this idempotent across
+	// restarts and won't overwrite a label an admin already set.
+	loopbackQuery := `INSERT IGNORE INTO known_machines (ip, label) VALUES ('127.0.0.1', 'localhost'), ('::1', 'localhost')`
+	if _, err := dm.db.Exec(loopbackQuery); err != nil {
+		return fmt.Errorf("failed to seed loopback known_machines: %w", err)
+	}
+
 	// --- 3. CREATE INDEXES ---
 	// File Table Indexes
 	dm.createIndexSafe("idx_files_filename_deleted", "files (filename, is_deleted)")

@@ -85,6 +85,7 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 	dbm.createNewFileRecord(entry)
 	dbm.CreateNewMetaDataRecord(metaData)
 
+	atomic.AddInt64(&FilesInStore, 1)
 	atomic.AddInt64(&FileSorts, 1)
 }
 

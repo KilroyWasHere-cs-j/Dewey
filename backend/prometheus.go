@@ -2,7 +2,6 @@ package main
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sync/atomic"
@@ -25,6 +24,9 @@ var BarcodeFailures int64
 var PluginRuns int64
 var PluginErrors int64
 var DBErrors int64
+var FilesInStore int64
+var FilesInBackUp int64
+var FilesInCache int64
 
 var (
 	fileOps = prometheus.NewCounterVec(
@@ -89,12 +91,15 @@ var (
 	ramUsage = prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "app_ram_usage",
-			Help: "RAM usage of the application",
+			Help: "Total memory obtained from the OS by the application (bytes, converted to MB)",
 		},
 		func() float64 {
 			var m runtime.MemStats
 			runtime.ReadMemStats(&m)
-			return float64(m.TotalAlloc / 1024 / 1024)
+			// Sys is total memory obtained from the OS — unlike TotalAlloc
+			// (cumulative allocations since start, never decreases), this
+			// reflects actual current RAM footprint.
+			return float64(m.Sys / 1024 / 1024)
 		},
 	)
 
@@ -128,19 +133,7 @@ var (
 			Help: "Size of the application cache",
 		},
 		func() float64 {
-			entries, err := os.ReadDir("./cache")
-			if err != nil {
-				Warn("Failed to read cache directory: " + err.Error())
-			}
-
-			count := 0
-			for _, entry := range entries {
-				// Use !entry.IsDir() to exclude subdirectories from the count
-				if !entry.IsDir() {
-					count++
-				}
-			}
-			return float64(count)
+			return float64(atomic.LoadInt64(&FilesInCache))
 		},
 	)
 
@@ -150,20 +143,7 @@ var (
 			Help: "Number of files in the application store",
 		},
 		func() float64 {
-			count := 0
-			err := filepath.WalkDir("./store", func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if !d.IsDir() {
-					count++
-				}
-				return nil
-			})
-			if err != nil {
-				Warn(err.Error())
-			}
-			return float64(count)
+			return float64(atomic.LoadInt64(&FilesInStore))
 		},
 	)
 	filesInBackUp = prometheus.NewGaugeFunc(
@@ -172,20 +152,7 @@ var (
 			Help: "Number of files in the application backup",
 		},
 		func() float64 {
-			count := 0
-			err := filepath.WalkDir("./backup", func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if !d.IsDir() {
-					count++
-				}
-				return nil
-			})
-			if err != nil {
-				Warn(err.Error())
-			}
-			return float64(count)
+			return float64(atomic.LoadInt64(&FilesInBackUp))
 		},
 	)
 
@@ -338,7 +305,32 @@ var (
 	)
 )
 
+// countFilesRecursive walks dir and counts non-directory entries. Used only
+// to seed the file-count counters once at startup — everything after that
+// is maintained incrementally at the actual write/delete call sites, so this
+// never runs on the scrape path.
+func countFilesRecursive(dir string) int64 {
+	var count int64
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			count++
+		}
+		return nil
+	})
+	if err != nil {
+		Warn(err.Error())
+	}
+	return count
+}
+
 func init() {
+	atomic.StoreInt64(&FilesInStore, countFilesRecursive(fileSystemBaseDir))
+	atomic.StoreInt64(&FilesInBackUp, countFilesRecursive(backupDir))
+	atomic.StoreInt64(&FilesInCache, countFilesRecursive(uploadDir))
+
 	prometheus.MustRegister(
 		fileOps, fileBytes, fileDuration,
 		uptime, systemInfo, cpuCount, ramUsage, currentHeap, gcCycles,

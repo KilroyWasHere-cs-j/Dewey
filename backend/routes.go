@@ -373,6 +373,7 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
+	atomic.AddInt64(&FilesInCache, 1)
 
 	// -------------------------
 	// Response
@@ -448,6 +449,7 @@ func deleteFile(c *gin.Context) {
 
 	Debug("file deleted: " + filename)
 	atomic.AddInt64(&FileDeletions, 1)
+	atomic.AddInt64(&FilesInStore, -1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File deleted",
