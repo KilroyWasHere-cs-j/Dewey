@@ -10,10 +10,11 @@ Dewey is a backend file sorting and storage tool that exposes a RESTful API for 
 - File type and size restrictions
 - Prometheus metrics, custom graphing, and an administration portal
 - HTTP rate limiting
-- Plugins
+- IP allowlisting for known machines, with per-request access logging
+- Lua-based plugin system for custom sorting/filtering logic
+- In-app documentation for both developers and administrators
 - (Planned) plugin validation
 - (Planned) self restart and cleanup
-- (Planned) documentation for both developers and administrators
 
 ### Technology Stack
 The application's backend is written entirely in Go (Golang), chosen for its balance between simplicity and performance. It offers a clean and efficient development experience while still providing the control, reliability, and speed expected from a compiled language. Go allows for fast development and a shallow learning curve.
@@ -26,11 +27,12 @@ Svelte is used for the frontend, providing a reactive and efficient user interfa
 
 
 #### External Libraries
-Grule - A Go native rule engine for human-readable rule definitions and sorting of files
 Gin - A Go web framework for building RESTful APIs
 Gozxing - A Go library for reading and writing barcode images
 Go-sqlite3 - A Go library for SQLite3 database access (SQLite3 was picked for its simplicity and ease of use)
-GopherLua - A Go native Lua VM (used for plugins)
+GopherLua - A Go native Lua VM (used for plugins, which handle file sorting/filtering)
+Prometheus client_golang / go-gin-prometheus - Metrics collection and exposition
+golang.org/x/time - Token-bucket rate limiting for the HTTP API
 
 
 #### Portability
