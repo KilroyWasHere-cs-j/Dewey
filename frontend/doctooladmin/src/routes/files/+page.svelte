@@ -131,6 +131,20 @@
 		data: ''
 	});
 
+	// Resets the file picker and every metadata field back to empty.
+	// Shared by the submit-success path and the "Clear" button so both
+	// stay in sync instead of duplicating the same reset object.
+	function resetUploadForm() {
+		if (fileInput) fileInput.value = '';
+		uploadFields = {
+			claim_number: '', claimant_name: '', date_of_injury: '',
+			employer: '', adjuster: '', support: '', claim_type: '',
+			jurisdiction: '', policy_number: '', acts_id: '', data: ''
+		};
+		uploadError = null;
+		uploadSuccess = null;
+	}
+
 	async function submitUpload() {
 		if (!fileInput?.files?.[0]) {
 			uploadError = 'Please select a file.';
@@ -162,14 +176,9 @@
 				uploadError = body.error ?? `HTTP ${res.status}`;
 				return;
 			}
-			uploadSuccess = body.filename ?? 'File uploaded successfully.';
-			// Reset file input and fields
-			if (fileInput) fileInput.value = '';
-			uploadFields = {
-				claim_number: '', claimant_name: '', date_of_injury: '',
-				employer: '', adjuster: '', support: '', claim_type: '',
-				jurisdiction: '', policy_number: '', acts_id: '', data: ''
-			};
+			const uploadedFilename = body.filename ?? 'File uploaded successfully.';
+			resetUploadForm();
+			uploadSuccess = uploadedFilename;
 			// Refresh list to include the new file
 			await loadFiles();
 		} catch (e) {
@@ -279,13 +288,23 @@
 							</p>
 						{/if}
 
-						<button
-							type="submit"
-							disabled={uploading}
-							class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
-						>
-							{uploading ? 'Uploading…' : 'Upload'}
-						</button>
+						<div class="flex gap-2">
+							<button
+								type="submit"
+								disabled={uploading}
+								class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
+							>
+								{uploading ? 'Uploading…' : 'Upload'}
+							</button>
+							<button
+								type="button"
+								disabled={uploading}
+								onclick={resetUploadForm}
+								class="rounded-lg border border-gray-300 bg-white px-6 py-2 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+							>
+								Clear
+							</button>
+						</div>
 					</form>
 				</section>
 			{/if}
