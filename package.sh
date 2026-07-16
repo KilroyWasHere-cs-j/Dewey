@@ -85,6 +85,39 @@ podman save localhost/admin-portal:latest -o "${BUNDLE_DIR}/admin-portal.tar"
 log "info" "Writing run script..."
 cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
 #!/bin/bash
+
+# --- COLOR DEFINITIONS ---
+NC='\033[0m'
+BOLD='\033[1m'
+DIM='\033[2m'
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
+
+# --- LOGGING FUNCTION ---
+log() {
+  local level="$1"
+  local message="$2"
+  case "$level" in
+    "info")    echo -e "  ${CYAN}${BOLD}>${NC} ${BOLD}${message}${NC}" ;;
+    "success") echo -e "  ${GREEN}${BOLD}\xE2\x9C\x94${NC} ${GREEN}${BOLD}${message}${NC}" ;;
+    "warn")    echo -e "  ${YELLOW}${BOLD}!${NC} ${YELLOW}${message}${NC}" ;;
+    "error")   echo -e "  ${RED}${BOLD}\xE2\x9C\x98 ERROR:${NC} ${RED}${BOLD}${message}${NC}" ;;
+  esac
+}
+
+# --- SECTION BANNER ---
+section() {
+  local label="$1"
+  echo ""
+  echo -e "  ${DIM}${CYAN}\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80${NC}"
+  echo -e "  ${MAGENTA}${BOLD}\xe2\x97\x86 ${label}${NC}"
+  echo -e "  ${DIM}${CYAN}\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80${NC}"
+}
+
 podman load -i cross-doc-tool-dev.tar
 podman load -i admin-portal.tar
 
@@ -119,6 +152,74 @@ fi
 # manually tearing it down first (the pod removal above already handles
 # that for us, but --replace keeps this safe to re-run either way).
 podman play kube --replace dewey-pod.yaml
+log "success" "Pod deployed"
+
+# ---------------- POST-DEPLOYMENT INFO ----------------
+section "Post-Deployment Info"
+
+# Give the pod's containers a moment to start before checking on them —
+# podman play kube returns as soon as it's created them, not once they're
+# actually serving traffic.
+sleep 5
+
+# Prefer the machine's primary LAN IP so these URLs are reachable from other
+# devices on the network, not just this host — falls back to localhost if
+# none is found.
+HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+[ -z "$HOST_IP" ] && HOST_IP="localhost"
+
+echo ""
+log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"
+echo ""
+echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
+echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         ${HOST_IP}:3306"
+echo ""
+
+# --- HEALTH CHECKS ---
+# check_health reports whether a service answered at all rather than
+# requiring a 200 — the backend's routes other than /metrics sit behind the
+# known_machines IP allowlist, so a 403 there still proves the service is up.
+check_health() {
+  local label="$1"
+  local url="$2"
+  local code
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null || true)
+  if [ -n "$code" ] && [ "$code" != "000" ]; then
+    log "success" "${label} is responding (HTTP ${code})"
+  else
+    log "warn" "${label} did not respond"
+  fi
+}
+
+# Backend's /metrics is registered directly on the gin engine, outside the
+# logConnections IP-allowlist group, so it's reachable without first
+# registering this host in known_machines.
+check_health "Frontend"   "http://localhost:3000"
+check_health "Backend"    "http://localhost:8080/metrics"
+check_health "Prometheus" "http://localhost:9090/-/healthy"
+
+# --- KEY METRICS SNAPSHOT ---
+echo ""
+log "info" "Backend metrics snapshot:"
+BACKEND_METRICS="$(curl -s --max-time 5 http://localhost:8080/metrics 2>/dev/null || true)"
+if [ -n "$BACKEND_METRICS" ]; then
+  for metric in app_uptime_seconds app_ram_usage app_heap_usage app_files_in_store app_files_in_backup app_db_errors; do
+    value=$(echo "$BACKEND_METRICS" | awk -v m="$metric" '$1 == m {print $2}')
+    [ -n "$value" ] && echo -e "  ${DIM}\xe2\x94\x82${NC} ${BOLD}${metric}${NC}\t${value}"
+  done
+else
+  log "warn" "Could not reach backend /metrics for a snapshot"
+fi
+
+# --- NEXT STEPS ---
+echo ""
+log "info" "Next steps:"
+echo -e "  ${DIM}\xe2\x94\x82${NC} List running containers:      ${CYAN}podman ps --pod${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f cross-doc-tool-dev${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach cross-doc-tool-dev${NC}"
+echo ""
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
 
