@@ -78,6 +78,14 @@ for arg in "$@"; do
   esac
 done
 
+# Prefer the machine's primary LAN IP so the frontend is reachable from other
+# devices on the network, not just this host — falls back to localhost if
+# none is found (e.g. an isolated CI runner). Computed early (rather than
+# just before the summary, as before) so it can also be passed to the
+# frontend container as ORIGIN below.
+HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+[ -z "$HOST_IP" ] && HOST_IP="localhost"
+
 # Nothing bounded the pod's CPU/RAM before this (issue #168) — a burst of
 # uploads, barcode scans, backup zipping, and Prometheus scrapes all at once
 # could consume the whole host or get OOM-killed unpredictably instead of
@@ -204,8 +212,13 @@ podman build -t admin-portal ./frontend/doctooladmin
 log "info" "Starting Svelte frontend container..."
 # adapter-node defaults BODY_SIZE_LIMIT to 512K; raise it to match backend's
 # maxFileSize (consts.go) so uploads aren't killed before reaching +server.ts.
+# ORIGIN tells SvelteKit's CSRF check (checkOrigin) what host to trust — without
+# it, adapter-node rejects multipart uploads whose Origin header doesn't match
+# what the server expects, which is what every client hits by default since
+# ORIGIN is unset otherwise (issue #197).
 podman run -d --pod dewey-pod --name svelte-container \
   -e BODY_SIZE_LIMIT=52428800 \
+  -e ORIGIN="http://${HOST_IP}:3000" \
   admin-portal
 log "success" "Frontend running"
 
@@ -223,12 +236,6 @@ echo ""
 
 # ---------------- POST-DEPLOYMENT INFO ----------------
 section "Post-Deployment Info"
-
-# Prefer the machine's primary LAN IP so these URLs are reachable from other
-# devices on the network, not just this host — falls back to localhost if
-# none is found (e.g. an isolated CI runner).
-HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-[ -z "$HOST_IP" ] && HOST_IP="localhost"
 
 echo ""
 log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"

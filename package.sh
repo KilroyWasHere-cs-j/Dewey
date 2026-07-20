@@ -148,6 +148,20 @@ else
   done
 fi
 
+# Prefer the machine's primary LAN IP so the frontend is reachable from other
+# devices on the network, not just this host — falls back to localhost if
+# none is found. Computed before podman play kube (rather than just before
+# the summary, as before) so it can patch dewey-pod.yaml's ORIGIN below.
+HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+[ -z "$HOST_IP" ] && HOST_IP="localhost"
+
+# dewey-pod.yaml was captured via `podman generate kube` on whatever machine
+# ran package.sh, so its ORIGIN env value is that machine's IP — wrong here.
+# SvelteKit's CSRF checkOrigin needs ORIGIN to match the address clients
+# actually use to reach this deployment, so patch it in place before playing
+# the pod (podman play kube has no per-env override flag).
+sed -i "/name: ORIGIN/{n;s|value: .*|value: http://${HOST_IP}:3000|}" dewey-pod.yaml
+
 # --replace lets this be re-run against an already-deployed pod without
 # manually tearing it down first (the pod removal above already handles
 # that for us, but --replace keeps this safe to re-run either way).
@@ -161,12 +175,6 @@ section "Post-Deployment Info"
 # podman play kube returns as soon as it's created them, not once they're
 # actually serving traffic.
 sleep 5
-
-# Prefer the machine's primary LAN IP so these URLs are reachable from other
-# devices on the network, not just this host — falls back to localhost if
-# none is found.
-HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-[ -z "$HOST_IP" ] && HOST_IP="localhost"
 
 echo ""
 log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"
