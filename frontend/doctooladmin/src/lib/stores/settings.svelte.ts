@@ -15,7 +15,6 @@ export interface Settings {
 	darkMode: boolean;
 	accentColor: 'yellow' | 'blue' | 'green' | 'purple' | 'slate';
 	chartColorTheme: 'default' | 'cool' | 'warm' | 'mono';
-	portalName: string;
 	layoutDensity: 'comfortable' | 'compact';
 }
 
@@ -29,7 +28,6 @@ export const DEFAULTS: Settings = {
 	darkMode: false,
 	accentColor: 'yellow',
 	chartColorTheme: 'default',
-	portalName: 'DEWEY',
 	layoutDensity: 'comfortable'
 };
 
