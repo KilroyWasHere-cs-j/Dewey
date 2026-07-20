@@ -263,22 +263,6 @@
 					</button>
 				</div>
 
-				<div class="flex items-center justify-between gap-4">
-					<div>
-						<p class="font-medium text-gray-700 dark:text-gray-200">Portal Name</p>
-						<p class="text-sm text-gray-500 dark:text-gray-400">The name shown in the topbar header.</p>
-					</div>
-					<input
-						type="text"
-						maxlength="24"
-						aria-label="Portal name"
-						autocomplete="off"
-						class="w-48 shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-						value={settings.value.portalName}
-						oninput={(e) => update('portalName', (e.target as HTMLInputElement).value)}
-					/>
-				</div>
-
 				<div class="flex items-start justify-between gap-4">
 					<div>
 						<p class="font-medium text-gray-700 dark:text-gray-200">Accent Color</p>

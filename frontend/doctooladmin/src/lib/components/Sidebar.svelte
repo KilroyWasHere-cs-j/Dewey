@@ -34,7 +34,7 @@
 	class={`bg-gray-900 text-white w-64 p-4 space-y-4
 		${open ? 'block' : 'hidden'} md:block`}
 >
-	<h2 class="mb-6 text-2xl font-bold">{settings.value.portalName}</h2>
+	<h2 class="mb-6 text-2xl font-bold">DEWEY</h2>
 
 	<nav aria-label="Main navigation" class="space-y-4">
 		{#each navGroups as group}
