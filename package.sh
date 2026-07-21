@@ -82,6 +82,21 @@ podman save localhost/cross-doc-tool-dev:latest -o "${BUNDLE_DIR}/cross-doc-tool
 log "info" "Saving frontend image..."
 podman save localhost/admin-portal:latest -o "${BUNDLE_DIR}/admin-portal.tar"
 
+# mysql/prometheus aren't built by this repo, so podman generate kube (above)
+# only captures a reference to whatever tag is running, not the image itself.
+# Without saving+bundling them too, a target server with no network access to
+# docker.io can't deploy at all (issue #207). Read the tag from the running
+# containers themselves rather than hardcoding it a second time here, so this
+# always matches whatever deploy.sh actually pinned and started.
+MYSQL_IMAGE="$(podman inspect dewey-mysql --format '{{.ImageName}}')"
+PROMETHEUS_IMAGE="$(podman inspect dewey-prometheus --format '{{.ImageName}}')"
+
+log "info" "Saving MySQL image (${MYSQL_IMAGE})..."
+podman save "$MYSQL_IMAGE" -o "${BUNDLE_DIR}/mysql.tar"
+
+log "info" "Saving Prometheus image (${PROMETHEUS_IMAGE})..."
+podman save "$PROMETHEUS_IMAGE" -o "${BUNDLE_DIR}/prometheus.tar"
+
 log "info" "Writing run script..."
 cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
 #!/bin/bash
@@ -120,6 +135,8 @@ section() {
 
 podman load -i cross-doc-tool-dev.tar
 podman load -i admin-portal.tar
+podman load -i mysql.tar
+podman load -i prometheus.tar
 
 # By default, wipe the backend data volumes (dewey-store, dewey-cache,
 # dewey-backup, dewey-logs) so each run starts fresh. Metrics like
