@@ -47,5 +47,8 @@
 	},
 	"dependencies": {
 		"@skeletonlabs/tw-plugin": "^0.4.1"
+	},
+	"overrides": {
+		"cookie": "^0.7.0"
 	}
 }
