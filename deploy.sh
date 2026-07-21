@@ -126,12 +126,15 @@ else
   log "info" "Keeping existing mysql-data volume (pass --reset-db to wipe)"
 fi
 
+# Pinned rather than :latest (issue #207) — package.sh bundles whatever tag
+# is actually running so offline deploys get the exact version this was
+# tested against, instead of silently pulling a different one later.
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
   -e MYSQL_ROOT_PASSWORD=dewey \
   -e MYSQL_DATABASE=deweyRecords \
   -v mysql-data:/var/lib/mysql:Z \
-  docker.io/library/mysql:latest
+  docker.io/library/mysql:9.7.0
 
 # Critical: database must be ready before the backend starts since it depends on it
 (while ! podman exec dewey-mysql mysqladmin ping -h localhost --silent 2>/dev/null; do
@@ -144,12 +147,13 @@ log "success" "Database is up!"
 # ---------------- PROMETHEUS ----------------
 section "Prometheus"
 log "info" "Pulling Prometheus image..."
-podman pull docker.io/prom/prometheus:latest
+# Pinned rather than :latest — see the mysql image note above (issue #207).
+podman pull docker.io/prom/prometheus:v3.13.1
 
 log "info" "Starting Prometheus container..."
 podman run -d --pod dewey-pod \
   --name dewey-prometheus \
-  docker.io/prom/prometheus:latest
+  docker.io/prom/prometheus:v3.13.1
 
 # Brief pause to let Prometheus spin up internal networking before healthcheck
 sleep 2
