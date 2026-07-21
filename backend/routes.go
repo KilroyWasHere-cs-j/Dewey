@@ -390,7 +390,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Post-processing
 	// -------------------------
-	go idAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
+	queueIdAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
 
 }
 
