@@ -20,11 +20,16 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			return json(await res.json());
 		}
 
+		// Escape backslashes/quotes (RFC 2616 quoted-string) so a filename
+		// containing a `"` can't break out of the quoted param and inject
+		// extra Content-Disposition directives (issue #208).
+		const safeFilename = filename.replace(/[\\"]/g, '\\$&');
+
 		// Stream the binary file through with a download header
 		return new Response(res.body, {
 			headers: {
 				'Content-Type': res.headers.get('Content-Type') ?? 'application/octet-stream',
-				'Content-Disposition': `attachment; filename="${filename}"`
+				'Content-Disposition': `attachment; filename="${safeFilename}"`
 			}
 		});
 	} catch (error) {
