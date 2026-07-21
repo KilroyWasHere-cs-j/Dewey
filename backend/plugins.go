@@ -58,16 +58,19 @@ func (pm *PluginManager) LoadPlugins() error {
 		return err
 	}
 
-	// Temporary state used only for plugin-type discovery; discarded after this call.
-	// Plugins are loaded one at a time so WhoAmI identifies each file individually.
-	L := lua.NewState()
-	defer L.Close()
-
 	for _, entry := range entries {
 		Debug(entry.Name())
 
+		// Fresh state per plugin file for discovery, closed at the end of
+		// this iteration (issue #216) — a single state reused across every
+		// DoFile call let Lua globals (WhoAmI, etc.) persist between files,
+		// so a plugin missing WhoAmI silently inherited the previous
+		// plugin's type/salience instead of failing to classify.
+		L := lua.NewState()
+
 		if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
+			L.Close()
 			continue
 		}
 
@@ -79,19 +82,26 @@ func (pm *PluginManager) LoadPlugins() error {
 			Protect: true,
 		})
 		if err != nil {
+			// A failed call (e.g. WhoAmI missing entirely) pushes nothing
+			// onto the stack — the unconditional Get/Pop(2) below would
+			// underflow and panic the whole process, not just this plugin,
+			// now that each file gets its own fresh state instead of
+			// silently inheriting the previous plugin's WhoAmI (issue #216).
 			Warn("Unable to call WhoAmI: " + err.Error())
+			L.Close()
+			continue
 		}
 
 		// Yes these are magic numbers don't touch them
 		pluginType := L.Get(-2).String()
 		salienceLV := L.Get(-1)
 		L.Pop(2) // clean WhoAmI return values off the stack
+		L.Close()
 
 		sVal, ok := salienceLV.(lua.LNumber)
 		if !ok {
 			Warn(fmt.Sprintf("plugin %s: salience must be a number, got %s", entry.Name(), salienceLV.Type()))
 			sVal = 0 // Default to 0 if not a number
-			continue
 		}
 		salience := int(sVal)
 
