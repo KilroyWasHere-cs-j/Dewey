@@ -30,3 +30,10 @@ const prometheusServer = ":8081"
 
 // Plugin specific constants
 const pluginDir = "./plugins" // Directory where plugins live
+
+// Post-processing (issue #217) — bounds how many idAndSort goroutines
+// (barcode scan + Lua filter plugins + disk copy) can run at once. Without
+// this, a burst of uploads accepted just under the rate limiter could each
+// spin up a full Lua-plugin-running goroutine concurrently with no ceiling,
+// letting them pile up faster than a slow filesystem can drain them.
+const maxConcurrentPostProcessing = 4

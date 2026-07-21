@@ -53,6 +53,23 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
+// postProcessingSem bounds concurrent idAndSort work to
+// maxConcurrentPostProcessing (issue #217).
+var postProcessingSem = make(chan struct{}, maxConcurrentPostProcessing)
+
+// queueIdAndSort runs idAndSort in a background goroutine without blocking
+// the caller (the upload response is already sent before this is called),
+// but bounds how many run at once via postProcessingSem — excess uploads
+// queue behind the semaphore instead of every one running its Lua filter
+// plugins and disk copy concurrently.
+func queueIdAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
+	go func() {
+		postProcessingSem <- struct{}{}
+		defer func() { <-postProcessingSem }()
+		idAndSort(pm, dbm, path, hash, filename, metaData)
+	}()
+}
+
 func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
 	entry := DBEntry{
 		Filename: filename,
