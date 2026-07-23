@@ -365,8 +365,30 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Save file
 	// -------------------------
+	// Reuse the already-open multipart file instead of c.SaveUploadedFile,
+	// which re-opens and re-copies the same bytes from the multipart source
+	// a second time — the hashing pass above already read this file once
+	// (issue #166).
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		Warn("Failed to rewind file before save: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save file",
+		})
+		return
+	}
+
 	dst := filepath.Join(uploadDir, safeFilename)
-	if err := c.SaveUploadedFile(fileHeader, dst); err != nil {
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		Warn("Failed to create destination file: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save file",
+		})
+		return
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, file); err != nil {
 		Warn("Failed to save file: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to save file",
