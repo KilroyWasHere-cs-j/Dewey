@@ -18,7 +18,9 @@
 	}
 
 	let sidebarOpen = $state(settings.value.defaultSidebarOpen);
-	const toggleSidebar = () => { sidebarOpen = !sidebarOpen; };
+	const toggleSidebar = () => {
+		sidebarOpen = !sidebarOpen;
+	};
 
 	let headingClass = $derived(ACCENT[settings.value.accentColor].text);
 	let mainClass = $derived(
@@ -87,10 +89,12 @@
 
 	let pendingDelete = $state<string | null>(null);
 	let deleting = $state(false);
+	let deleteError = $state<string | null>(null);
 
 	async function confirmDelete() {
 		if (!pendingDelete) return;
 		deleting = true;
+		deleteError = null;
 		const target = pendingDelete;
 		try {
 			const res = await fetch(`/api/files/${encodeURIComponent(target)}`, { method: 'DELETE' });
@@ -102,7 +106,10 @@
 			metaState = next;
 			pendingDelete = null;
 		} catch (e) {
-			alert('Delete failed: ' + e);
+			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
+			// matching uploadError/listError elsewhere on this page instead of a
+			// blocking native alert().
+			deleteError = String(e);
 		} finally {
 			deleting = false;
 		}
@@ -137,9 +144,17 @@
 	function resetUploadForm() {
 		if (fileInput) fileInput.value = '';
 		uploadFields = {
-			claim_number: '', claimant_name: '', date_of_injury: '',
-			employer: '', adjuster: '', support: '', claim_type: '',
-			jurisdiction: '', policy_number: '', acts_id: '', data: ''
+			claim_number: '',
+			claimant_name: '',
+			date_of_injury: '',
+			employer: '',
+			adjuster: '',
+			support: '',
+			claim_type: '',
+			jurisdiction: '',
+			policy_number: '',
+			acts_id: '',
+			data: ''
 		};
 		uploadError = null;
 		uploadSuccess = null;
@@ -200,7 +215,6 @@
 		<Topbar {sidebarOpen} {toggleSidebar} />
 
 		<main id="main-content" class={mainClass}>
-
 			<!-- ── Header ─────────────────────────────────────────────────────── -->
 			<div class="flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-gray-800 dark:text-white">File Management</h1>
@@ -215,7 +229,11 @@
 						class="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors {uploadOpen
 							? 'bg-gray-600 hover:bg-gray-700'
 							: 'bg-gray-900 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600'}"
-						onclick={() => { uploadOpen = !uploadOpen; uploadError = null; uploadSuccess = null; }}
+						onclick={() => {
+							uploadOpen = !uploadOpen;
+							uploadError = null;
+							uploadSuccess = null;
+						}}
 					>
 						{uploadOpen ? 'Cancel Upload' : 'Upload File'}
 					</button>
@@ -230,7 +248,10 @@
 					</h2>
 
 					<form
-						onsubmit={(e) => { e.preventDefault(); submitUpload(); }}
+						onsubmit={(e) => {
+							e.preventDefault();
+							submitUpload();
+						}}
 						class="space-y-4"
 					>
 						<!-- File picker -->
@@ -247,19 +268,7 @@
 
 						<!-- Metadata fields — 2-column grid -->
 						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-							{#each [
-								{ key: 'claim_number',   label: 'Claim Number' },
-								{ key: 'claimant_name',  label: 'Claimant Name' },
-								{ key: 'date_of_injury', label: 'Date of Injury', type: 'date' },
-								{ key: 'employer',       label: 'Employer' },
-								{ key: 'adjuster',       label: 'Adjuster' },
-								{ key: 'support',        label: 'Support Level' },
-								{ key: 'claim_type',     label: 'Claim Type' },
-								{ key: 'jurisdiction',   label: 'Jurisdiction' },
-								{ key: 'policy_number',  label: 'Policy Number' },
-								{ key: 'acts_id',        label: 'ACTs ID' },
-								{ key: 'data',           label: 'Data / Tag' }
-							] as field}
+							{#each [{ key: 'claim_number', label: 'Claim Number' }, { key: 'claimant_name', label: 'Claimant Name' }, { key: 'date_of_injury', label: 'Date of Injury', type: 'date' }, { key: 'employer', label: 'Employer' }, { key: 'adjuster', label: 'Adjuster' }, { key: 'support', label: 'Support Level' }, { key: 'claim_type', label: 'Claim Type' }, { key: 'jurisdiction', label: 'Jurisdiction' }, { key: 'policy_number', label: 'Policy Number' }, { key: 'acts_id', label: 'ACTs ID' }, { key: 'data', label: 'Data / Tag' }] as field}
 								<div>
 									<label
 										for="upload-{field.key}"
@@ -311,7 +320,9 @@
 
 			<!-- ── File List ──────────────────────────────────────────────────── -->
 			<section class="rounded-2xl bg-white shadow-sm dark:bg-gray-800">
-				<div class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+				<div
+					class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4 dark:border-gray-700"
+				>
 					<h2 class="shrink-0 text-xs font-semibold tracking-wider uppercase {headingClass}">
 						Stored Files
 					</h2>
@@ -322,7 +333,7 @@
 						placeholder="Search filenames…"
 						aria-label="Search filenames"
 						bind:value={searchQuery}
-						class="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500 dark:focus:ring-gray-500"
+						class="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-transparent focus:ring-2 focus:ring-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500 dark:focus:ring-gray-500"
 					/>
 
 					{#if !listLoading}
@@ -338,33 +349,37 @@
 
 				{#if listLoading}
 					<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
-
 				{:else if listError}
 					<p role="alert" class="px-6 py-8 text-sm text-red-600 dark:text-red-400">
 						Failed to load files: {listError}
 					</p>
-
 				{:else if files.length === 0}
 					<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">No files stored.</p>
-
 				{:else if filteredFiles.length === 0}
 					<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">
-						No files match <span class="font-medium text-gray-700 dark:text-gray-300">"{searchQuery}"</span>.
+						No files match <span class="font-medium text-gray-700 dark:text-gray-300"
+							>"{searchQuery}"</span
+						>.
 					</p>
-
 				{:else}
 					<div class="overflow-x-auto">
 						<table class="w-full text-sm">
 							<thead>
-								<tr class="border-b border-gray-100 bg-gray-50 text-left dark:border-gray-700 dark:bg-gray-900/40">
+								<tr
+									class="border-b border-gray-100 bg-gray-50 text-left dark:border-gray-700 dark:bg-gray-900/40"
+								>
 									<th class="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Filename</th>
-									<th class="px-6 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
+									<th class="px-6 py-3 text-right font-medium text-gray-500 dark:text-gray-400"
+										>Actions</th
+									>
 								</tr>
 							</thead>
 							<tbody>
 								{#each filteredFiles as filename (filename)}
 									<!-- Main file row -->
-									<tr class="border-b border-gray-50 hover:bg-gray-50/50 dark:border-gray-700/50 dark:hover:bg-gray-700/20">
+									<tr
+										class="border-b border-gray-50 hover:bg-gray-50/50 dark:border-gray-700/50 dark:hover:bg-gray-700/20"
+									>
 										<td class="px-6 py-3 font-mono text-gray-800 dark:text-gray-200">
 											{filename}
 										</td>
@@ -381,7 +396,9 @@
 
 												<!-- Metadata toggle -->
 												<button
-													class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {metaState[filename]
+													class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {metaState[
+														filename
+													]
 														? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
 														: 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'}"
 													onclick={() => toggleMeta(filename)}
@@ -391,7 +408,8 @@
 
 												<!-- Delete: request confirmation first -->
 												{#if pendingDelete === filename}
-													<span class="text-xs text-gray-500 dark:text-gray-400">Are you sure?</span>
+													<span class="text-xs text-gray-500 dark:text-gray-400">Are you sure?</span
+													>
 													<button
 														disabled={deleting}
 														class="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -401,14 +419,25 @@
 													</button>
 													<button
 														class="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-														onclick={() => { pendingDelete = null; }}
+														onclick={() => {
+															pendingDelete = null;
+															deleteError = null;
+														}}
 													>
 														Cancel
 													</button>
+													{#if deleteError}
+														<span role="alert" class="text-xs text-red-600 dark:text-red-400"
+															>{deleteError}</span
+														>
+													{/if}
 												{:else}
 													<button
 														class="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-														onclick={() => { pendingDelete = filename; }}
+														onclick={() => {
+															pendingDelete = filename;
+															deleteError = null;
+														}}
 													>
 														Delete
 													</button>
@@ -419,29 +448,20 @@
 
 									<!-- Expanded metadata row -->
 									{#if metaState[filename]}
-										<tr class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-900/20">
+										<tr
+											class="border-b border-gray-100 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-900/20"
+										>
 											<td colspan="2" class="px-6 py-4">
 												{#if metaState[filename] === 'loading'}
 													<p class="text-xs text-gray-400">Loading metadata…</p>
-
 												{:else if metaState[filename] === 'error'}
 													<p class="text-xs text-red-500">Failed to load metadata.</p>
-
 												{:else}
 													{@const meta = metaState[filename] as MetaData}
-													<dl class="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
-														{#each [
-															{ label: 'Claim #',       value: meta.claim_number },
-															{ label: 'Claimant',      value: meta.claimant_name },
-															{ label: 'Date of Injury',value: meta.date_of_injury },
-															{ label: 'Employer',      value: meta.employer },
-															{ label: 'Adjuster',      value: meta.adjuster },
-															{ label: 'Support',       value: meta.support },
-															{ label: 'Claim Type',    value: meta.claim_type },
-															{ label: 'Jurisdiction',  value: meta.jurisdiction },
-															{ label: 'Policy #',      value: meta.policy_number },
-															{ label: 'ACTs ID',       value: meta.acts_id }
-														] as item}
+													<dl
+														class="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-5"
+													>
+														{#each [{ label: 'Claim #', value: meta.claim_number }, { label: 'Claimant', value: meta.claimant_name }, { label: 'Date of Injury', value: meta.date_of_injury }, { label: 'Employer', value: meta.employer }, { label: 'Adjuster', value: meta.adjuster }, { label: 'Support', value: meta.support }, { label: 'Claim Type', value: meta.claim_type }, { label: 'Jurisdiction', value: meta.jurisdiction }, { label: 'Policy #', value: meta.policy_number }, { label: 'ACTs ID', value: meta.acts_id }] as item}
 															<div>
 																<dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
 																	{item.label}
