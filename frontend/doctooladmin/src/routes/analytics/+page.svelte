@@ -61,12 +61,8 @@
 	let colors = $derived(CHART_THEMES[settings.value.chartColorTheme]);
 
 	// Alert conditions derived from live metrics + user thresholds
-	let ramAlert = $derived(
-		(metrics.app_ram_usage ?? 0) > settings.value.ramAlertThresholdMb
-	);
-	let retryAlert = $derived(
-		(metrics.app_file_retries ?? 0) > settings.value.retryAlertThreshold
-	);
+	let ramAlert = $derived((metrics.app_ram_usage ?? 0) > settings.value.ramAlertThresholdMb);
+	let retryAlert = $derived((metrics.app_file_retries ?? 0) > settings.value.retryAlertThreshold);
 
 	// Padding and gap change with layout density
 	let mainClass = $derived(
@@ -81,51 +77,59 @@
 	}
 </script>
 
-<!-- Prometheus unreachable banner (toggled in settings) -->
-{#if prometheusDown && settings.value.showPrometheusAlert}
-	<div
-		role="alert"
-		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
-	>
-		<svg
-			aria-hidden="true"
-			class="h-4 w-4 shrink-0 text-red-400"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-			stroke-width="2"
+<!-- Alert banners — stacked via flex column + gap so the browser handles spacing
+     instead of hand-computed margin offsets (issue #242). -->
+<div class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
+	<!-- Prometheus unreachable banner (toggled in settings) -->
+	{#if prometheusDown && settings.value.showPrometheusAlert}
+		<div
+			role="alert"
+			class="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-			/>
-		</svg>
-		<span>Prometheus is unreachable — metrics may be stale or unavailable</span>
-	</div>
-{/if}
+			<svg
+				aria-hidden="true"
+				class="h-4 w-4 shrink-0 text-red-400"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+				/>
+			</svg>
+			<span>Prometheus is unreachable — metrics may be stale or unavailable</span>
+		</div>
+	{/if}
 
-<!-- RAM alert -->
-{#if ramAlert}
-	<div
-		role="alert"
-		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-950/90 px-5 py-3 text-sm text-amber-300 shadow-lg backdrop-blur"
-		style="margin-top: {prometheusDown && settings.value.showPrometheusAlert ? '3.5rem' : '0'}"
-	>
-		<span>⚠ RAM usage ({metrics.app_ram_usage} MB) exceeds threshold ({settings.value.ramAlertThresholdMb} MB)</span>
-	</div>
-{/if}
+	<!-- RAM alert -->
+	{#if ramAlert}
+		<div
+			role="alert"
+			class="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-950/90 px-5 py-3 text-sm text-amber-300 shadow-lg backdrop-blur"
+		>
+			<span
+				>⚠ RAM usage ({metrics.app_ram_usage} MB) exceeds threshold ({settings.value
+					.ramAlertThresholdMb} MB)</span
+			>
+		</div>
+	{/if}
 
-<!-- Retry alert -->
-{#if retryAlert}
-	<div
-		role="alert"
-		class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
-		style="margin-top: {(prometheusDown && settings.value.showPrometheusAlert ? 3.5 : 0) + (ramAlert ? 3.5 : 0)}rem"
-	>
-		<span>⚠ File retries ({metrics.app_file_retries}) exceeds threshold ({settings.value.retryAlertThreshold})</span>
-	</div>
-{/if}
+	<!-- Retry alert -->
+	{#if retryAlert}
+		<div
+			role="alert"
+			class="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
+		>
+			<span
+				>⚠ File retries ({metrics.app_file_retries}) exceeds threshold ({settings.value
+					.retryAlertThreshold})</span
+			>
+		</div>
+	{/if}
+</div>
 
 <svelte:head>
 	<title>Analytics — Dewey</title>
@@ -209,9 +213,7 @@
 
 			<!-- File I/O -->
 			<section>
-				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
-					File I/O
-				</h2>
+				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">File I/O</h2>
 				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 					<!-- file_io_bytes_total has a single "op" label, so keys are just "read" / "write" -->
 					<MetricBarChart
@@ -231,9 +233,7 @@
 
 			<!-- Activity Counters — includes new deletions and filter loads from #104 -->
 			<section>
-				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
-					Activity
-				</h2>
+				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">Activity</h2>
 				<div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
 					<MetricGraph
 						label="File Copies"
@@ -334,9 +334,7 @@
 
 			<!-- Network -->
 			<section>
-				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
-					Network
-				</h2>
+				<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">Network</h2>
 				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 					<MetricGraph
 						label="Network Receive"
