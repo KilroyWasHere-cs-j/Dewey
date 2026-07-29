@@ -49,6 +49,8 @@ func main() {
 	pm.RegisterHook("OnInit")
 	pm.RegisterHook("OnFilter")
 	pm.RegisterHook("OnTick")
+	pm.RegisterHook("OnUpload")
+	pm.RegisterHook("OnDelete")
 	if err := pm.LoadPlugins(); err != nil {
 		Warn("Failed to load plugins: " + err.Error())
 	}

@@ -435,6 +435,7 @@ func uploadFile(c *gin.Context) {
 //   - 500 Internal Server Error: filesystem or DB failure
 func deleteFile(c *gin.Context) {
 	filename := filepath.Base(c.Param("filename")) // prevent path traversal
+	pm := c.MustGet("plugins").(*PluginManger)
 	dbm := c.MustGet("db").(*DatabaseManager)
 
 	storeRelPath, err := dbm.pullRecordByFilename(filename)
@@ -442,6 +443,19 @@ func deleteFile(c *gin.Context) {
 		Warn("file record not found: " + err.Error())
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "File not found",
+		})
+		return
+	}
+
+	// OnDelete runs synchronously, before anything is actually removed —
+	// unlike OnFilter/OnUpload, no response has been sent yet at this
+	// point, so a plugin calling error(...) genuinely vetoes the deletion
+	// instead of racing an already-sent 200 OK.
+	entry := DBEntry{Filename: filename, Path: storeRelPath}
+	if _, err := pm.RunByHook("OnDelete", entry); err != nil {
+		Warn("deletion vetoed by plugin: " + err.Error())
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Deletion blocked by plugin: " + err.Error(),
 		})
 		return
 	}
