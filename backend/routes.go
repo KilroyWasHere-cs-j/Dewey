@@ -163,7 +163,7 @@ func listFiles(c *gin.Context) {
 
 func uploadFile(c *gin.Context) {
 	Debug("uploadFile")
-	pm := c.MustGet("plugins").(*PluginManager)
+	pm := c.MustGet("plugins").(*PluginManger)
 	dbm := c.MustGet("db").(*DatabaseManager)
 
 	// MaxMultipartMemory only controls the in-memory/disk threshold while
