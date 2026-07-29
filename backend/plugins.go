@@ -33,6 +33,10 @@ type PluginManger struct {
 	// salience descending. This is the actual dispatch table RunByHook uses.
 	hooks         map[string][]Plugin
 	loadedPlugins []Plugin
+	// dir is where LoadPlugins reads plugin files from. Defaults to the
+	// package-level pluginDir const; tests override it with a temp
+	// directory so they don't have to touch the real plugins/ folder.
+	dir string
 }
 
 func NewPluginManger() *PluginManger {
@@ -40,12 +44,13 @@ func NewPluginManger() *PluginManger {
 		registeredHooks: make(map[string]struct{}),
 		hooks:           make(map[string][]Plugin),
 		loadedPlugins:   make([]Plugin, 0),
+		dir:             pluginDir,
 	}
 }
 
 // Plugin loader
 func (pm *PluginManger) LoadPlugins() error {
-	entries, err := os.ReadDir(pluginDir)
+	entries, err := os.ReadDir(pm.dir)
 	if err != nil {
 		Warn("Unable to read plugin directory: " + err.Error())
 		return err
@@ -58,7 +63,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		// so a plugin missing WhoAmI silently inherited the previous
 		// plugin's type/salience instead of failing to classify.
 		L := lua.NewState()
-		if err := L.DoFile(filepath.Join(pluginDir, entry.Name())); err != nil {
+		if err := L.DoFile(filepath.Join(pm.dir, entry.Name())); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
 			L.Close()
 			continue
@@ -113,7 +118,7 @@ func (pm *PluginManger) LoadPlugins() error {
 
 		// Build a per-plugin state pool. Capturing pluginFile by value in the
 		// closure avoids the loop variable capture bug.
-		pluginFile := filepath.Join(pluginDir, entry.Name())
+		pluginFile := filepath.Join(pm.dir, entry.Name())
 		pool := &sync.Pool{
 			New: func() any {
 				state := lua.NewState()
