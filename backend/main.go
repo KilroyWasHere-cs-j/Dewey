@@ -42,13 +42,22 @@ func main() {
 	Banner()
 
 	Section("Plugins")
-	pm := NewPluginManager()
+	pm := NewPluginManger()
 	defer pm.Close()
+	// Hooks must be registered before LoadPlugins runs — LoadPlugins only
+	// checks plugin files against already-registered hook names.
+	pm.RegisterHook("OnInit")
+	pm.RegisterHook("OnFilter")
+	pm.RegisterHook("OnTick")
+	pm.RegisterHook("OnUpload")
+	pm.RegisterHook("OnDelete")
 	if err := pm.LoadPlugins(); err != nil {
 		Warn("Failed to load plugins: " + err.Error())
 	}
 	pm.ListPlugins()
-	pm.RunPlugins(Init)
+	if _, err := pm.RunByHook("OnInit", DBEntry{}); err != nil {
+		Warn("Failed to run OnInit: " + err.Error())
+	}
 
 	Section("Daemon")
 	ctx, cancel := context.WithCancel(context.Background())

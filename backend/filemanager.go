@@ -62,7 +62,7 @@ var postProcessingSem = make(chan struct{}, maxConcurrentPostProcessing)
 // but bounds how many run at once via postProcessingSem — excess uploads
 // queue behind the semaphore instead of every one running its Lua filter
 // plugins and disk copy concurrently.
-func queueIdAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
+func queueIdAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
 	go func() {
 		postProcessingSem <- struct{}{}
 		defer func() { <-postProcessingSem }()
@@ -70,7 +70,7 @@ func queueIdAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash s
 	}()
 }
 
-func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
+func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
 	entry := DBEntry{
 		Filename: filename,
 		Act:      metaData.ACTsID,
@@ -93,9 +93,19 @@ func idAndSort(pm *PluginManager, dbm *DatabaseManager, path string, hash string
 		entry.Barcode = "Nil"
 	}
 
-	runFilter := pm.RunPlugins(Filter)
+	// OnUpload fires first — a notification hook for plugins that just want
+	// to observe/log/tag the incoming file — then OnFilter decides Path.
+	// Both run here (async, after the 200 OK is already sent) rather than
+	// synchronously in uploadFile, so neither can veto the upload itself.
 	atomic.AddInt64(&PluginRuns, 1)
-	entry, err := runFilter(entry)
+	entry, err := pm.RunByHook("OnUpload", entry)
+	if err != nil {
+		Warn("Failed to run OnUpload: " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
+	}
+
+	atomic.AddInt64(&PluginRuns, 1)
+	entry, err = pm.RunByHook("OnFilter", entry)
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())
 		atomic.AddInt64(&PluginErrors, 1)
