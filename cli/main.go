@@ -9,6 +9,12 @@ import (
 
 const defaultHost = "http://localhost:8080"
 
+const (
+	colorReset = "\033[0m"
+	colorRed   = "\033[31m"
+	colorGreen = "\033[32m"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: dewey-cli <command>")
@@ -35,16 +41,20 @@ func main() {
 func get(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "request failed:", err)
+		fmt.Fprintln(os.Stderr, colorRed+"request failed:"+colorReset, err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "reading response failed:", err)
+		fmt.Fprintln(os.Stderr, colorRed+"reading response failed:"+colorReset, err)
 		os.Exit(1)
 	}
 
-	fmt.Println(string(body))
+	color := colorGreen
+	if resp.StatusCode >= 400 {
+		color = colorRed
+	}
+	fmt.Println(color + string(body) + colorReset)
 }
