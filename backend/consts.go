@@ -25,9 +25,6 @@ const maxOpenDBConnections = 10         // maximum allowable open connections
 const maxIdleDBConnections = 10         // maximum allowable idle connections
 const dbConnectionTimeoutMultiplier = 2 // in minutes
 
-// Prometheus server
-const prometheusServer = ":8081"
-
 // Plugin specific constants
 const pluginDir = "./plugins" // Directory where plugins live
 
