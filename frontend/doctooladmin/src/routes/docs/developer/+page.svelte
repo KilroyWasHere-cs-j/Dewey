@@ -90,16 +90,18 @@
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">2</span><span><strong class="text-gray-700 dark:text-gray-200">Validate</strong> — extension checked against an allowlist; file header bytes checked for PE (Windows) and ELF (Linux) executable signatures. Both checks must pass.</span></li>
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span><strong class="text-gray-700 dark:text-gray-200">Cache</strong> — file is written to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./cache</code> with a Unix timestamp prefix to avoid collisions. SHA-256 hash is computed.</span></li>
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">4</span><span><strong class="text-gray-700 dark:text-gray-200">Barcode scan</strong> — the cached file is scanned via gozxing. Result stored in the DB entry.</span></li>
-					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">5</span><span><strong class="text-gray-700 dark:text-gray-200">Plugin filter</strong> — all registered Filter plugins run in salience order, each able to mutate the file's destination path.</span></li>
-					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">6</span><span><strong class="text-gray-700 dark:text-gray-200">Store</strong> — file is copied from cache to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./store</code> at the path determined by the plugin chain.</span></li>
-					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">7</span><span><strong class="text-gray-700 dark:text-gray-200">Record</strong> — a row is inserted into the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">files</code> table and a row into the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">meta</code> table.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">5</span><span><strong class="text-gray-700 dark:text-gray-200">OnUpload plugins</strong> — a tag-only notification hook (can't veto the upload), able to mutate metadata such as <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">entry.Meta</code>.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">6</span><span><strong class="text-gray-700 dark:text-gray-200">OnFilter plugins</strong> — all registered OnFilter plugins run in salience order, each able to mutate the file's destination path.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">7</span><span><strong class="text-gray-700 dark:text-gray-200">Store</strong> — file is copied from cache to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./store</code> at the path determined by the plugin chain.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">8</span><span><strong class="text-gray-700 dark:text-gray-200">Record</strong> — a row is inserted into the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">files</code> table and a row into the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">meta</code> table.</span></li>
 				</ol>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">File Retrieval</h3>
 				<p class="text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /files/:filename/false</code> —
 					checks cache first; falls back to a DB path lookup. Returns the file stream directly.
-					Metadata retrieval (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/false</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/true</code>) is planned but not yet implemented.
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /files/:filename/true</code> returns
+					the file's metadata record as JSON instead of streaming its bytes.
 				</p>
 			</section>
 
@@ -289,46 +291,53 @@
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Plugin System</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Plugins are Lua scripts dropped into <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./plugins/</code>.
-					They are loaded at startup by the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">PluginManager</code> and
-					executed by GopherLua. Each plugin must export two functions: <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code> and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">Begin</code>.
+					They are loaded at startup by the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">PluginManger</code> against
+					a dynamic registry of hook names Go registers up front — there's no fixed set of plugin "types" baked into the
+					loader. Every plugin exports <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code>, plus one function
+					per hook it wants to attach to, named exactly after that hook. A single file can implement more than one hook.
 				</p>
 
-				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Plugin Types</h3>
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Hooks</h3>
 				<div class="mb-4 overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
 							<tr class="border-b border-gray-200 text-left dark:border-gray-700">
-								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Type</th>
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Hook</th>
 								<th class="pb-2 font-semibold text-gray-700 dark:text-gray-200">When it runs</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-100 text-xs dark:divide-gray-700">
-							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">filter</td><td class="py-2 text-gray-600 dark:text-gray-400">On every file upload. Can mutate the destination path (<code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">entry.Path</code>).</td></tr>
-							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">script</td><td class="py-2 text-gray-600 dark:text-gray-400">On every file upload. Can mutate metadata fields (<code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">entry.Meta</code>, <code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">entry.Act</code>).</td></tr>
-							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">init</td><td class="py-2 text-gray-600 dark:text-gray-400">Once at server startup. Intended for one-time setup. (Stub — not yet fully implemented.)</td></tr>
-							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">tick</td><td class="py-2 text-gray-600 dark:text-gray-400">On each daemon cycle. Intended for periodic tasks. (Stub — not yet fully implemented.)</td></tr>
+							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">OnUpload</td><td class="py-2 text-gray-600 dark:text-gray-400">Once per upload, during async post-processing, before OnFilter. Runs after the 200 OK is already sent, so it can't veto the upload — tag-only (e.g. write into <code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">entry.Meta</code>).</td></tr>
+							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">OnFilter</td><td class="py-2 text-gray-600 dark:text-gray-400">Once per upload, during async post-processing. Can mutate the destination path (<code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">entry.Path</code>).</td></tr>
+							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">OnDelete</td><td class="py-2 text-gray-600 dark:text-gray-400">Once per delete request, synchronously, before anything is removed. Calling <code class="rounded bg-gray-100 px-0.5 dark:bg-gray-700">error(...)</code> vetoes the deletion — the caller gets a 403 instead.</td></tr>
+							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">OnInit</td><td class="py-2 text-gray-600 dark:text-gray-400">Once at server startup. Registered and invoked; no shipped example plugin.</td></tr>
+							<tr><td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">OnTick</td><td class="py-2 text-gray-600 dark:text-gray-400">Once per daemon tick. Registered and invoked; no shipped example plugin.</td></tr>
 						</tbody>
 					</table>
 				</div>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Plugin Structure</h3>
 				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
-					Every plugin must implement these two Lua functions:
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code> reports salience only — which hook(s) a plugin
+					attaches to comes entirely from the hook-named functions it defines, e.g. <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">OnFilter(entry)</code>:
 				</p>
-				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">-- WhoAmI declares the plugin's type and salience (execution priority).
--- Higher salience runs first within the same bucket.
+				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">-- Salience determines this plugin's run order relative to other OnFilter
+-- plugins (higher runs first). WhoAmI reports salience only — which hook
+-- this plugin attaches to comes from the OnFilter function name below.
+Salience = 10
+
 function WhoAmI()
-    return "filter", 10
+    return Salience
 end
 
--- Begin receives the file entry table and returns a (possibly modified) copy.
--- The fields available depend on plugin type.
-function Begin(entry)
+-- OnFilter receives the file entry table and returns a (possibly modified)
+-- copy.
+function OnFilter(entry)
     -- entry.Filename  — timestamped filename (e.g. "1700000000_report.pdf")
     -- entry.Act       — ACTs ID from upload metadata
     -- entry.Hash      — SHA-256 hash of the file
-    -- entry.Path      — destination path (filter plugins should modify this)
-    -- entry.Meta      — metadata string (script plugins can modify this)
+    -- entry.Path      — destination path (OnFilter should modify this)
+    -- entry.Meta      — metadata string
     -- entry.Barcode   — decoded barcode text, or "Nil" if none found
 
     -- Example: sort PDFs into a subdirectory
@@ -341,9 +350,10 @@ end</code></pre>
 
 				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Salience</h3>
 				<p class="text-sm text-gray-600 dark:text-gray-300">
-					The second return value from <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code> is the salience.
-					Higher numbers run first. Use salience to control ordering when multiple plugins of the same type are loaded.
-					Plugins with equal salience run in an undefined order.
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code>'s return value is the salience.
+					Higher numbers run first. Use salience to control ordering when multiple plugins attach to the same hook.
+					Plugins with equal salience run in an undefined order. Each plugin runs in its own isolated Lua state
+					(via a per-plugin <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">sync.Pool</code>), so one plugin's globals can't leak into another's.
 				</p>
 			</section>
 
@@ -469,7 +479,7 @@ end</code></pre>
 				<ol class="mb-4 space-y-1 text-sm text-gray-600 dark:text-gray-300">
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">1</span><span>Clears all files from <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./cache</code> (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dumpCache</code>).</span></li>
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">2</span><span>Creates a timestamped zip of <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./store</code> in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./backup</code> (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">save</code>).</span></li>
-					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span>Runs all registered Tick plugins.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span>Runs all registered OnTick plugins.</span></li>
 				</ol>
 				<p class="text-sm text-gray-600 dark:text-gray-300">
 					The daemon uses an <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">observableTicker</code> wrapper around

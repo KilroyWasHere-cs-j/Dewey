@@ -361,7 +361,7 @@
 							problem: 'Plugin Errors showing in Analytics',
 							causes: [
 								'A Lua plugin script has a runtime error.',
-								'A plugin\'s Begin() function returned an unexpected type.',
+								'A plugin\'s hook function (e.g. OnFilter, OnUpload) returned an unexpected type instead of the entry table.',
 							],
 							fix: 'Check the backend logs for WARN lines containing "plugin". The error message will include the plugin name and the Lua error. Fix the plugin script in ./plugins/ — it is reloaded on the next server start.'
 						},

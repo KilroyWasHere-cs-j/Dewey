@@ -75,7 +75,7 @@ func (o *observableTicker) Remaining() time.Duration {
 	return rem
 }
 
-func startDaemon(ctx context.Context, pm *PluginManager) {
+func startDaemon(ctx context.Context, pm *PluginManger) {
 	// Debug("starting cache clear daemon")
 
 	daemonTicker = newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
@@ -103,7 +103,9 @@ func startDaemon(ctx context.Context, pm *PluginManager) {
 					if err == nil {
 						atomic.AddInt64(&FilesInBackUp, 1)
 					}
-					pm.RunPlugins(Tick)
+					if _, err := pm.RunByHook("OnTick", DBEntry{}); err != nil {
+						Warn("Failed to run OnTick: " + err.Error())
+					}
 				}()
 
 			case <-ctx.Done():
