@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 // GET ?meta=true  → returns MetaData JSON from the backend
@@ -33,7 +34,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 			}
 		});
 	} catch (error) {
-		return json({ error: 'Request failed', details: String(error) }, { status: 500 });
+		return proxyError('Request failed', error);
 	}
 };
 
@@ -52,6 +53,6 @@ export const DELETE: RequestHandler = async ({ params }) => {
 
 		return json({ ok: true });
 	} catch (error) {
-		return json({ error: 'Request failed', details: String(error) }, { status: 500 });
+		return proxyError('Request failed', error);
 	}
 };

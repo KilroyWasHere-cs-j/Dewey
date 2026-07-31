@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -10,7 +11,7 @@ export const GET: RequestHandler = async () => {
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
-		return json({ error: 'Failed to list files', details: String(error) }, { status: 500 });
+		return proxyError('Failed to list files', error);
 	}
 };
 
@@ -31,6 +32,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const body = await res.json();
 		return json(body, { status: res.status });
 	} catch (error) {
-		return json({ error: 'Upload failed', details: String(error) }, { status: 500 });
+		return proxyError('Upload failed', error);
 	}
 };

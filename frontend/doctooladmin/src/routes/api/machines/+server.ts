@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -10,7 +11,7 @@ export const GET: RequestHandler = async () => {
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
-		return json({ error: 'Failed to list machines', details: String(error) }, { status: 500 });
+		return proxyError('Failed to list machines', error);
 	}
 };
 
@@ -28,6 +29,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const data = await res.json();
 		return json(data, { status: res.status });
 	} catch (error) {
-		return json({ error: 'Failed to add machine', details: String(error) }, { status: 500 });
+		return proxyError('Failed to add machine', error);
 	}
 };
