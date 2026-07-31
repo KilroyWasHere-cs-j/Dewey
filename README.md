@@ -14,6 +14,7 @@ A backend file sorting and storage service with a RESTful API, built for stable 
 - [Plugin System](#plugin-system)
 - [Technology Stack](#technology-stack)
 - [External Libraries](#external-libraries)
+- [Testing](#testing)
 - [Deployment & Packaging](#deployment--packaging)
 - [Roadmap](#roadmap)
 
@@ -48,7 +49,7 @@ Dewey ingests uploaded files, validates and sorts them, and exposes them again t
 - Structured, rotating logger
 
 **Extensibility**
-- Lua plugin system with `Filter`, `Script`, `Init`, and `Tick` hook types
+- Lua plugin system with a dynamic hook registry (`OnUpload`, `OnFilter`, `OnDelete`, `OnInit`, `OnTick`) — a plugin attaches to a hook simply by defining a function with that name
 - (Planned) plugin validation
 - (Planned) self restart and cleanup
 
@@ -97,9 +98,10 @@ flowchart TD
     G --> H{"Image extension?"}
     H -- Yes --> I["Scan Code128 barcode"]
     H -- No --> J["Barcode = Nil"]
-    I --> K["Run Filter plugins in salience order"]
+    I --> K["Run OnUpload plugins (tag-only, can't veto)"]
     J --> K
-    K --> L["Copy file: cache/ -> store/"]
+    K --> K2["Run OnFilter plugins in salience order (can rewrite Path)"]
+    K2 --> L["Copy file: cache/ -> store/"]
     L --> M["Create files + meta DB records"]
 ```
 
@@ -128,7 +130,7 @@ A background ticker (default interval: hourly, see `daemonTickTime` in `consts.g
 flowchart LR
     T(("Hourly tick")) --> A["Clear cache/"]
     A --> B["Zip store/ into a timestamped file under backup/"]
-    B --> C["Run Tick plugins"]
+    B --> C["Run OnTick plugins"]
 ```
 
 ## API Reference
@@ -152,16 +154,19 @@ All routes below sit behind the IP-allowlist middleware (`known_machines`), whic
 
 ## Plugin System
 
-Sorting and filtering logic is written in Lua rather than hardcoded in Go, so it can change without a rebuild. Plugin files live in `backend/plugins/` and are loaded from `pluginDir` at startup. Each plugin declares a `WhoAmI()` function returning its hook type and salience, and a `Begin(entry)` function that receives (and can modify) the file's DB entry as a Lua table.
+Sorting and filtering logic is written in Lua rather than hardcoded in Go, so it can change without a rebuild. Plugin files live in `backend/plugins/` and are loaded from `pluginDir` at startup, against a dynamic registry of hook names Go registers up front (`main.go`) — there's no fixed set of plugin "types" baked into the loader.
 
-| Hook type | Runs | Status |
+Every plugin declares a `WhoAmI()` function returning its salience only. Which hook(s) it attaches to comes from the global functions it defines: a file attaches to a hook by defining a function with that hook's exact name (e.g. `OnFilter(entry)`), and a single file can implement more than one hook. Each such function receives the file's DB entry as a Lua table and returns the (possibly modified) table back.
+
+| Hook | Runs | Notes |
 |---|---|---|
-| `Filter` | Once per upload, during post-processing | Can rewrite the file's destination `Path` |
-| `Script` | Once per upload, during post-processing | Can rewrite `Meta`/`Act` fields |
-| `Init` | Once at server startup | Registered but currently a no-op |
-| `Tick` | Once per daemon tick | Registered but currently a no-op |
+| `OnUpload` | Once per upload, during async post-processing, before `OnFilter` | Fires after the `200 OK` is already sent, so it can't veto the upload — tag-only (e.g. write into `Meta`) |
+| `OnFilter` | Once per upload, during async post-processing | Can rewrite the file's destination `Path` |
+| `OnDelete` | Once per delete request, synchronously, before anything is removed | Calling `error(...)` vetoes the deletion — the caller gets a `403` instead |
+| `OnInit` | Once at server startup | Registered and invoked; no shipped example plugin |
+| `OnTick` | Once per daemon tick | Registered and invoked; no shipped example plugin |
 
-Within a hook type, plugins run in descending salience order (highest first), each in its own isolated Lua state so one plugin's globals can't leak into another's.
+Within a hook, plugins run in descending salience order (highest first), each in its own isolated Lua state (via a per-plugin `sync.Pool`) so one plugin's globals can't leak into another's. Example plugins for `OnFilter`, `OnUpload`, and `OnDelete` ship in `backend/plugins/`.
 
 ## Technology Stack
 
@@ -182,7 +187,12 @@ The frontend admin portal is built with Svelte, giving a reactive UI with HTML-l
 | [prometheus/client_golang](https://github.com/prometheus/client_golang) + [go-gin-prometheus](https://github.com/zsais/go-gin-prometheus) | Metrics collection and exposition |
 | [golang.org/x/time](https://pkg.go.dev/golang.org/x/time/rate) | Token-bucket rate limiting for the HTTP API |
 
-`go.mod` also still carries `go-sqlite3` and CGO Lua bindings (`golua`, `luar`) left over from an earlier architecture — they aren't used by any current code path (#165).
+## Testing
+
+Two layers of tests cover the backend:
+
+- **Go unit tests** (`go test ./...` from `backend/`) — cover the pure-logic pieces in isolation: `filevalidator_test.go` exercises PE/ELF binary sniffing and extension/content-type matching, and `plugins_test.go` exercises hook registration, plugin loading/attachment, salience ordering, and `OnDelete`'s veto behavior. These run in CI on every push/PR (`.github/workflows/go.yml`).
+- **BITs** (Built-In Tests, `backend/testing_tooling/test_suite.sh`) — a black-box HTTP suite that runs against a live server, hitting real endpoints (uploads with randomized metadata, error cases, health checks) rather than calling Go functions directly. The server launches this suite automatically in the background on every startup (see the `BITs` section in `main.go`) so a bad deploy fails loudly instead of silently; it can also be run manually against any base URL: `./test_suite.sh http://localhost:8080`.
 
 ## Deployment & Packaging
 
