@@ -242,8 +242,8 @@ fi
 echo ""
 log "info" "Next steps:"
 echo -e "  ${DIM}\xe2\x94\x82${NC} List running containers:      ${CYAN}podman ps --pod${NC}"
-echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f cross-doc-tool-dev${NC}"
-echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach cross-doc-tool-dev${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f dewey-pod-cross-doc-tool-dev${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach dewey-pod-cross-doc-tool-dev${NC}"
 echo ""
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
