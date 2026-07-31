@@ -33,8 +33,13 @@ backend/logs
 backend/cache
 backend/backup
 
+# Shell script run logs
+logs/
+backend/testing_tooling/logs/
+
 # Compiled binary
 backend/Dewey
+cli/dewey-cli
 
 # Mac file
 .DS_Store

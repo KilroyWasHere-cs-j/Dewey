@@ -6,6 +6,16 @@ BASE="${BASE%/}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOWNLOAD_DIR="$(mktemp -d)"
 
+# --- LOGGING ---
+# Mirror both streams into a timestamped log file, keeping stdout (structured
+# PASS/FAIL results) and stderr (human-readable progress) separately teed so
+# neither stream's meaning changes for callers piping this script's output.
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/test_suite-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
+echo >&2 "Logging output to $LOG_FILE"
+
 PASS=0
 FAIL=0
 SKIP=0

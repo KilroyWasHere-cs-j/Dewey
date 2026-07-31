@@ -3,6 +3,16 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# --- LOGGING ---
+# Mirror everything printed to the terminal into a timestamped log file so a
+# run can be reviewed or attached to a bug report after the fact.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/package-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "Logging output to $LOG_FILE"
+
 # --- COLOR DEFINITIONS ---
 NC='\033[0m'
 BOLD='\033[1m'
