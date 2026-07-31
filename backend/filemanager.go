@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -66,6 +67,11 @@ func queueIdAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash st
 	go func() {
 		postProcessingSem <- struct{}{}
 		defer func() { <-postProcessingSem }()
+		defer func() {
+			if r := recover(); r != nil {
+				Warn("Recovered from panic in post-processing goroutine: " + fmt.Sprintf("%v", r))
+			}
+		}()
 		idAndSort(pm, dbm, path, hash, filename, metaData)
 	}()
 }
