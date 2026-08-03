@@ -199,7 +199,7 @@ echo ""
 echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
-echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         ${HOST_IP}:3306"
+echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         not published to the LAN (issue #200); reachable inside the pod only"
 echo ""
 
 # --- HEALTH CHECKS ---

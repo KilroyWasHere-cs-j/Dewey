@@ -106,12 +106,16 @@ section "Pod Creation"
 log "info" "Creating dewey-pod..."
 log "info" "Resource limits: ${POD_CPUS} CPUs, ${POD_MEMORY} memory (override via DEWEY_POD_CPUS/DEWEY_POD_MEMORY)"
 # Added 9090 here so Prometheus is accessible externally
+# 3306 is intentionally not published here (issue #200) — MySQL only needs
+# to be reachable inside the pod's network (backend talks to it over
+# 127.0.0.1), not from the LAN. The app's only access control
+# (known_machines IP allowlist) guards HTTP routes, not the database itself,
+# so publishing 3306 let anyone on the LAN connect straight to MySQL.
 podman pod create --infra=true \
   --cpus "$POD_CPUS" \
   --memory "$POD_MEMORY" \
   -p 8080:8080 \
   -p 3000:3000 \
-  -p 3306:3306 \
   -p 9090:9090 \
   dewey-pod
 
@@ -126,12 +130,31 @@ else
   log "info" "Keeping existing mysql-data volume (pass --reset-db to wipe)"
 fi
 
+# Root password used to be hardcoded (issue #200), meaning "dewey" was the
+# permanent root password for every deployment this script produced. Instead,
+# generate a random one and persist it in a local, gitignored file so it
+# survives re-deploys that keep mysql-data — MySQL only honors
+# MYSQL_ROOT_PASSWORD on first init of an empty data dir, so if the volume
+# survives but the password doesn't, the backend's new DSN stops matching
+# what's actually in the (still-initialized) database. Only regenerate when
+# --reset-db has just wiped that volume, since that's the one case where the
+# next container init will actually apply a new password.
+MYSQL_PASSWORD_FILE=".mysql-root-password"
+if [ "$RESET_DB" = true ] || [ ! -f "$MYSQL_PASSWORD_FILE" ]; then
+  log "info" "Generating new MySQL root password..."
+  MYSQL_ROOT_PASSWORD="$(openssl rand -hex 24)"
+  printf '%s' "$MYSQL_ROOT_PASSWORD" > "$MYSQL_PASSWORD_FILE"
+  chmod 600 "$MYSQL_PASSWORD_FILE"
+else
+  MYSQL_ROOT_PASSWORD="$(cat "$MYSQL_PASSWORD_FILE")"
+fi
+
 # Pinned rather than :latest (issue #207) — package.sh bundles whatever tag
 # is actually running so offline deploys get the exact version this was
 # tested against, instead of silently pulling a different one later.
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
-  -e MYSQL_ROOT_PASSWORD=dewey \
+  -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
   -e MYSQL_DATABASE=deweyRecords \
   -v mysql-data:/var/lib/mysql:Z \
   docker.io/library/mysql:9.7.0
@@ -200,7 +223,11 @@ log "info" "Starting backend container..."
 # Named volumes for store/cache/backup/logs. By default these are wiped above
 # on every deploy; pass --keep-data to let them survive pod recreation instead,
 # the same way mysql-data does for the database.
+# DB_DSN is now required (issue #200) — db.go no longer has a hardcoded
+# fallback, so it must be passed the same generated root password MySQL
+# was started with above.
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
+  -e DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/deweyRecords" \
   -v dewey-store:/app/store:Z \
   -v dewey-cache:/app/cache:Z \
   -v dewey-backup:/app/backup:Z \
@@ -247,7 +274,7 @@ echo ""
 echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
-echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         ${HOST_IP}:3306"
+echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         not published to the LAN (issue #200); reachable inside the pod only"
 echo ""
 
 # --- HEALTH CHECKS ---

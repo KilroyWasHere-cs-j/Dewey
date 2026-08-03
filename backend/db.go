@@ -37,11 +37,13 @@ type DatabaseManager struct {
 }
 
 // NewDatabaseManager initializes and verifies the database connection pool.
-// Reads connection string from DB_DSN env var, falls back to local dev default.
+// Reads connection string from the required DB_DSN env var — no hardcoded
+// fallback (issue #200), since a fallback credential baked into the binary
+// would be the same password for every deployment that forgets to set one.
 func NewDatabaseManager() (*DatabaseManager, error) {
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
-		dsn = "root:dewey@tcp(127.0.0.1:3306)/deweyRecords"
+		return nil, fmt.Errorf("DB_DSN environment variable is required")
 	}
 
 	db, err := sql.Open("mysql", dsn)
