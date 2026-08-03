@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 export interface AppMetrics {
@@ -158,14 +159,7 @@ export const GET: RequestHandler = async () => {
 
 		return json(metrics);
 	} catch (error) {
-		console.error('Failed to fetch metrics:', error);
-		return json(
-			{
-				error: 'Failed to fetch metrics',
-				details: error instanceof Error ? error.message : String(error)
-			},
-			{ status: 500 }
-		);
+		return proxyError('Failed to fetch metrics', error);
 	}
 };
 
