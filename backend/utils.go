@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -92,7 +93,7 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 				func() {
 					defer func() {
 						if r := recover(); r != nil {
-							// Warn("daemon panic recovered")
+							Warn(fmt.Sprintf("daemon panic recovered: %v", r))
 						}
 					}()
 					if err := dumpCache(); err != nil {
