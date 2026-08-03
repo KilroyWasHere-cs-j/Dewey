@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync/atomic"
 )
 
@@ -117,7 +118,16 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		atomic.AddInt64(&PluginErrors, 1)
 	}
 
-	new_path := filepath.Join(fileSystemBaseDir, entry.Path)
+	// entry.Path is fully attacker-controllable by this point — OnFilter just
+	// ran and any Lua plugin can set it to arbitrary text (issue #202). Reject
+	// anything that resolves outside fileSystemBaseDir before it's ever used
+	// for a filesystem write, rather than trusting filepath.Join alone.
+	new_path, err := resolveStorePath(fileSystemBaseDir, entry.Path)
+	if err != nil {
+		Warn("Rejected plugin-supplied path escaping store directory: " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
+		return
+	}
 	err = CopyFile(
 		filepath.Join(uploadDir, path),
 		new_path,
@@ -140,6 +150,27 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 
 	atomic.AddInt64(&FilesInStore, 1)
 	atomic.AddInt64(&FileSorts, 1)
+}
+
+// resolveStorePath joins rel onto base and confirms the result still lives
+// under base, rejecting anything that escapes it (issue #202). filepath.Join
+// already runs filepath.Clean, which collapses "../" segments — but Clean
+// alone can't tell "this walked past base" from "this legitimately reaches
+// outside", so the prefix check below is still required.
+//
+// The check appends a trailing separator to base before comparing so that a
+// sibling directory sharing base's name as a prefix (e.g. base
+// "/app/store" and rel "../store-evil" cleaning to "/app/store-evil")
+// isn't mistaken for a path inside it.
+func resolveStorePath(base, rel string) (string, error) {
+	full := filepath.Join(base, rel)
+	baseClean := filepath.Clean(base)
+
+	if full != baseClean && !strings.HasPrefix(full, baseClean+string(os.PathSeparator)) {
+		return "", fmt.Errorf("path %q escapes base directory %q", rel, base)
+	}
+
+	return full, nil
 }
 
 func CopyFile(src, dst string) error {
