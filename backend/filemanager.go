@@ -127,8 +127,16 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		return
 	}
 
-	dbm.createNewFileRecord(entry)
-	dbm.CreateNewMetaDataRecord(metaData)
+	// createNewFileRecord's returned id links the metadata row to this exact
+	// file via meta.file_id (issue #228), instead of the client-suppliable
+	// acts_id string previously used to join files and meta. Without a valid
+	// file id there's nothing correct to link a meta row to, so skip it —
+	// createNewFileRecord has already logged and counted the failure.
+	fileID, err := dbm.createNewFileRecord(entry)
+	if err != nil {
+		return
+	}
+	dbm.CreateNewMetaDataRecord(metaData, fileID)
 
 	atomic.AddInt64(&FilesInStore, 1)
 	atomic.AddInt64(&FileSorts, 1)

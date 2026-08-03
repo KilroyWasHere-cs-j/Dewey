@@ -68,13 +68,19 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 }
 
 // createNewFileRecord manages writing a new record safely within a database transaction.
-func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) {
+// Returns the row's auto-generated id so the caller can link a MetaData
+// record to this exact file via a real foreign key (issue #228), instead of
+// the client-suppliable acts_id string previously used to join files and
+// meta — that string had no uniqueness guarantee, so two uploads sharing an
+// acts_id (or both leaving it blank) could return the wrong claimant's
+// metadata.
+func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) (int64, error) {
 	tx, err := dm.db.Begin()
 
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return 0, err
 	}
 	// Deferring Rollback ensures resources are cleaned up if any step fails.
 	// If tx.Commit() succeeds, Rollback() does nothing.
@@ -85,21 +91,34 @@ func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) {
 	query := `INSERT INTO files (filename, acts_id, sha256_hash, created_at, filepath, is_deleted, barcode)
 	          VALUES (?, ?, ?, ?, ?, ?, ?)`
 
-	_, err = tx.Exec(query, entry.Filename, entry.Act, entry.Hash, now, entry.Path, 0, entry.Barcode)
+	result, err := tx.Exec(query, entry.Filename, entry.Act, entry.Hash, now, entry.Path, 0, entry.Barcode)
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return 0, err
+	}
+
+	fileID, err := result.LastInsertId()
+	if err != nil {
+		Warn("Failed to read inserted file id: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
+		return 0, err
 	}
 
 	if err := tx.Commit(); err != nil {
 		Warn("Failed to commit transaction: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return 0, err
 	}
+
+	return fileID, nil
 }
 
-func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
+// CreateNewMetaDataRecord inserts a claim metadata row linked to fileID via
+// meta.file_id (issue #228) — a real foreign key populated from the files
+// row's own auto-increment id, rather than the client-suppliable acts_id
+// string previously used to join the two tables.
+func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData, fileID int64) {
 	tx, err := dm.db.Begin()
 
 	if err != nil {
@@ -111,10 +130,10 @@ func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData) {
 	// If tx.Commit() succeeds, Rollback() does nothing.
 	defer tx.Rollback()
 
-	query := `INSERT INTO meta (claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id)
-		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO meta (claim_number, claimant_name, date_of_injury, employer, adjuster, support, claim_type, jurisdiction, policy_number, acts_id, file_id)
+		          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	_, err = tx.Exec(query, metaData.ClaimNumber, metaData.ClaimantName, metaData.DateOfInjury, metaData.Employer, metaData.Adjuster, metaData.Support, metaData.ClaimType, metaData.Jurisdiction, metaData.PolicyNumber, metaData.ACTsID)
+	_, err = tx.Exec(query, metaData.ClaimNumber, metaData.ClaimantName, metaData.DateOfInjury, metaData.Employer, metaData.Adjuster, metaData.Support, metaData.ClaimType, metaData.Jurisdiction, metaData.PolicyNumber, metaData.ACTsID, fileID)
 
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
@@ -146,7 +165,11 @@ func (dm *DatabaseManager) pullRecordByFilename(fileName string) (string, error)
 }
 
 // pullMetaByFilename retrieves the metadata record linked to the given filename.
-// Joins files and meta on acts_id so a single query resolves both tables.
+// Joins files and meta on files.id = meta.file_id (issue #228) — a real
+// foreign key populated at insert time — rather than the client-suppliable
+// acts_id string, which had no uniqueness guarantee and could return an
+// arbitrary/wrong claimant's metadata when two uploads shared (or both
+// omitted) the same acts_id.
 func (dm *DatabaseManager) pullMetaByFilename(filename string) (MetaData, error) {
 	var m MetaData
 
@@ -154,7 +177,7 @@ func (dm *DatabaseManager) pullMetaByFilename(filename string) (MetaData, error)
 		SELECT m.claim_number, m.claimant_name, m.date_of_injury, m.employer,
 		       m.adjuster, m.support, m.claim_type, m.jurisdiction, m.policy_number, m.acts_id
 		FROM files f
-		JOIN meta m ON f.acts_id = m.acts_id
+		JOIN meta m ON f.id = m.file_id
 		WHERE f.filename = ? AND f.is_deleted = 0
 		LIMIT 1`
 
@@ -394,6 +417,17 @@ func (dm *DatabaseManager) Migrate() error {
 		return fmt.Errorf("failed to create meta table: %w", err)
 	}
 
+	// meta previously had no real link to files — pullMetaByFilename joined
+	// on the client-suppliable acts_id string, which had no uniqueness
+	// guarantee and could match the wrong claimant's row (issue #228).
+	// file_id is populated at insert time from the files row's own
+	// auto-increment id (see CreateNewMetaDataRecord), so this join is now
+	// deterministic. Added via ALTER rather than in metaQuery's CREATE TABLE
+	// IF NOT EXISTS above, since that statement is a no-op against a table
+	// that already exists from before this fix.
+	dm.addColumnSafe("meta", "file_id", "INT NULL")
+	dm.addForeignKeySafe("meta", "fk_meta_file_id", "file_id", "files", "id")
+
 	machinesQuery := `
 	CREATE TABLE IF NOT EXISTS known_machines (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -449,4 +483,50 @@ func isDuplicateKeyError(err error) bool {
 	// MySQL error code 1061: Duplicate key name
 	msg := err.Error()
 	return strings.Contains(msg, "1061") || strings.Contains(msg, "Duplicate key")
+}
+
+// addColumnSafe adds a column to an existing table and gracefully ignores
+// MySQL's "Duplicate column name" error (1060) if it already exists —
+// mirrors createIndexSafe's re-run-safe pattern for migrations that ALTER
+// a table created by an earlier version of Migrate.
+func (dm *DatabaseManager) addColumnSafe(table, column, definition string) {
+	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
+	_, err := dm.db.Exec(query)
+	if err != nil && !isDuplicateColumnError(err) {
+		fmt.Printf("[MIGRATION WARNING] Could not add column %s.%s: %v\n", table, column, err)
+	}
+}
+
+// Helper function to handle a duplicate column gracefully in MySQL
+func isDuplicateColumnError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// MySQL error code 1060: Duplicate column name
+	msg := err.Error()
+	return strings.Contains(msg, "1060") || strings.Contains(msg, "Duplicate column")
+}
+
+// addForeignKeySafe adds a named foreign key constraint and gracefully
+// ignores MySQL's "Duplicate foreign key constraint name" error (1826) if
+// it already exists.
+func (dm *DatabaseManager) addForeignKeySafe(table, constraintName, column, refTable, refColumn string) {
+	query := fmt.Sprintf(
+		"ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s)",
+		table, constraintName, column, refTable, refColumn,
+	)
+	_, err := dm.db.Exec(query)
+	if err != nil && !isDuplicateConstraintError(err) {
+		fmt.Printf("[MIGRATION WARNING] Could not add foreign key %s: %v\n", constraintName, err)
+	}
+}
+
+// Helper function to handle a duplicate foreign key constraint gracefully in MySQL
+func isDuplicateConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// MySQL error code 1826: Duplicate foreign key constraint name
+	msg := err.Error()
+	return strings.Contains(msg, "1826") || strings.Contains(msg, "Duplicate foreign key constraint")
 }
