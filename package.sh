@@ -198,7 +198,7 @@ log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"
 echo ""
 echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
-echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    not published to the LAN (issue #204); ssh -L 9090:localhost:9090 to reach it"
 echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         not published to the LAN (issue #200); reachable inside the pod only"
 echo ""
 
@@ -223,7 +223,17 @@ check_health() {
 # registering this host in known_machines.
 check_health "Frontend"   "http://localhost:3000"
 check_health "Backend"    "http://localhost:8080/metrics"
-check_health "Prometheus" "http://localhost:9090/-/healthy"
+
+# Prometheus isn't published to the LAN (issue #204), so it's not reachable
+# via localhost from the host either — check the container's running state
+# via podman instead. podman play kube prefixes container names with the
+# pod name, so this is dewey-pod-dewey-prometheus rather than
+# deploy.sh's bare dewey-prometheus.
+if [ "$(podman inspect -f '{{.State.Running}}' dewey-pod-dewey-prometheus 2>/dev/null)" = "true" ]; then
+  log "success" "Prometheus is responding (container running)"
+else
+  log "warn" "Prometheus did not respond"
+fi
 
 # --- KEY METRICS SNAPSHOT ---
 echo ""

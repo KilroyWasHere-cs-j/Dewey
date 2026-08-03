@@ -105,18 +105,23 @@ log "success" "Clean slate ready"
 section "Pod Creation"
 log "info" "Creating dewey-pod..."
 log "info" "Resource limits: ${POD_CPUS} CPUs, ${POD_MEMORY} memory (override via DEWEY_POD_CPUS/DEWEY_POD_MEMORY)"
-# Added 9090 here so Prometheus is accessible externally
 # 3306 is intentionally not published here (issue #200) — MySQL only needs
 # to be reachable inside the pod's network (backend talks to it over
 # 127.0.0.1), not from the LAN. The app's only access control
 # (known_machines IP allowlist) guards HTTP routes, not the database itself,
 # so publishing 3306 let anyone on the LAN connect straight to MySQL.
+#
+# 9090 (Prometheus) is intentionally not published either (issue #204) —
+# Prometheus has no authentication in front of it, so publishing it exposed
+# the full PromQL query API, target list, and Prometheus's own internal
+# state to anyone on the LAN. Use an SSH port-forward
+# (ssh -L 9090:localhost:9090 <host>, then curl/browse localhost:9090 on
+# your machine) when you actually need to reach it.
 podman pod create --infra=true \
   --cpus "$POD_CPUS" \
   --memory "$POD_MEMORY" \
   -p 8080:8080 \
   -p 3000:3000 \
-  -p 9090:9090 \
   dewey-pod
 
 # ---------------- MYSQL ----------------
@@ -181,10 +186,13 @@ podman run -d --pod dewey-pod \
 # Brief pause to let Prometheus spin up internal networking before healthcheck
 sleep 2
 log "info" "Checking Prometheus health..."
-if curl -s --fail http://localhost:9090/-/healthy > /dev/null; then
+# 9090 isn't published to the LAN (issue #204), so curling an HTTP endpoint
+# from the host isn't an option anymore either — check the container's own
+# running state via podman instead.
+if [ "$(podman inspect -f '{{.State.Running}}' dewey-prometheus 2>/dev/null)" = "true" ]; then
   log "success" "Prometheus is healthy!"
 else
-  log "warn" "Prometheus health check did not return 200 OK immediately."
+  log "warn" "Prometheus container did not start."
 fi
 
 # ---------------- BACKEND ----------------
@@ -273,7 +281,7 @@ log "info" "Host IP: ${BOLD}${HOST_IP}${NC}"
 echo ""
 echo -e "  ${DIM}\xe2\x94\x82${NC} Frontend      http://${HOST_IP}:3000"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Backend API   http://${HOST_IP}:8080"
-echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    http://${HOST_IP}:9090"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    not published to the LAN (issue #204); ssh -L 9090:localhost:9090 to reach it"
 echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         not published to the LAN (issue #200); reachable inside the pod only"
 echo ""
 
@@ -298,7 +306,15 @@ check_health() {
 # registering this host in known_machines.
 check_health "Frontend"   "http://localhost:3000"
 check_health "Backend"    "http://localhost:8080/metrics"
-check_health "Prometheus" "http://localhost:9090/-/healthy"
+
+# Prometheus isn't published to the LAN (issue #204), so it's no longer
+# reachable via localhost from the host either — same container-state check
+# used right after starting it above.
+if [ "$(podman inspect -f '{{.State.Running}}' dewey-prometheus 2>/dev/null)" = "true" ]; then
+  log "success" "Prometheus is responding (container running)"
+else
+  log "warn" "Prometheus did not respond"
+fi
 
 # --- KEY METRICS SNAPSHOT ---
 echo ""
