@@ -68,13 +68,22 @@ echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x9
 # on every deploy. Default is to wipe: metrics like app_files_in_store read
 # these directories live, so leftover files from a previous deployment made
 # the dashboard look like nothing had reset between deploys.
+#
+# --wipe-data explicitly opts into that wipe when there's no TTY to prompt
+# on. Without it, a non-interactive run (cron, CI, SSH without -t) used to
+# silently fall through to the wipe default with just a log line to show
+# for it — since mysql-data survives by default but the store doesn't, that
+# left MySQL's file-metadata pointing at documents no longer on disk
+# (issue #206). See the TTY check below for the safe default this enables.
 RESET_DB=false
 KEEP_DATA=false
 KEEP_DATA_SET=false
+WIPE_DATA_SET=false
 for arg in "$@"; do
   case "$arg" in
     --reset-db) RESET_DB=true ;;
     --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
+    --wipe-data) WIPE_DATA_SET=true ;;
   esac
 done
 
@@ -198,15 +207,19 @@ fi
 # ---------------- BACKEND ----------------
 section "Backend"
 
-# Ask interactively unless --keep-data already answered the question, or
-# there's no TTY to ask on (e.g. running from CI/automation) — in which
-# case the default (wipe) stands, same as before this prompt existed.
-if [ "$KEEP_DATA_SET" = false ] && [ -t 0 ]; then
+# Ask interactively unless --keep-data/--wipe-data already answered the
+# question, or there's no TTY to ask on (e.g. running from CI/automation).
+if [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ] && [ -t 0 ]; then
   read -r -p "  Wipe store/cache/backup/logs volumes before this deploy? [Y/n] " wipe_answer
   case "$wipe_answer" in
     [nN]*) KEEP_DATA=true ;;
     *) KEEP_DATA=false ;;
   esac
+elif [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ]; then
+  # No TTY and no explicit flag (issue #206): default to the safe option
+  # instead of silently wiping. Pass --wipe-data to wipe non-interactively.
+  log "warn" "No TTY and no --keep-data/--wipe-data flag; defaulting to --keep-data. Pass --wipe-data to wipe non-interactively."
+  KEEP_DATA=true
 fi
 
 if [ "$KEEP_DATA" = true ]; then
