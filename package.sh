@@ -143,11 +143,16 @@ podman load -i prometheus.tar
 # app_files_in_store read these directories live, so leftover files from a
 # previous run made the dashboard look like nothing had reset between runs.
 # Pass --keep-data to preserve them instead (e.g. re-running against real
-# data you don't want to lose). mysql-data is never touched by this script.
+# data you don't want to lose), or --wipe-data to explicitly confirm a wipe
+# when running non-interactively (see the TTY check below). mysql-data is
+# never touched by this script.
 KEEP_DATA=false
+KEEP_DATA_SET=false
+WIPE_DATA_SET=false
 for arg in "$@"; do
   case "$arg" in
-    --keep-data) KEEP_DATA=true ;;
+    --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
+    --wipe-data) WIPE_DATA_SET=true ;;
   esac
 done
 
@@ -155,6 +160,24 @@ done
 # before we try to remove them — a volume in use by a running container
 # can't be removed.
 podman pod rm -f dewey-pod 2>/dev/null || true
+
+# Ask interactively unless --keep-data/--wipe-data already answered the
+# question, or there's no TTY to ask on (e.g. running from CI/automation).
+# Previously this always defaulted to wipe regardless of TTY, so a
+# non-interactive run (cron, CI, SSH without -t) silently wiped the store
+# with only a log line to show for it — since mysql-data isn't touched by
+# this script, that left MySQL's file-metadata pointing at documents no
+# longer on disk (issue #206).
+if [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ] && [ -t 0 ]; then
+  read -r -p "  Wipe store/cache/backup/logs volumes before this run? [Y/n] " wipe_answer
+  case "$wipe_answer" in
+    [nN]*) KEEP_DATA=true ;;
+    *) KEEP_DATA=false ;;
+  esac
+elif [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ]; then
+  log "warn" "No TTY and no --keep-data/--wipe-data flag; defaulting to --keep-data. Pass --wipe-data to wipe non-interactively."
+  KEEP_DATA=true
+fi
 
 if [ "$KEEP_DATA" = true ]; then
   echo "Keeping existing store/cache/backup/logs volumes (--keep-data passed)"
