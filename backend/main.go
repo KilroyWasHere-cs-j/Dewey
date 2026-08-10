@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 	"golang.org/x/time/rate"
 )
@@ -90,9 +91,13 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 
-	// Prometheus
+	// Prometheus — request-metric collection runs globally, but the /metrics
+	// endpoint itself is registered below inside the api group so it sits
+	// behind the same known_machines IP allowlist as every other route
+	// (issue #203). p.Use(r) would register it directly on the bare engine,
+	// bypassing that group entirely.
 	p := ginprometheus.NewWithConfig(ginprometheus.Config{Subsystem: "gin"})
-	p.Use(r)
+	r.Use(p.HandlerFunc())
 
 	// Rate limiter
 	limiter := rate.NewLimiter(rateLimitPerSecond, rateLimitBurst)
@@ -120,6 +125,7 @@ func main() {
 	{
 		api.GET("/", index)
 		api.GET("/version", versionInfo)
+		api.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
 		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
 		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
 		api.POST("/upload", uploadFile)
