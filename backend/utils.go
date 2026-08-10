@@ -31,7 +31,11 @@ type observableTicker struct {
 	last     time.Time
 }
 
-var daemonTicker *observableTicker
+// daemonTicker is written once at startup and read from a Prometheus scrape
+// goroutine (TimeUntilNextTick), so the pointer itself needs its own
+// synchronization on top of the mutex already guarding observableTicker's
+// internal fields.
+var daemonTicker atomic.Pointer[observableTicker]
 
 func newObservableTicker(d time.Duration) *observableTicker {
 	return &observableTicker{
@@ -79,16 +83,17 @@ func (o *observableTicker) Remaining() time.Duration {
 func startDaemon(ctx context.Context, pm *PluginManger) {
 	// Debug("starting cache clear daemon")
 
-	daemonTicker = newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
+	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
+	daemonTicker.Store(dt)
 
 	go func() {
-		defer daemonTicker.Stop()
+		defer dt.Stop()
 
 		for {
 			select {
-			case t := <-daemonTicker.Chan():
+			case t := <-dt.Chan():
 				// record tick time so Remaining() can be observed
-				daemonTicker.markTick(t)
+				dt.markTick(t)
 				// run task safely so panic won't kill goroutine
 				func() {
 					defer func() {
@@ -120,10 +125,11 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 // TimeUntilNextTick returns the duration until the daemon's next scheduled
 // run. If the daemon hasn't been started it returns -1.
 func TimeUntilNextTick() time.Duration {
-	if daemonTicker == nil {
+	dt := daemonTicker.Load()
+	if dt == nil {
 		return time.Duration(-1)
 	}
-	return daemonTicker.Remaining()
+	return dt.Remaining()
 }
 
 // dumpCache clears all files from the upload cache directory. Best-effort:
