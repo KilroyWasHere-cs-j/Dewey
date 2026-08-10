@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { backendUrl } from '$lib/server/backend';
 import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
@@ -9,10 +9,8 @@ export interface AppVersionInfo {
 }
 
 export const GET: RequestHandler = async () => {
-	const backendUrl = env.BACKEND_URL ?? 'http://localhost:8080';
-
 	try {
-		const res = await fetch(`${backendUrl}/version`);
+		const res = await fetch(`${backendUrl()}/version`);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
