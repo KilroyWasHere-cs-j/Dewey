@@ -17,6 +17,7 @@
 		{ href: '#architecture', label: 'Architecture' },
 		{ href: '#stack', label: 'Tech Stack' },
 		{ href: '#api', label: 'API Reference' },
+		{ href: '#cli', label: 'CLI Tool' },
 		{ href: '#access', label: 'Access Control' },
 		{ href: '#plugins', label: 'Plugin System' },
 		{ href: '#database', label: 'Database' },
@@ -241,6 +242,74 @@
 						<span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-gray-700 dark:text-gray-300">{ext}</span>
 					{/each}
 				</div>
+			</section>
+
+			<!-- ── CLI Tool ── -->
+			<section id="cli" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">CLI Tool</h2>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">cli/</code> is a small standalone Go
+					module (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-cli</code>) that wraps
+					every backend route above, so the API can be exercised during development without reaching
+					for <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">curl</code> and hand-built
+					multipart requests.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Build & run</h3>
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">cd cli
+go build -o dewey-cli .
+
+# Defaults to http://localhost:8080 — override with DEWEY_HOST
+DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Commands</h3>
+				<div class="mb-4 overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="border-b border-gray-200 text-left dark:border-gray-700">
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Command</th>
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Route</th>
+								<th class="pb-2 font-semibold text-gray-700 dark:text-gray-200">Notes</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-100 text-xs dark:divide-gray-700">
+							{#each [
+								{ cmd: 'health',                          route: 'GET  /',                     notes: '' },
+								{ cmd: 'version',                         route: 'GET  /version',               notes: '' },
+								{ cmd: 'dump_cache',                      route: 'GET  /admin/dumpCache',       notes: '' },
+								{ cmd: 'list_machines',                   route: 'GET  /machines',              notes: '' },
+								{ cmd: 'add_machine <ip> <label>',        route: 'POST /machines',              notes: '' },
+								{ cmd: 'delete_machine <ip>',             route: 'DELETE /machines/:ip',        notes: '' },
+								{ cmd: 'list_files',                      route: 'GET  /files',                 notes: '' },
+								{ cmd: 'get_file <filename>',             route: 'GET  /files/:filename/false', notes: '' },
+								{ cmd: 'get_file_meta <filename>',        route: 'GET  /files/:filename/true',  notes: '' },
+								{ cmd: 'delete_file <filename>',          route: 'DELETE /files/:filename',     notes: '' },
+								{ cmd: 'upload <path> [field=value ...]', route: 'POST /upload',                notes: 'See metadata fields below.' },
+								{ cmd: 'self_ip',                         route: '—',                           notes: 'Locally-determined outbound IP toward DEWEY_HOST — a starting guess for what to register in Known Machines, not a guarantee (NAT can rewrite the source address in transit).' },
+							] as row}
+								<tr>
+									<td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.cmd}</td>
+									<td class="py-2 pr-4 font-mono text-xs text-gray-500 dark:text-gray-400">{row.route}</td>
+									<td class="py-2 text-gray-600 dark:text-gray-400">{row.notes}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Upload metadata</h3>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">upload</code> accepts any of the
+					<a href="#api" class="underline">metadata fields</a> as trailing
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">field=value</code> arguments, in any
+					order. Fields left out are simply not sent, same as leaving them blank in the admin portal's
+					upload dialog. An unrecognised field name fails immediately rather than being silently
+					dropped.
+				</p>
+				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">./dewey-cli upload report.pdf \
+  claim_number=CL-1024 \
+  claimant_name="Jane Doe" \
+  acts_id=A-88</code></pre>
 			</section>
 
 			<!-- ── Access Control ── -->
