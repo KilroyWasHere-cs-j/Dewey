@@ -40,8 +40,26 @@ commands:
   get_file <filename>                 GET  /files/:filename/false
   get_file_meta <filename>            GET  /files/:filename/true
   delete_file <filename>              DELETE /files/:filename
-  upload <path>                       POST /upload
-  self_ip                             locally-determined outbound IP toward the host`
+  upload <path> [field=value ...]     POST /upload (optional metadata fields, see below)
+  self_ip                             locally-determined outbound IP toward the host
+
+env:
+  DEWEY_HOST                          backend base URL, default http://localhost:8080
+
+upload metadata fields (all optional, order doesn't matter):
+  claim_number claimant_name date_of_injury employer adjuster
+  support claim_type jurisdiction policy_number acts_id
+
+  example: dewey-cli upload report.pdf claim_number=CL-1 acts_id=A-1`
+
+// uploadMetaFields lists the multipart form fields uploadFile
+// (backend/routes.go) reads into MetaData, in the same order the backend
+// struct declares them — kept here so the CLI can validate field=value args
+// instead of silently dropping a typo'd key.
+var uploadMetaFields = []string{
+	"claim_number", "claimant_name", "date_of_injury", "employer", "adjuster",
+	"support", "claim_type", "jurisdiction", "policy_number", "acts_id",
+}
 
 func main() {
 	fmt.Print(colorGreen + "Welcome to Dewey CLI\n" + colorReset)
@@ -83,8 +101,9 @@ func main() {
 		requireArgs(3, "delete_file <filename>")
 		del(host + "/files/" + os.Args[2])
 	case "upload":
-		requireArgs(3, "upload <path>")
-		upload(host+"/upload", os.Args[2])
+		requireArgs(3, "upload <path> [field=value ...]")
+		meta := parseMetadata(os.Args[3:])
+		upload(host+"/upload", os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
 	default:
@@ -92,6 +111,32 @@ func main() {
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
 		os.Exit(1)
 	}
+}
+
+// parseMetadata turns trailing "field=value" CLI args into the metadata map
+// upload attaches to the request, rejecting anything that isn't in
+// uploadMetaFields so a typo'd field name fails fast instead of being
+// silently dropped by the backend's PostForm lookup.
+func parseMetadata(args []string) map[string]string {
+	valid := make(map[string]struct{}, len(uploadMetaFields))
+	for _, k := range uploadMetaFields {
+		valid[k] = struct{}{}
+	}
+
+	meta := make(map[string]string, len(args))
+	for _, arg := range args {
+		key, value, ok := strings.Cut(arg, "=")
+		if !ok {
+			fmt.Fprintf(os.Stderr, colorRed+"invalid metadata arg %q, expected field=value\n"+colorReset, arg)
+			os.Exit(1)
+		}
+		if _, ok := valid[key]; !ok {
+			fmt.Fprintf(os.Stderr, colorRed+"unknown metadata field %q, expected one of: %s\n"+colorReset, key, strings.Join(uploadMetaFields, ", "))
+			os.Exit(1)
+		}
+		meta[key] = value
+	}
+	return meta
 }
 
 func requireArgs(n int, cmdUsage string) {
@@ -160,7 +205,10 @@ func postJSON(url string, payload any) {
 
 // upload sends filePath to the backend's /upload route as multipart/form-data
 // under the "file" field, matching what uploadFile (backend/routes.go) reads.
-func upload(url, filePath string) {
+// meta entries are attached as additional form fields (claim_number, etc.) —
+// omitted entries are simply absent from the request, same as leaving a form
+// field blank in the admin portal's upload dialog.
+func upload(url, filePath string, meta map[string]string) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"could not open file:"+colorReset, err)
@@ -170,6 +218,16 @@ func upload(url, filePath string) {
 
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
+
+	for _, key := range uploadMetaFields {
+		if value, ok := meta[key]; ok {
+			if err := w.WriteField(key, value); err != nil {
+				fmt.Fprintln(os.Stderr, colorRed+"failed to build upload:"+colorReset, err)
+				os.Exit(1)
+			}
+		}
+	}
+
 	part, err := w.CreateFormFile("file", filepath.Base(filePath))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"failed to build upload:"+colorReset, err)
