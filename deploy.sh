@@ -308,10 +308,21 @@ echo -e "  ${DIM}\xe2\x94\x82${NC} Prometheus    not published to the LAN (issue
 echo -e "  ${DIM}\xe2\x94\x82${NC} MySQL         not published to the LAN (issue #200); reachable inside the pod only"
 echo ""
 
+# --- KNOWN MACHINES ---
+# /metrics now sits behind the known_machines IP allowlist like every other
+# backend route (issue #203), so register this deploy host the same way the
+# backend seeds its own loopback addresses (db.go) — otherwise the health
+# check and metrics snapshot below would need a manual addMachine call first.
+log "info" "Registering deploy host (${HOST_IP}) in known_machines..."
+podman exec dewey-mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" deweyRecords \
+  -e "INSERT IGNORE INTO known_machines (ip, label) VALUES ('${HOST_IP}', 'deploy-host');" \
+  2>/dev/null && log "success" "Deploy host registered" \
+  || log "warn" "Could not register deploy host in known_machines"
+
 # --- HEALTH CHECKS ---
 # check_health reports whether a service answered at all rather than
-# requiring a 200 — the backend's routes other than /metrics sit behind the
-# known_machines IP allowlist, so a 403 there still proves the service is up.
+# requiring a 200 — every backend route sits behind the known_machines IP
+# allowlist, so a 403 there still proves the service is up.
 check_health() {
   local label="$1"
   local url="$2"
@@ -324,9 +335,13 @@ check_health() {
   fi
 }
 
-# Backend's /metrics is registered directly on the gin engine, outside the
-# logConnections IP-allowlist group, so it's reachable without first
-# registering this host in known_machines.
+# Backend's /metrics now sits behind the known_machines allowlist (issue
+# #203), same as every other route. The registration above should cover
+# this curl, but Podman's NAT can present a host-to-published-port
+# connection under a different source IP than ${HOST_IP} depending on the
+# network backend in use — if this or the metrics snapshot below still 403s,
+# check `podman logs cross-doc-tool-dev` for the "unregistered machine" IP
+# it actually saw and register that one instead.
 check_health "Frontend"   "http://localhost:3000"
 check_health "Backend"    "http://localhost:8080/metrics"
 
