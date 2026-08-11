@@ -48,6 +48,31 @@ func NewPluginManger() *PluginManger {
 	}
 }
 
+// dangerousBaseGlobals are registered by lua.OpenBase alongside the safe
+// base functions (print, pairs, type, pcall, error, ...) — OpenBase bundles
+// them all into one unexported map, so they can't be excluded at open time
+// and have to be stripped afterward instead. Left in place, any of these
+// let a plugin construct/execute arbitrary code from a string, read/execute
+// arbitrary files, or swap a function's environment table.
+var dangerousBaseGlobals = []string{"load", "loadstring", "dofile", "loadfile", "require", "getfenv", "setfenv"}
+
+// newSandboxedState returns an LState with only base, string, and table
+// opened (math is intentionally left out — no current plugin uses it), and
+// the dangerous base globals above nil'd out. Every lua.NewState() call in
+// this file must go through here instead of calling it directly, so a
+// plugin file never gets os/io access or a way to construct code from a
+// string (issue #284, superseding #199).
+func newSandboxedState() *lua.LState {
+	L := lua.NewState(lua.Options{SkipOpenLibs: true})
+	lua.OpenBase(L)
+	lua.OpenString(L)
+	lua.OpenTable(L)
+	for _, name := range dangerousBaseGlobals {
+		L.SetGlobal(name, lua.LNil)
+	}
+	return L
+}
+
 // Plugin loader
 func (pm *PluginManger) LoadPlugins() error {
 	entries, err := os.ReadDir(pm.dir)
@@ -62,7 +87,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		// DoFile call let Lua globals (WhoAmI, etc.) persist between files,
 		// so a plugin missing WhoAmI silently inherited the previous
 		// plugin's type/salience instead of failing to classify.
-		L := lua.NewState()
+		L := newSandboxedState()
 		if err := L.DoFile(filepath.Join(pm.dir, entry.Name())); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
 			L.Close()
@@ -121,7 +146,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		pluginFile := filepath.Join(pm.dir, entry.Name())
 		pool := &sync.Pool{
 			New: func() any {
-				state := lua.NewState()
+				state := newSandboxedState()
 				if err := state.DoFile(pluginFile); err != nil {
 					Warn("pool: failed to load " + pluginFile + ": " + err.Error())
 				}
