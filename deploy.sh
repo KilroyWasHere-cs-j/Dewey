@@ -356,8 +356,8 @@ check_health() {
 # network backend in use — if this or the metrics snapshot below still 403s,
 # check `podman logs cross-doc-tool-dev` for the "unregistered machine" IP
 # it actually saw and register that one instead.
-check_health "Frontend"   "http://localhost:3000"
-check_health "Backend"    "http://localhost:8080/metrics"
+check_health "Frontend"   "http://127.0.0.1:3000"
+check_health "Backend"    "http://127.0.0.1:8080/metrics"
 
 # Prometheus isn't published to the LAN (issue #204), so it's no longer
 # reachable via localhost from the host either — same container-state check
@@ -371,7 +371,7 @@ fi
 # --- KEY METRICS SNAPSHOT ---
 echo ""
 log "info" "Backend metrics snapshot:"
-BACKEND_METRICS="$(curl -s --max-time 5 http://localhost:8080/metrics 2>/dev/null || true)"
+BACKEND_METRICS="$(curl -s --max-time 5 http://127.0.0.1:8080/metrics 2>/dev/null || true)"
 if [ -n "$BACKEND_METRICS" ]; then
   for metric in app_uptime_seconds app_ram_usage app_heap_usage app_files_in_store app_files_in_backup app_db_errors; do
     value=$(echo "$BACKEND_METRICS" | awk -v m="$metric" '$1 == m {print $2}')
