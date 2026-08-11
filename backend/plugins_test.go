@@ -1,8 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -243,4 +246,204 @@ end
 func TestListPluginsDoesNotPanicOnEmptyManager(t *testing.T) {
 	pm := NewPluginManger()
 	pm.ListPlugins()
+}
+
+// --- Runtime sandbox (issue #284) ---
+
+// TestSandboxBlocksDangerousGlobalsAndStdlib confirms os/io are absent and
+// none of the base-lib globals that could reconstruct that access (load,
+// loadstring, dofile, loadfile, require, getfenv, setfenv) survive
+// newSandboxedState's setup.
+func TestSandboxBlocksDangerousGlobalsAndStdlib(t *testing.T) {
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "sandboxCheck.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    if dofile ~= nil then error("dofile should be nil") end
+    if load ~= nil then error("load should be nil") end
+    if loadstring ~= nil then error("loadstring should be nil") end
+    if loadfile ~= nil then error("loadfile should be nil") end
+    if require ~= nil then error("require should be nil") end
+    if getfenv ~= nil then error("getfenv should be nil") end
+    if setfenv ~= nil then error("setfenv should be nil") end
+    if os ~= nil then error("os should not be open") end
+    if io ~= nil then error("io should not be open") end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook: %v", err)
+	}
+}
+
+// --- Go-native capability API: http.get/http.post (issue #284) ---
+
+// withUnblockedPluginHTTPClient swaps pluginHTTPClient's SSRF-blocking
+// dialer out for the default one. httptest servers only bind to loopback —
+// exactly what dialBlockingPrivateIPs refuses to reach — so wiring tests
+// that need a real request/response round trip use this, while the
+// blocking behavior itself is tested separately against the real client.
+func withUnblockedPluginHTTPClient(t *testing.T) {
+	t.Helper()
+	orig := pluginHTTPClient
+	pluginHTTPClient = &http.Client{}
+	t.Cleanup(func() { pluginHTTPClient = orig })
+}
+
+func TestHTTPGetWiringRoundTrip(t *testing.T) {
+	withUnblockedPluginHTTPClient(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello from server"))
+	}))
+	defer srv.Close()
+
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "httpGet.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    local result = http.get("`+srv.URL+`")
+    if not result:match("hello from server") then
+        error("unexpected body: " .. result)
+    end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook: %v", err)
+	}
+}
+
+func TestHTTPPostWiringRoundTrip(t *testing.T) {
+	withUnblockedPluginHTTPClient(t)
+
+	var receivedBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		buf := make([]byte, 1024)
+		n, _ := r.Body.Read(buf)
+		receivedBody = string(buf[:n])
+		w.Write([]byte("posted"))
+	}))
+	defer srv.Close()
+
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "httpPost.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    local result = http.post("`+srv.URL+`", "hello-post-body")
+    if not result:match("posted") then
+        error("unexpected response: " .. result)
+    end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook: %v", err)
+	}
+	if !strings.Contains(receivedBody, "hello-post-body") {
+		t.Fatalf("server did not receive posted body, got %q", receivedBody)
+	}
+}
+
+// TestHTTPGetBlocksLoopback is the property that actually matters: with the
+// real (blocking) pluginHTTPClient in place, a plugin's http.get to a
+// loopback address (standing in for pod-internal MySQL/Prometheus, which
+// are deliberately unpublished from the LAN per #200/#204) must fail, and
+// that failure must surface as a normal, pcall-catchable Lua error rather
+// than crashing the hook.
+func TestHTTPGetBlocksLoopback(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("should never be reachable"))
+	}))
+	defer srv.Close()
+
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "httpBlocked.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    local ok, result = pcall(http.get, "`+srv.URL+`")
+    if ok then
+        error("expected http.get to a loopback address to fail, got: " .. tostring(result))
+    end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook (plugin should have caught the blocked call itself via pcall): %v", err)
+	}
+}
+
+// --- Go-native capability API: files.read/files.write (issue #284) ---
+
+func TestFilesReadWriteRoundTrip(t *testing.T) {
+	// pluginScratchDir is a const, so this runs against the real relative
+	// path (./plugin-scratch under backend/, since `go test` runs with the
+	// package directory as cwd) and cleans up after itself.
+	t.Cleanup(func() { os.RemoveAll(pluginScratchDir) })
+
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "filesRoundTrip.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    files.write("note.txt", "hello from plugin")
+    local content = files.read("note.txt")
+    if content ~= "hello from plugin" then
+        error("round trip mismatch: " .. content)
+    end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook: %v", err)
+	}
+}
+
+// TestFilesWriteBlocksTraversal is the property that actually matters:
+// resolveStorePath rejects a "../" escape before any write happens, so
+// unlike the round-trip test above, this never touches a real file.
+func TestFilesWriteBlocksTraversal(t *testing.T) {
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+	writePlugin(t, pm.dir, "filesTraversal.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    local ok = pcall(files.write, "../escaped.txt", "should never land")
+    if ok then
+        error("expected a traversal write to fail")
+    end
+    return entry
+end
+`)
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("RunByHook: %v", err)
+	}
 }

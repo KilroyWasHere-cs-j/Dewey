@@ -165,9 +165,24 @@ Every plugin declares a `WhoAmI()` function returning its salience only. Which h
 | `OnFilter` | Once per upload, during async post-processing | Can rewrite the file's destination `Path` |
 | `OnDelete` | Once per delete request, synchronously, before anything is removed | Calling `error(...)` vetoes the deletion — the caller gets a `403` instead |
 | `OnInit` | Once at server startup | Registered and invoked; no shipped example plugin |
-| `OnTick` | Once per daemon tick | Registered and invoked; no shipped example plugin |
+| `OnTick` | Once per daemon tick | `OnTick.lua` — fetches NOAA's planetary K-index (`http.get`), caches it to the plugin scratch directory (`files.write`), reads the cache back (`files.read`), and beacons it out (`http.post`); see the Capability API section below |
 
-Within a hook, plugins run in descending salience order (highest first), each in its own isolated Lua state (via a per-plugin `sync.Pool`) so one plugin's globals can't leak into another's. Example plugins for `OnFilter`, `OnUpload`, and `OnDelete` ship in `backend/plugins/`.
+Within a hook, plugins run in descending salience order (highest first), each in its own isolated Lua state (via a per-plugin `sync.Pool`) so one plugin's globals can't leak into another's. Example plugins for `OnFilter`, `OnUpload`, `OnDelete`, and `OnTick` ship in `backend/plugins/`.
+
+### Sandboxing & Capability API
+
+A plugin's Lua state only has `base`, `string`, and `table` opened — no `os`, `io`, or `math`, and the base-library globals that could reconstruct that access (`load`, `loadstring`, `dofile`, `loadfile`, `require`, `getfenv`, `setfenv`) are stripped out too (issue #284, superseding #199, which had found `lua.NewState()` running with the full stdlib open — full shell access from any `.lua` file dropped into `plugins/`).
+
+In place of raw `os`/`io`, plugins get two narrow, Go-implemented capability APIs — the only way for one to reach the network or filesystem:
+
+| Function | Does | Restriction |
+|---|---|---|
+| `http.get(url)` | GET request, returns the response body as a string | Refuses to dial loopback/private/link-local/unspecified IPs — checked against the actually-resolved IP at dial time, not just the URL's hostname, closing a DNS-rebinding gap. MySQL and Prometheus are deliberately unpublished from the LAN (#200, #204) with no auth of their own; this is what stops an unrestricted plugin HTTP client from being a direct SSRF path back into both. |
+| `http.post(url, body)` | POST request with `body`, returns the response body as a string | Same restriction as `http.get`. |
+| `files.read(name)` | Reads a file, returns its contents as a string | Confined to `pluginScratchDir` (`./plugin-scratch`, separate from `store`/`cache`/`backup`) via the same traversal check (`resolveStorePath`) that keeps uploads inside `fileSystemBaseDir` — a `../` escape is rejected before any file is touched. |
+| `files.write(name, data)` | Writes `data` to a file | Same restriction as `files.read`. |
+
+A Go-side error on any of these four raises a normal Lua error, catchable with `pcall` like any other plugin error. `OnTick.lua` uses all four together as one real workflow: fetch, cache, read the cache back, beacon out.
 
 ## Technology Stack
 
@@ -192,7 +207,7 @@ The frontend admin portal is built with Svelte, giving a reactive UI with HTML-l
 
 Two layers of tests cover the backend:
 
-- **Go unit tests** (`go test ./...` from `backend/`) — cover the pure-logic pieces in isolation: `filevalidator_test.go` exercises PE/ELF binary sniffing and extension/content-type matching, and `plugins_test.go` exercises hook registration, plugin loading/attachment, salience ordering, and `OnDelete`'s veto behavior. These run in CI on every push/PR (`.github/workflows/go.yml`).
+- **Go unit tests** (`go test ./...` from `backend/`) — cover the pure-logic pieces in isolation: `filevalidator_test.go` exercises PE/ELF binary sniffing and extension/content-type matching, and `plugins_test.go` exercises hook registration, plugin loading/attachment, salience ordering, `OnDelete`'s veto behavior, the runtime sandbox (dangerous globals and `os`/`io` absent), and the `http`/`files` capability API (successful round trips, plus the SSRF and path-traversal restrictions). These run in CI on every push/PR (`.github/workflows/go.yml`).
 - **BITs** (Built-In Tests, `backend/testing_tooling/test_suite.sh`) — a black-box HTTP suite that runs against a live server, hitting real endpoints (uploads with randomized metadata, error cases, health checks) rather than calling Go functions directly. The server launches this suite automatically in the background on every startup (see the `BITs` section in `main.go`) so a bad deploy fails loudly instead of silently; it can also be run manually against any base URL: `./test_suite.sh http://localhost:8080`.
 
 ## Deployment & Packaging
@@ -210,11 +225,11 @@ Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on ev
 | Data | Volume(s) | Controlled by |
 |---|---|---|
 | MySQL database (file records, metadata, the `known_machines` allowlist) | `mysql-data` | `deploy.sh` only — `--reset-db` |
-| Backend data (`store/`, `cache/`, `backup/`, `logs/`) | `dewey-store`, `dewey-cache`, `dewey-backup`, `dewey-logs` | Both scripts — `--keep-data` / `--wipe-data`, or the interactive prompt |
+| Backend data (`store/`, `cache/`, `backup/`, `logs/`, `plugin-scratch/`) | `dewey-store`, `dewey-cache`, `dewey-backup`, `dewey-logs`, `dewey-plugin-scratch` | `deploy.sh` — `--keep-data` / `--wipe-data`, or the interactive prompt (`package.sh`'s bundled `run.sh` doesn't yet mount `dewey-plugin-scratch`) |
 
 **`deploy.sh` flags:**
 - `--reset-db` — wipes the `mysql-data` volume before starting MySQL. Not passing this is the default and keeps the database across redeploys. Since MySQL only honors `MYSQL_ROOT_PASSWORD` on first init of an empty data directory, the root password is persisted to a local, gitignored `.mysql-root-password` file and reused on every run that keeps `mysql-data` — it's only regenerated when `--reset-db` actually wipes the volume.
-- `--keep-data` — preserves `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs` instead of wiping them.
+- `--keep-data` — preserves `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs`/`dewey-plugin-scratch` instead of wiping them.
 - `--wipe-data` — explicitly wipes those same four volumes. Needed to wipe non-interactively (CI, cron, `ssh` without `-t`), since without a TTY to prompt on, the script defaults to `--keep-data` rather than silently wiping.
 - No flags, run interactively: prompted `Wipe store/cache/backup/logs volumes before this deploy? [Y/n]` (default: wipe).
 

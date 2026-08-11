@@ -27,6 +27,10 @@ const dbConnectionTimeoutMultiplier = 2 // in minutes
 
 // Plugin specific constants
 const pluginDir = "./plugins" // Directory where plugins live
+// pluginScratchDir is where files.read/files.write (issue #284) confine a
+// plugin's file access — kept separate from store/cache/backup so a plugin
+// can never reach documents a user actually uploaded.
+const pluginScratchDir = "./plugin-scratch"
 
 // Post-processing (issue #217) — bounds how many idAndSort goroutines
 // (barcode scan + Lua filter plugins + disk copy) can run at once. Without

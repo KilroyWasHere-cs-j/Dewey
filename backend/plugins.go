@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -48,6 +53,230 @@ func NewPluginManger() *PluginManger {
 	}
 }
 
+// --- Go-native capability API (issue #284) ---
+//
+// Plugins get no os/io access (see newSandboxedState below), so this is the
+// only sanctioned way for one to reach the network or the filesystem. Built
+// bottom-up: isDisallowedPluginIP/dialBlockingPrivateIPs/pluginHTTPClient
+// enforce the SSRF restriction for the network side, resolvePluginScratchPath
+// enforces the path-traversal restriction for the file side, httpGet/
+// httpPost/fileRead/fileWrite are the Go-side implementations, and the
+// luaHTTPGet/luaHTTPPost/luaFileRead/luaFileWrite adapters let
+// newSandboxedState register them as the "http" and "files" global tables.
+
+// isDisallowedPluginIP reports whether ip is a loopback, private, link-local,
+// or unspecified address — the ranges a plugin's HTTP client must never
+// reach. MySQL and Prometheus are deliberately unpublished from the LAN
+// (issues #200, #204) and have no auth of their own, on the assumption
+// they're unreachable from outside the pod's network namespace; an
+// unrestricted plugin HTTP client would be a direct SSRF path back into
+// both.
+func isDisallowedPluginIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
+}
+
+// dialBlockingPrivateIPs resolves addr's host itself and checks every
+// candidate against isDisallowedPluginIP before dialing, then dials that
+// exact IP rather than the original hostname. Checking only the URL's
+// hostname up front (rather than the address actually being connected to)
+// would leave a DNS-rebinding gap: a hostname that resolves to a public IP
+// at check time but a pod-internal one at dial time. Resolving once and
+// dialing the specific IP we vetted closes that gap.
+func dialBlockingPrivateIPs(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+
+	var dialer net.Dialer
+	var lastErr error
+	for _, ip := range ips {
+		if isDisallowedPluginIP(ip) {
+			lastErr = fmt.Errorf("refusing to dial disallowed address %s (resolved from %s)", ip, host)
+			continue
+		}
+		conn, dialErr := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		if dialErr == nil {
+			return conn, nil
+		}
+		lastErr = dialErr
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no addresses resolved for %s", host)
+	}
+	return nil, lastErr
+}
+
+// pluginHTTPClient is the only HTTP client plugin code can reach, via
+// http.get/http.post. Its Transport dials through dialBlockingPrivateIPs
+// instead of the default dialer.
+var pluginHTTPClient = &http.Client{
+	Transport: &http.Transport{DialContext: dialBlockingPrivateIPs},
+}
+
+// httpGet is the Go-side implementation behind the Lua "http.get" global —
+// deliberately going through pluginHTTPClient rather than http.Get, so
+// every request a plugin makes is subject to the SSRF check above.
+func (pm *PluginManger) httpGet(url string) (string, error) {
+	resp, err := pluginHTTPClient.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+// httpPost is the Go-side implementation behind the Lua "http.post" global.
+// Same pluginHTTPClient as httpGet, same SSRF check applied.
+func (pm *PluginManger) httpPost(url string, body string) (string, error) {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	resp, err := pluginHTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(respBody), nil
+}
+
+// luaHTTPGet and luaHTTPPost adapt httpGet/httpPost to gopher-lua's
+// LGFunction signature: pull arguments off the Lua stack, call the Go-side
+// implementation (which goes through pluginHTTPClient's SSRF-safe dialer),
+// and push the result back. A Go error becomes a raised Lua error rather
+// than a second return value, so a plugin can catch it with pcall the same
+// way it would any other Lua error.
+func (pm *PluginManger) luaHTTPGet(L *lua.LState) int {
+	url := L.CheckString(1)
+	body, err := pm.httpGet(url)
+	if err != nil {
+		L.RaiseError("http.get: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(body))
+	return 1
+}
+
+func (pm *PluginManger) luaHTTPPost(L *lua.LState) int {
+	url := L.CheckString(1)
+	body := L.CheckString(2)
+	respBody, err := pm.httpPost(url, body)
+	if err != nil {
+		L.RaiseError("http.post: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(respBody))
+	return 1
+}
+
+// fileRead and fileWrite are the Go-side implementations behind the Lua
+// "files.read"/"files.write" globals — the only filesystem access a plugin
+// gets now that os/io are gone from the sandbox. Both confine name to
+// pluginScratchDir via resolveStorePath, the same traversal check
+// filemanager.go already uses to keep uploads within fileSystemBaseDir —
+// a plain filepath.Join+Clean wouldn't catch a "../" escape on its own.
+func (pm *PluginManger) fileRead(name string) (string, error) {
+	path, err := resolveStorePath(pluginScratchDir, name)
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (pm *PluginManger) fileWrite(name string, data string) error {
+	path, err := resolveStorePath(pluginScratchDir, name)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(data), 0o600)
+}
+
+// luaFileRead and luaFileWrite adapt fileRead/fileWrite to gopher-lua's
+// LGFunction signature, the same pattern as luaHTTPGet/luaHTTPPost above.
+func (pm *PluginManger) luaFileRead(L *lua.LState) int {
+	filePath := L.CheckString(1)
+	fileContent, err := pm.fileRead(filePath)
+	if err != nil {
+		L.RaiseError("files.read: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(fileContent))
+	return 1
+}
+
+func (pm *PluginManger) luaFileWrite(L *lua.LState) int {
+	filePath := L.CheckString(1)
+	fileContent := L.CheckString(2)
+	err := pm.fileWrite(filePath, fileContent)
+	if err != nil {
+		L.RaiseError("files.write: %s", err.Error())
+		return 0
+	}
+	return 1
+}
+
+// dangerousBaseGlobals are registered by lua.OpenBase alongside the safe
+// base functions (print, pairs, type, pcall, error, ...) — OpenBase bundles
+// them all into one unexported map, so they can't be excluded at open time
+// and have to be stripped afterward instead. Left in place, any of these
+// let a plugin construct/execute arbitrary code from a string, read/execute
+// arbitrary files, or swap a function's environment table.
+var dangerousBaseGlobals = []string{"load", "loadstring", "dofile", "loadfile", "require", "getfenv", "setfenv"}
+
+// newSandboxedState returns an LState with only base, string, and table
+// opened (math is intentionally left out — no current plugin uses it), and
+// the dangerous base globals above nil'd out. Every lua.NewState() call in
+// this file must go through here instead of calling it directly, so a
+// plugin file never gets os/io access or a way to construct code from a
+// string (issue #284, superseding #199).
+//
+// It's a method (not a free function) so it can register pm's Go-native
+// capability functions — http.get/http.post and files.read/files.write
+// above — as the only sanctioned way for a plugin to reach the network or
+// filesystem, in place of the os/io access it no longer has.
+func (pm *PluginManger) newSandboxedState() *lua.LState {
+	L := lua.NewState(lua.Options{SkipOpenLibs: true})
+	lua.OpenBase(L)
+	lua.OpenString(L)
+	lua.OpenTable(L)
+	for _, name := range dangerousBaseGlobals {
+		L.SetGlobal(name, lua.LNil)
+	}
+
+	httpTbl := L.NewTable()
+	L.SetField(httpTbl, "get", L.NewFunction(pm.luaHTTPGet))
+	L.SetField(httpTbl, "post", L.NewFunction(pm.luaHTTPPost))
+	L.SetGlobal("http", httpTbl)
+
+	filesTbl := L.NewTable()
+	L.SetField(filesTbl, "read", L.NewFunction(pm.luaFileRead))
+	L.SetField(filesTbl, "write", L.NewFunction(pm.luaFileWrite))
+	L.SetGlobal("files", filesTbl)
+
+	return L
+}
+
 // Plugin loader
 func (pm *PluginManger) LoadPlugins() error {
 	entries, err := os.ReadDir(pm.dir)
@@ -57,13 +286,29 @@ func (pm *PluginManger) LoadPlugins() error {
 	}
 
 	for _, entry := range entries {
+		pluginPath := filepath.Join(pm.dir, entry.Name())
+
+		// Static validation (issue #284) runs before any Lua state exists
+		// for this file — a malicious plugin's top-level code executes
+		// immediately on DoFile below, before any hook function is ever
+		// called, so this is the only thing that catches it pre-execution.
+		src, err := os.ReadFile(pluginPath)
+		if err != nil {
+			Warn("Unable to read plugin " + entry.Name() + ": " + err.Error())
+			continue
+		}
+		if err := validatePluginSource(src, entry.Name()); err != nil {
+			Warn("Plugin failed static validation: " + err.Error())
+			continue
+		}
+
 		// Fresh state per plugin file for discovery, closed at the end of
 		// this iteration (issue #216) — a single state reused across every
 		// DoFile call let Lua globals (WhoAmI, etc.) persist between files,
 		// so a plugin missing WhoAmI silently inherited the previous
 		// plugin's type/salience instead of failing to classify.
-		L := lua.NewState()
-		if err := L.DoFile(filepath.Join(pm.dir, entry.Name())); err != nil {
+		L := pm.newSandboxedState()
+		if err := L.DoFile(pluginPath); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
 			L.Close()
 			continue
@@ -121,7 +366,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		pluginFile := filepath.Join(pm.dir, entry.Name())
 		pool := &sync.Pool{
 			New: func() any {
-				state := lua.NewState()
+				state := pm.newSandboxedState()
 				if err := state.DoFile(pluginFile); err != nil {
 					Warn("pool: failed to load " + pluginFile + ": " + err.Error())
 				}
