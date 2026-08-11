@@ -286,13 +286,29 @@ func (pm *PluginManger) LoadPlugins() error {
 	}
 
 	for _, entry := range entries {
+		pluginPath := filepath.Join(pm.dir, entry.Name())
+
+		// Static validation (issue #284) runs before any Lua state exists
+		// for this file — a malicious plugin's top-level code executes
+		// immediately on DoFile below, before any hook function is ever
+		// called, so this is the only thing that catches it pre-execution.
+		src, err := os.ReadFile(pluginPath)
+		if err != nil {
+			Warn("Unable to read plugin " + entry.Name() + ": " + err.Error())
+			continue
+		}
+		if err := validatePluginSource(src, entry.Name()); err != nil {
+			Warn("Plugin failed static validation: " + err.Error())
+			continue
+		}
+
 		// Fresh state per plugin file for discovery, closed at the end of
 		// this iteration (issue #216) — a single state reused across every
 		// DoFile call let Lua globals (WhoAmI, etc.) persist between files,
 		// so a plugin missing WhoAmI silently inherited the previous
 		// plugin's type/salience instead of failing to classify.
 		L := pm.newSandboxedState()
-		if err := L.DoFile(filepath.Join(pm.dir, entry.Name())); err != nil {
+		if err := L.DoFile(pluginPath); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
 			L.Close()
 			continue
