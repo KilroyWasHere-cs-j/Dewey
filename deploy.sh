@@ -143,6 +143,13 @@ podman pod create --infra=true \
   -p 3000:3000 \
   dewey-pod
 
+# Per-container limits (issue #211): the pod-level cap above (issue #168)
+# only bounds the aggregate, so a heavy container could still consume the
+# whole pod's budget and starve the others (e.g. a backend upload/barcode
+# burst OOM-killing MySQL or Prometheus even though the pod stays under its
+# cap). These four are sized to sum to the pod defaults (4 CPUs / 4g) so no
+# single container can eat the whole allocation alone.
+
 # ---------------- MYSQL ----------------
 section "MySQL"
 log "info" "Deploying MySQL..."
@@ -178,6 +185,7 @@ fi
 # tested against, instead of silently pulling a different one later.
 podman run -d --pod dewey-pod \
   --name dewey-mysql \
+  --cpus 1 --memory 1g \
   -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
   -e MYSQL_DATABASE=deweyRecords \
   -v mysql-data:/var/lib/mysql:Z \
@@ -200,6 +208,7 @@ podman pull docker.io/prom/prometheus:v3.13.1
 log "info" "Starting Prometheus container..."
 podman run -d --pod dewey-pod \
   --name dewey-prometheus \
+  --cpus 0.5 --memory 512m \
   docker.io/prom/prometheus:v3.13.1
 
 # Brief pause to let Prometheus spin up internal networking before healthcheck
@@ -257,8 +266,11 @@ log "info" "Starting backend container..."
 # DB_DSN is now required (issue #200) — db.go no longer has a hardcoded
 # fallback, so it must be passed the same generated root password MySQL
 # was started with above.
+# Largest share of the four per-container limits (issue #211): this is the
+# burst source (uploads/barcode processing) they exist to contain.
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
   --read-only --tmpfs /tmp \
+  --cpus 2 --memory 2g \
   -e DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/deweyRecords" \
   -v dewey-store:/app/store:Z \
   -v dewey-cache:/app/cache:Z \
@@ -280,6 +292,7 @@ log "info" "Starting Svelte frontend container..."
 # what the server expects, which is what every client hits by default since
 # ORIGIN is unset otherwise (issue #197).
 podman run -d --pod dewey-pod --name svelte-container \
+  --cpus 0.5 --memory 512m \
   -e BODY_SIZE_LIMIT=52428800 \
   -e ORIGIN="http://${HOST_IP}:3000" \
   admin-portal
