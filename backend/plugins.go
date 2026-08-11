@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	lua "github.com/yuin/gopher-lua"
@@ -62,7 +67,12 @@ var dangerousBaseGlobals = []string{"load", "loadstring", "dofile", "loadfile", 
 // this file must go through here instead of calling it directly, so a
 // plugin file never gets os/io access or a way to construct code from a
 // string (issue #284, superseding #199).
-func newSandboxedState() *lua.LState {
+//
+// It's a method (not a free function) so it can register pm's Go-native
+// capability functions — http.get/http.post below — as the only sanctioned
+// way for a plugin to reach the network, in place of the os/io access it no
+// longer has.
+func (pm *PluginManger) newSandboxedState() *lua.LState {
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	lua.OpenBase(L)
 	lua.OpenString(L)
@@ -70,7 +80,42 @@ func newSandboxedState() *lua.LState {
 	for _, name := range dangerousBaseGlobals {
 		L.SetGlobal(name, lua.LNil)
 	}
+
+	httpTbl := L.NewTable()
+	L.SetField(httpTbl, "get", L.NewFunction(pm.luaHTTPGet))
+	L.SetField(httpTbl, "post", L.NewFunction(pm.luaHTTPPost))
+	L.SetGlobal("http", httpTbl)
+
 	return L
+}
+
+// luaHTTPGet and luaHTTPPost adapt httpGet/httpPost to gopher-lua's
+// LGFunction signature: pull arguments off the Lua stack, call the Go-side
+// implementation (which goes through pluginHTTPClient's SSRF-safe dialer),
+// and push the result back. A Go error becomes a raised Lua error rather
+// than a second return value, so a plugin can catch it with pcall the same
+// way it would any other Lua error.
+func (pm *PluginManger) luaHTTPGet(L *lua.LState) int {
+	url := L.CheckString(1)
+	body, err := pm.httpGet(url)
+	if err != nil {
+		L.RaiseError("http.get: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(body))
+	return 1
+}
+
+func (pm *PluginManger) luaHTTPPost(L *lua.LState) int {
+	url := L.CheckString(1)
+	body := L.CheckString(2)
+	respBody, err := pm.httpPost(url, body)
+	if err != nil {
+		L.RaiseError("http.post: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(respBody))
+	return 1
 }
 
 // Plugin loader
@@ -87,7 +132,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		// DoFile call let Lua globals (WhoAmI, etc.) persist between files,
 		// so a plugin missing WhoAmI silently inherited the previous
 		// plugin's type/salience instead of failing to classify.
-		L := newSandboxedState()
+		L := pm.newSandboxedState()
 		if err := L.DoFile(filepath.Join(pm.dir, entry.Name())); err != nil {
 			Warn("Unable to load plugin " + entry.Name() + ": " + err.Error())
 			L.Close()
@@ -146,7 +191,7 @@ func (pm *PluginManger) LoadPlugins() error {
 		pluginFile := filepath.Join(pm.dir, entry.Name())
 		pool := &sync.Pool{
 			New: func() any {
-				state := newSandboxedState()
+				state := pm.newSandboxedState()
 				if err := state.DoFile(pluginFile); err != nil {
 					Warn("pool: failed to load " + pluginFile + ": " + err.Error())
 				}
@@ -192,6 +237,91 @@ func (pm *PluginManger) RunByHook(sig string, entry DBEntry) (DBEntry, error) {
 		}
 	}
 	return entry, nil
+}
+
+// isDisallowedPluginIP reports whether ip is a loopback, private, link-local,
+// or unspecified address — the ranges a plugin's HTTP client must never
+// reach. MySQL and Prometheus are deliberately unpublished from the LAN
+// (issues #200, #204) and have no auth of their own, on the assumption
+// they're unreachable from outside the pod's network namespace; an
+// unrestricted plugin HTTP client would be a direct SSRF path back into
+// both.
+func isDisallowedPluginIP(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
+}
+
+// dialBlockingPrivateIPs resolves addr's host itself and checks every
+// candidate against isDisallowedPluginIP before dialing, then dials that
+// exact IP rather than the original hostname. Checking only the URL's
+// hostname up front (rather than the address actually being connected to)
+// would leave a DNS-rebinding gap: a hostname that resolves to a public IP
+// at check time but a pod-internal one at dial time. Resolving once and
+// dialing the specific IP we vetted closes that gap.
+func dialBlockingPrivateIPs(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	ips, err := net.DefaultResolver.LookupIP(ctx, "ip", host)
+	if err != nil {
+		return nil, err
+	}
+
+	var dialer net.Dialer
+	var lastErr error
+	for _, ip := range ips {
+		if isDisallowedPluginIP(ip) {
+			lastErr = fmt.Errorf("refusing to dial disallowed address %s (resolved from %s)", ip, host)
+			continue
+		}
+		conn, dialErr := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		if dialErr == nil {
+			return conn, nil
+		}
+		lastErr = dialErr
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no addresses resolved for %s", host)
+	}
+	return nil, lastErr
+}
+
+// pluginHTTPClient is the only HTTP client plugin code can reach, via
+// http.get/http.post. Its Transport dials through dialBlockingPrivateIPs
+// instead of the default dialer.
+var pluginHTTPClient = &http.Client{
+	Transport: &http.Transport{DialContext: dialBlockingPrivateIPs},
+}
+
+func (pm *PluginManger) httpGet(url string) (string, error) {
+	resp, err := pluginHTTPClient.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func (pm *PluginManger) httpPost(url string, body string) (string, error) {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	resp, err := pluginHTTPClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(respBody), nil
 }
 
 // callHook borrows this plugin's isolated LState from its own pool,
