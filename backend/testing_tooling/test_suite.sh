@@ -10,7 +10,14 @@ DOWNLOAD_DIR="$(mktemp -d)"
 # Mirror both streams into a timestamped log file, keeping stdout (structured
 # PASS/FAIL results) and stderr (human-readable progress) separately teed so
 # neither stream's meaning changes for callers piping this script's output.
-LOG_DIR="$SCRIPT_DIR/logs"
+# Lives under the app's own persisted /app/logs volume rather than a
+# testing_tooling/logs subdirectory — that path isn't covered by any volume
+# mount or the --tmpfs /tmp added for --read-only hardening (issue #213), so
+# mkdir here would fail under a read-only root filesystem; putting it on a
+# separate ephemeral tmpfs instead would lose BITs' run history on every
+# container restart, which would make debugging a failed self-test on a
+# redeployed container needlessly hard.
+LOG_DIR="$(dirname "$SCRIPT_DIR")/logs/bits"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/test_suite-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)

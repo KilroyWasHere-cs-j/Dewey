@@ -258,6 +258,7 @@ log "info" "Starting backend container..."
 # fallback, so it must be passed the same generated root password MySQL
 # was started with above.
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
+  --read-only --tmpfs /tmp \
   -e DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/deweyRecords" \
   -v dewey-store:/app/store:Z \
   -v dewey-cache:/app/cache:Z \

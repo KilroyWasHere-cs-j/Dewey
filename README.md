@@ -16,6 +16,7 @@ A backend file sorting and storage service with a RESTful API, built for stable 
 - [External Libraries](#external-libraries)
 - [Testing](#testing)
 - [Deployment & Packaging](#deployment--packaging)
+  - [Data Persistence](#data-persistence)
 - [Roadmap](#roadmap)
 
 ## Overview
@@ -198,8 +199,28 @@ Two layers of tests cover the backend:
 
 The application and its supporting services are built into Podman containers for portable, controlled deployment.
 
-- **`deploy.sh`** — creates `dewey-pod` and starts all four containers (MySQL, Prometheus, backend, frontend) with persistent named volumes for the database and for `store/`, `cache/`, `backup/`, and `logs/`. Supports `--reset-db` and `--keep-data` flags for controlling what survives a redeploy.
-- **`package.sh`** — builds the backend and frontend images against an already-running `dewey-pod`, then exports the whole pod (images + Kubernetes-style pod spec + a run script) as a self-contained `.tar.gz` bundle that can be moved to another host and deployed with `run.sh`, without needing a registry.
+- **`deploy.sh`** — creates `dewey-pod` and starts all four containers (MySQL, Prometheus, backend, frontend) with persistent named volumes for the database and for `store/`, `cache/`, `backup/`, and `logs/`.
+- **`package.sh`** — builds the backend and frontend images against an already-running `dewey-pod`, then exports the whole pod (images + Kubernetes-style pod spec + a self-contained `run.sh`) as a `.tar.gz` bundle that can be moved to another host and deployed without needing a registry or a repo checkout — it also cross-compiles and bundles `dewey-cli`.
+- **`dewey-cli`** — a standalone CLI client for the deployed API (`cli/main.go`), buildable manually (`cd cli && go build -o dewey-cli .`) or already sitting alongside `run.sh` in a `package.sh` bundle.
+
+### Data Persistence
+
+Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on every run (`podman pod rm -f dewey-pod`), so whatever survives that has to live in a named Podman volume rather than the pod itself. Two independent things can be wiped, controlled separately:
+
+| Data | Volume(s) | Controlled by |
+|---|---|---|
+| MySQL database (file records, metadata, the `known_machines` allowlist) | `mysql-data` | `deploy.sh` only — `--reset-db` |
+| Backend data (`store/`, `cache/`, `backup/`, `logs/`) | `dewey-store`, `dewey-cache`, `dewey-backup`, `dewey-logs` | Both scripts — `--keep-data` / `--wipe-data`, or the interactive prompt |
+
+**`deploy.sh` flags:**
+- `--reset-db` — wipes the `mysql-data` volume before starting MySQL. Not passing this is the default and keeps the database across redeploys. Since MySQL only honors `MYSQL_ROOT_PASSWORD` on first init of an empty data directory, the root password is persisted to a local, gitignored `.mysql-root-password` file and reused on every run that keeps `mysql-data` — it's only regenerated when `--reset-db` actually wipes the volume.
+- `--keep-data` — preserves `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs` instead of wiping them.
+- `--wipe-data` — explicitly wipes those same four volumes. Needed to wipe non-interactively (CI, cron, `ssh` without `-t`), since without a TTY to prompt on, the script defaults to `--keep-data` rather than silently wiping.
+- No flags, run interactively: prompted `Wipe store/cache/backup/logs volumes before this deploy? [Y/n]` (default: wipe).
+
+**Bundled `run.sh` flags** (from a `package.sh` bundle): the same `--keep-data` / `--wipe-data` pair and interactive-prompt fallback for the four backend data volumes — but no `--reset-db` equivalent. `run.sh` never touches `mysql-data`, so the database always persists across a bundle's redeploys regardless of flags; wiping it requires `podman volume rm mysql-data` by hand.
+
+**To guarantee nothing is lost across a redeploy:** don't pass `--reset-db`, and either pass `--keep-data` or answer `n` to the prompt (or pass `--keep-data` up front to skip the prompt entirely in a non-interactive context).
 
 ## Roadmap
 
