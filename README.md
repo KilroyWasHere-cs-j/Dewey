@@ -165,9 +165,9 @@ Every plugin declares a `WhoAmI()` function returning its salience only. Which h
 | `OnFilter` | Once per upload, during async post-processing | Can rewrite the file's destination `Path` |
 | `OnDelete` | Once per delete request, synchronously, before anything is removed | Calling `error(...)` vetoes the deletion — the caller gets a `403` instead |
 | `OnInit` | Once at server startup | Registered and invoked; no shipped example plugin |
-| `OnTick` | Once per daemon tick | Registered and invoked; no shipped example plugin |
+| `OnTick` | Once per daemon tick | `OnTick.lua` — fetches NOAA's planetary K-index (`http.get`), caches it to the plugin scratch directory (`files.write`), reads the cache back (`files.read`), and beacons it out (`http.post`); see the Capability API section below |
 
-Within a hook, plugins run in descending salience order (highest first), each in its own isolated Lua state (via a per-plugin `sync.Pool`) so one plugin's globals can't leak into another's. Example plugins for `OnFilter`, `OnUpload`, and `OnDelete` ship in `backend/plugins/`.
+Within a hook, plugins run in descending salience order (highest first), each in its own isolated Lua state (via a per-plugin `sync.Pool`) so one plugin's globals can't leak into another's. Example plugins for `OnFilter`, `OnUpload`, `OnDelete`, and `OnTick` ship in `backend/plugins/`.
 
 ### Sandboxing & Capability API
 
@@ -182,7 +182,7 @@ In place of raw `os`/`io`, plugins get two narrow, Go-implemented capability API
 | `files.read(name)` | Reads a file, returns its contents as a string | Confined to `pluginScratchDir` (`./plugin-scratch`, separate from `store`/`cache`/`backup`) via the same traversal check (`resolveStorePath`) that keeps uploads inside `fileSystemBaseDir` — a `../` escape is rejected before any file is touched. |
 | `files.write(name, data)` | Writes `data` to a file | Same restriction as `files.read`. |
 
-A Go-side error on any of these four raises a normal Lua error, catchable with `pcall` like any other plugin error.
+A Go-side error on any of these four raises a normal Lua error, catchable with `pcall` like any other plugin error. `OnTick.lua` uses all four together as one real workflow: fetch, cache, read the cache back, beacon out.
 
 ## Technology Stack
 
