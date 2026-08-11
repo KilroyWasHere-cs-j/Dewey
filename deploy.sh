@@ -74,10 +74,11 @@ echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x9
 # it, since podman named volumes are meant to survive pod recreation.
 #
 # --keep-data preserves the backend data volumes (dewey-store, dewey-cache,
-# dewey-backup, dewey-logs) instead of the default behavior, which wipes them
-# on every deploy. Default is to wipe: metrics like app_files_in_store read
-# these directories live, so leftover files from a previous deployment made
-# the dashboard look like nothing had reset between deploys.
+# dewey-backup, dewey-logs, dewey-plugin-scratch) instead of the default
+# behavior, which wipes them on every deploy. Default is to wipe: metrics
+# like app_files_in_store read these directories live, so leftover files
+# from a previous deployment made the dashboard look like nothing had reset
+# between deploys.
 #
 # --wipe-data explicitly opts into that wipe when there's no TTY to prompt
 # on. Without it, a non-interactive run (cron, CI, SSH without -t) used to
@@ -242,10 +243,10 @@ elif [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ]; then
 fi
 
 if [ "$KEEP_DATA" = true ]; then
-  log "info" "Keeping existing store/cache/backup/logs volumes"
+  log "info" "Keeping existing store/cache/backup/logs/plugin-scratch volumes"
 else
-  log "warn" "Resetting store/cache/backup/logs volumes (default; pass --keep-data to preserve)..."
-  for vol in dewey-store dewey-cache dewey-backup dewey-logs; do
+  log "warn" "Resetting store/cache/backup/logs/plugin-scratch volumes (default; pass --keep-data to preserve)..."
+  for vol in dewey-store dewey-cache dewey-backup dewey-logs dewey-plugin-scratch; do
     podman volume inspect "$vol" &>/dev/null && podman volume rm "$vol"
   done
 fi
@@ -260,9 +261,14 @@ podman build \
   -t cross-doc-tool-dev ./backend
 
 log "info" "Starting backend container..."
-# Named volumes for store/cache/backup/logs. By default these are wiped above
-# on every deploy; pass --keep-data to let them survive pod recreation instead,
-# the same way mysql-data does for the database.
+# Named volumes for store/cache/backup/logs/plugin-scratch. By default these
+# are wiped above on every deploy; pass --keep-data to let them survive pod
+# recreation instead, the same way mysql-data does for the database.
+# dewey-plugin-scratch backs files.read/files.write (issue #284) — the
+# container runs --read-only, so without an actual volume mounted at
+# /app/plugin-scratch, fileSystemInit's MkdirAll for that directory fails
+# at startup (silently: it warns and moves on rather than failing fast),
+# and every files.read/files.write call from a plugin errors out.
 # DB_DSN is now required (issue #200) — db.go no longer has a hardcoded
 # fallback, so it must be passed the same generated root password MySQL
 # was started with above.
@@ -276,6 +282,7 @@ podman run -d --pod dewey-pod --name cross-doc-tool-dev \
   -v dewey-cache:/app/cache:Z \
   -v dewey-backup:/app/backup:Z \
   -v dewey-logs:/app/logs:Z \
+  -v dewey-plugin-scratch:/app/plugin-scratch:Z \
   cross-doc-tool-dev
 log "success" "Backend running"
 

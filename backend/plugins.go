@@ -56,12 +56,13 @@ func NewPluginManger() *PluginManger {
 // --- Go-native capability API (issue #284) ---
 //
 // Plugins get no os/io access (see newSandboxedState below), so this is the
-// only sanctioned way for one to reach the network. Built bottom-up:
-// isDisallowedPluginIP and dialBlockingPrivateIPs enforce the SSRF
-// restriction, pluginHTTPClient is the one client that dialer is wired
-// into, httpGet/httpPost are the Go-side implementations, and
-// luaHTTPGet/luaHTTPPost adapt those to gopher-lua so newSandboxedState can
-// register them as the "http" global table.
+// only sanctioned way for one to reach the network or the filesystem. Built
+// bottom-up: isDisallowedPluginIP/dialBlockingPrivateIPs/pluginHTTPClient
+// enforce the SSRF restriction for the network side, resolvePluginScratchPath
+// enforces the path-traversal restriction for the file side, httpGet/
+// httpPost/fileRead/fileWrite are the Go-side implementations, and the
+// luaHTTPGet/luaHTTPPost/luaFileRead/luaFileWrite adapters let
+// newSandboxedState register them as the "http" and "files" global tables.
 
 // isDisallowedPluginIP reports whether ip is a loopback, private, link-local,
 // or unspecified address — the ranges a plugin's HTTP client must never
@@ -182,6 +183,59 @@ func (pm *PluginManger) luaHTTPPost(L *lua.LState) int {
 	return 1
 }
 
+// fileRead and fileWrite are the Go-side implementations behind the Lua
+// "files.read"/"files.write" globals — the only filesystem access a plugin
+// gets now that os/io are gone from the sandbox. Both confine name to
+// pluginScratchDir via resolveStorePath, the same traversal check
+// filemanager.go already uses to keep uploads within fileSystemBaseDir —
+// a plain filepath.Join+Clean wouldn't catch a "../" escape on its own.
+func (pm *PluginManger) fileRead(name string) (string, error) {
+	path, err := resolveStorePath(pluginScratchDir, name)
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func (pm *PluginManger) fileWrite(name string, data string) error {
+	path, err := resolveStorePath(pluginScratchDir, name)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(data), 0o600)
+}
+
+// luaFileRead and luaFileWrite adapt fileRead/fileWrite to gopher-lua's
+// LGFunction signature, the same pattern as luaHTTPGet/luaHTTPPost above.
+func (pm *PluginManger) luaFileRead(L *lua.LState) int {
+	filePath := L.CheckString(1)
+	fileContent, err := pm.fileRead(filePath)
+	if err != nil {
+		L.RaiseError("files.read: %s", err.Error())
+		return 0
+	}
+	L.Push(lua.LString(fileContent))
+	return 1
+}
+
+func (pm *PluginManger) luaFileWrite(L *lua.LState) int {
+	filePath := L.CheckString(1)
+	fileContent := L.CheckString(2)
+	err := pm.fileWrite(filePath, fileContent)
+	if err != nil {
+		L.RaiseError("files.write: %s", err.Error())
+		return 0
+	}
+	return 1
+}
+
 // dangerousBaseGlobals are registered by lua.OpenBase alongside the safe
 // base functions (print, pairs, type, pcall, error, ...) — OpenBase bundles
 // them all into one unexported map, so they can't be excluded at open time
@@ -198,9 +252,9 @@ var dangerousBaseGlobals = []string{"load", "loadstring", "dofile", "loadfile", 
 // string (issue #284, superseding #199).
 //
 // It's a method (not a free function) so it can register pm's Go-native
-// capability functions — http.get/http.post above — as the only sanctioned
-// way for a plugin to reach the network, in place of the os/io access it no
-// longer has.
+// capability functions — http.get/http.post and files.read/files.write
+// above — as the only sanctioned way for a plugin to reach the network or
+// filesystem, in place of the os/io access it no longer has.
 func (pm *PluginManger) newSandboxedState() *lua.LState {
 	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	lua.OpenBase(L)
@@ -214,6 +268,11 @@ func (pm *PluginManger) newSandboxedState() *lua.LState {
 	L.SetField(httpTbl, "get", L.NewFunction(pm.luaHTTPGet))
 	L.SetField(httpTbl, "post", L.NewFunction(pm.luaHTTPPost))
 	L.SetGlobal("http", httpTbl)
+
+	filesTbl := L.NewTable()
+	L.SetField(filesTbl, "read", L.NewFunction(pm.luaFileRead))
+	L.SetField(filesTbl, "write", L.NewFunction(pm.luaFileWrite))
+	L.SetGlobal("files", filesTbl)
 
 	return L
 }

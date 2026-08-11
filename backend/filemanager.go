@@ -36,6 +36,7 @@ var barcodeCandidateExt = regexp.MustCompile(`(?i)\.(png|jpe?g)$`)
 // Behavior:
 //   - Creates upload directory
 //   - Creates base storage directory
+//   - Creates plugin scratch directory (files.read/files.write, issue #284)
 //   - Initiate the loading of filter rules
 //   - Fails fast if any directory cannot be created
 func fileSystemInit() {
@@ -43,6 +44,7 @@ func fileSystemInit() {
 		uploadDir,
 		fileSystemBaseDir,
 		backupDir,
+		pluginScratchDir,
 	}
 
 	for _, dir := range dirs {
