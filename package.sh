@@ -73,6 +73,14 @@ log "info" "Building frontend image ${DIM}(admin-portal)${NC}..."
 podman build -t admin-portal ./frontend/doctooladmin
 log "success" "Frontend image built"
 
+log "info" "Building dewey-cli..."
+# The deployment target is always a Linux server (podman pods, bash run.sh
+# below) regardless of what OS/arch this script itself runs on, so the
+# build target is fixed rather than inferred from the packaging host
+# (issue #280).
+(cd cli && GOOS=linux GOARCH=amd64 go build -o dewey-cli .)
+log "success" "dewey-cli built"
+
 # ---------------- PACKAGE ----------------
 # Exports the full pod as a self-contained bundle: images + pod spec + run script.
 # The resulting .tar.gz can be transferred to any server and deployed with ./run.sh
@@ -106,6 +114,11 @@ podman save "$MYSQL_IMAGE" -o "${BUNDLE_DIR}/mysql.tar"
 
 log "info" "Saving Prometheus image (${PROMETHEUS_IMAGE})..."
 podman save "$PROMETHEUS_IMAGE" -o "${BUNDLE_DIR}/prometheus.tar"
+
+log "info" "Bundling dewey-cli..."
+cp cli/dewey-cli "${BUNDLE_DIR}/dewey-cli"
+chmod +x "${BUNDLE_DIR}/dewey-cli"
+rm -f cli/dewey-cli
 
 log "info" "Writing run script..."
 cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
@@ -287,6 +300,7 @@ log "info" "Next steps:"
 echo -e "  ${DIM}\xe2\x94\x82${NC} List running containers:      ${CYAN}podman ps --pod${NC}"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f dewey-pod-cross-doc-tool-dev${NC}"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach dewey-pod-cross-doc-tool-dev${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Use the CLI:                  ${CYAN}./dewey-cli --help${NC}"
 echo ""
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
