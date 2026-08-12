@@ -3,6 +3,7 @@
 	import AppShell from '$lib/components/AppShell.svelte';
 	import MetricGraph from '$lib/components/MetricGraph.svelte';
 	import MetricBarChart from '$lib/components/MetricBarChart.svelte';
+	import StatTile from '$lib/components/StatTile.svelte';
 	import { settings, CHART_THEMES } from '$lib/stores/settings.svelte';
 	import type { AppMetrics } from '../api/metrics/+server';
 
@@ -171,7 +172,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				Application
 			</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5">
 				<MetricGraph
 					label="Files in Store"
 					value={metrics.app_files_in_store ?? 0}
@@ -190,12 +191,18 @@
 					color={colors[6]}
 					maxHistory={settings.value.analyticsHistoryWindow}
 				/>
-				<MetricGraph
+				<!-- Plain stat tiles, not sparkline graphs — a countdown and an
+				     ever-increasing uptime counter don't have a meaningful trend
+				     to plot (issue #279). -->
+				<StatTile
 					label="Next Tick"
 					value={round2((metrics.app_time_til_next_tick ?? 0) / 60)}
 					unit="min"
-					color={colors[7]}
-					maxHistory={settings.value.analyticsHistoryWindow}
+				/>
+				<StatTile
+					label="Uptime"
+					value={round2((metrics.app_uptime_seconds ?? 0) / 3600)}
+					unit="hr"
 				/>
 			</div>
 		</section>
