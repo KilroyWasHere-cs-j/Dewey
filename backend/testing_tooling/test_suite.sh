@@ -740,6 +740,51 @@ run_delete_tests() {
     fi
 }
 
+# ── Section 14: PDF embedded JavaScript rejection ─────────────────────────────
+
+run_pdf_javascript_test() {
+    section "PDF EMBEDDED JAVASCRIPT REJECTION"
+
+    local src="$SCRIPT_DIR/js_test.pdf"
+
+    if [ ! -f "$src" ]; then
+        result_skip "POST /upload [PDF with embedded JS]" "js_test.pdf not found"
+        return
+    fi
+
+    info "  Uploading js_test.pdf (PDF with an /OpenAction JavaScript trigger) ..."
+    pace
+    local body code
+    body=$(curl -s -w "\n%{http_code}" --max-time 30 \
+        -X POST "$BASE/upload" \
+        -F "file=@$src" \
+        -F "claim_number=CLM-00000" \
+        -F "claimant_name=PDF JS Test" \
+        -F "date_of_injury=2025-01-01" \
+        -F "employer=TestCorp" \
+        -F "adjuster=A. Smith" \
+        -F "support=Full Support" \
+        -F "claim_type=Workers Comp" \
+        -F "jurisdiction=California" \
+        -F "policy_number=POL-000001" \
+        -F "acts_id=ACTS_PDFJS" \
+        -F "data=pdf-js-rejection-test" 2>/dev/null)
+    code=$(echo "$body" | tail -1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" -ge 400 ]; then
+        if echo "$body" | grep -qi "javascript"; then
+            result_pass "POST /upload [PDF with embedded JS] -> HTTP $code (JS detected and blocked)"
+        else
+            result_pass "POST /upload [PDF with embedded JS] -> HTTP $code (rejected)"
+        fi
+    elif [ "$code" = "000" ]; then
+        result_fail "POST /upload [PDF with embedded JS]" "connection failed"
+    else
+        result_fail "POST /upload [PDF with embedded JS]" "expected 4xx, got HTTP $code — server accepted a PDF with embedded JavaScript"
+    fi
+}
+
 # ── Run everything ────────────────────────────────────────────────────────────
 
 info "${CYAN}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -760,6 +805,7 @@ run_upload_tests
 run_upload_error_tests
 run_bad_extension_test
 run_elf_rejection_test
+run_pdf_javascript_test
 run_path_traversal_tests
 run_sha256_upload_test
 run_duplicate_upload_test

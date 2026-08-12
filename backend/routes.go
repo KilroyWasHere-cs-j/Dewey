@@ -334,6 +334,30 @@ func uploadFile(c *gin.Context) {
 
 	file.Seek(0, io.SeekStart)
 
+	// PDFs get one more check beyond the sniff above: reject any PDF
+	// carrying embedded JavaScript or auto-actions (issue #245). Unlike the
+	// checks above, this needs to happen after we know it's really a PDF —
+	// ContainsPDFJavaScript parses the full object structure via pdfcpu.
+	if ext == ".pdf" {
+		hasJS, err := ContainsPDFJavaScript(file)
+		if err != nil {
+			Warn("Failed to scan PDF for embedded JavaScript: " + err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to validate file content",
+			})
+			return
+		}
+		if hasJS {
+			Warn("PDF rejected: contains embedded JavaScript or an auto-action")
+			uploadRejections.WithLabelValues("pdf_js_blocked").Inc()
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "PDF contains embedded JavaScript or auto-actions and was rejected",
+			})
+			return
+		}
+		file.Seek(0, io.SeekStart)
+	}
+
 	// -------------------------
 	// Generate filename
 	// -------------------------
