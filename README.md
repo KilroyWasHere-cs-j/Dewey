@@ -220,7 +220,7 @@ The application and its supporting services are built into Podman containers for
 
 ### Data Persistence
 
-Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on every run (`podman pod rm -f dewey-pod`), so whatever survives that has to live in a named Podman volume rather than the pod itself. Two independent things can be wiped, controlled separately:
+Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on every run (`podman pod rm -f dewey-pod`), so whatever survives that has to live in a named Podman volume rather than the pod itself. Two independent things can be wiped, normally controlled separately (`deploy.sh --clean-slate` ties them together — see below):
 
 | Data | Volume(s) | Controlled by |
 |---|---|---|
@@ -232,10 +232,13 @@ Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on ev
 - `--keep-data` — preserves `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs`/`dewey-plugin-scratch` instead of wiping them.
 - `--wipe-data` — explicitly wipes those same four volumes. Needed to wipe non-interactively (CI, cron, `ssh` without `-t`), since without a TTY to prompt on, the script defaults to `--keep-data` rather than silently wiping.
 - No flags, run interactively: prompted `Wipe store/cache/backup/logs volumes before this deploy? [Y/n]` (default: wipe).
+- `--clean-slate` — forces both a full `mysql-data` wipe and a `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs`/`dewey-plugin-scratch` wipe together, overriding any `--reset-db`/`--keep-data`/`--wipe-data` also passed. Exists because those two resets are otherwise independent: running one without the other leaves the DB pointing at files that no longer exist, or files on disk with no DB record — exactly the drift this flag is meant to rule out (issue #296). Requires an interactive TTY and typing `yes` at a dedicated confirmation prompt; refuses to run at all non-interactively, since this permanently destroys every stored file and its metadata in one shot.
 
 **Bundled `run.sh` flags** (from a `package.sh` bundle): the same `--keep-data` / `--wipe-data` pair and interactive-prompt fallback for the four backend data volumes — but no `--reset-db` equivalent. `run.sh` never touches `mysql-data`, so the database always persists across a bundle's redeploys regardless of flags; wiping it requires `podman volume rm mysql-data` by hand.
 
 **To guarantee nothing is lost across a redeploy:** don't pass `--reset-db`, and either pass `--keep-data` or answer `n` to the prompt (or pass `--keep-data` up front to skip the prompt entirely in a non-interactive context).
+
+**To guarantee a fully clean, consistent state instead:** pass `--clean-slate` rather than combining `--reset-db` with a store/cache wipe by hand — it's the only path that keeps both sides in sync, since the individual flags don't warn you if they end up wiping just one.
 
 ## Roadmap
 
