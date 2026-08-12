@@ -33,6 +33,16 @@
 		return () => clearInterval(id);
 	});
 
+	// Sum app_upload_rejections_total across every reason label (pe_blocked,
+	// elf_blocked, content_mismatch, pdf_js_blocked, etc.) into one running
+	// count for the sparkline — the per-reason breakdown isn't shown here.
+	let uploadRejectionsTotal = $derived(
+		Object.values((metrics.app_upload_rejections_total as Record<string, number>) ?? {}).reduce(
+			(sum, v) => sum + v,
+			0
+		)
+	);
+
 	// Aggregate file_io_ops_total (3 labels: op, result, file_group) by op for a clean bar chart
 	let ioOpsByType = $derived(
 		Object.entries((metrics.file_io_ops_total as Record<string, number>) ?? {}).reduce(
@@ -277,7 +287,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				Processing Pipeline
 			</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+			<div class="grid grid-cols-2 gap-4 lg:grid-cols-5 xl:grid-cols-6">
 				<MetricGraph
 					label="Barcode Successes"
 					value={metrics.app_barcode_successes ?? 0}
@@ -306,6 +316,12 @@
 					label="DB Errors"
 					value={metrics.app_db_errors ?? 0}
 					color="#dc2626"
+					maxHistory={settings.value.analyticsHistoryWindow}
+				/>
+				<MetricGraph
+					label="Upload Rejections"
+					value={uploadRejectionsTotal}
+					color="#a855f7"
 					maxHistory={settings.value.analyticsHistoryWindow}
 				/>
 			</div>
