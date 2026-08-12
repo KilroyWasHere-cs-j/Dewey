@@ -33,6 +33,7 @@ RUN mkdir -p cache store backup logs plugins \
     && chown -R appuser:appgroup /app
 
 COPY --from=builder --chown=appuser:appgroup /app/app-binary .
+COPY --from=builder --chown=appuser:appgroup /app/config.json .
 COPY --from=builder --chown=appuser:appgroup /app/plugins ./plugins
 COPY --chown=appuser:appgroup testing_tooling ./testing_tooling
 

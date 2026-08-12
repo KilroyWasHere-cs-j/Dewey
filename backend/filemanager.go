@@ -58,8 +58,12 @@ func fileSystemInit() {
 }
 
 // postProcessingSem bounds concurrent idAndSort work to
-// maxConcurrentPostProcessing (issue #217).
-var postProcessingSem = make(chan struct{}, maxConcurrentPostProcessing)
+// maxConcurrentPostProcessing (issue #217). Sized in load() (consts.go)
+// once the config file has actually been read, not here — see the
+// comment there for why a static initializer referencing
+// maxConcurrentPostProcessing directly would be wrong now that it's a
+// runtime-loaded var instead of a compile-time const.
+var postProcessingSem chan struct{}
 
 // queueIdAndSort runs idAndSort in a background goroutine without blocking
 // the caller (the upload response is already sent before this is called),

@@ -1,0 +1,29 @@
+{
+	"file_system": {
+		"upload_dir": "./cache",
+		"file_system_base_dir": "./store",
+		"backup_dir": "./backup",
+		"daemon_tick_time_hours": 1
+	},
+	"server": {
+		"max_file_size_bytes": 52428800,
+		"port_number": "8080",
+		"app_version": "0.1.0"
+	},
+	"rate_limit": {
+		"requests_per_second": 10,
+		"burst": 20
+	},
+	"database": {
+		"max_open_connections": 10,
+		"max_idle_connections": 10,
+		"connection_timeout_multiplier_minutes": 2
+	},
+	"plugin": {
+		"plugin_dir": "./plugins",
+		"plugin_scratch_dir": "./plugin-scratch"
+	},
+	"post_processing": {
+		"max_concurrent": 4
+	}
+}
