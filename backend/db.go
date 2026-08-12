@@ -55,7 +55,7 @@ func NewDatabaseManager() (*DatabaseManager, error) {
 	// 2. Configure connection pool settings
 	db.SetMaxOpenConns(maxOpenDBConnections)
 	db.SetMaxIdleConns(maxIdleDBConnections)
-	db.SetConnMaxLifetime(time.Minute * dbConnectionTimeoutMultiplier)
+	db.SetConnMaxLifetime(time.Minute * time.Duration(dbConnectionTimeoutMultiplier))
 
 	// 3. Verify the connection is actually working
 	if err := db.Ping(); err != nil {

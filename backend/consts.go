@@ -1,40 +1,148 @@
 package main
 
-// Maybe use structs here
+import (
+	"encoding/json"
+	"os"
+)
 
-// File system specific constants
-const uploadDir = "./cache"         // temp dir for storing files after files post upload and for fast query access
-const fileSystemBaseDir = "./store" // base directory where all stored files start from
-const backupDir = "./backup"        // directory where backup files are stored
-const daemonTickTime = 1            // system tick interval in hours (note don't try and set this to a float as it won't compile)
+// configFile is the path load() reads at startup — relative to the
+// binary's working directory, same as every other path in this file
+// (./cache, ./store, etc.).
+const configFile = "./config.json"
 
-// Server specific constants
-const maxFileSize = 50 << 20 // maximum file that can be uploaded in bytes (50MB)
-const portNumber = "8080"    // port for the server to listen on
-const appVersion = "0.1.0"   // app release version, bump by hand before cutting a release
+// Config mirrors config.json's shape. Field names match the const names
+// this file used to declare (issue #256) so callers throughout the
+// codebase keep referencing the same package-level identifiers below —
+// only this file and the handful of call sites that needed a type change
+// for the switch from untyped consts to typed vars were touched.
+type Config struct {
+	FileSystem     FileSystemConfig     `json:"file_system"`
+	Server         ServerConfig         `json:"server"`
+	RateLimit      RateLimitConfig      `json:"rate_limit"`
+	Database       DatabaseConfig       `json:"database"`
+	Plugin         PluginConfig         `json:"plugin"`
+	PostProcessing PostProcessingConfig `json:"post_processing"`
+}
 
-// Rate limiter (global, not per-IP — shared across every client hitting this
-// server). A single dashboard page load fires off several requests (files
-// or machines, metrics, version), so this needs enough headroom for normal
-// navigation, not just a single request.
-const rateLimitPerSecond = 10 // steady-state requests/sec refill rate
-const rateLimitBurst = 20     // burst allowance on top of the refill rate
+// FileSystem specific config
+type FileSystemConfig struct {
+	UploadDir         string `json:"upload_dir"`             // temp dir for storing files after files post upload and for fast query access
+	FileSystemBaseDir string `json:"file_system_base_dir"`   // base directory where all stored files start from
+	BackupDir         string `json:"backup_dir"`             // directory where backup files are stored
+	DaemonTickTime    int    `json:"daemon_tick_time_hours"` // system tick interval in hours
+}
 
-// Database specific constants
-const maxOpenDBConnections = 10         // maximum allowable open connections
-const maxIdleDBConnections = 10         // maximum allowable idle connections
-const dbConnectionTimeoutMultiplier = 2 // in minutes
+// Server specific config
+type ServerConfig struct {
+	MaxFileSize int64  `json:"max_file_size_bytes"` // maximum file that can be uploaded in bytes
+	PortNumber  string `json:"port_number"`         // port for the server to listen on
+	AppVersion  string `json:"app_version"`         // app release version, bump by hand before cutting a release
+}
 
-// Plugin specific constants
-const pluginDir = "./plugins" // Directory where plugins live
-// pluginScratchDir is where files.read/files.write (issue #284) confine a
-// plugin's file access — kept separate from store/cache/backup so a plugin
-// can never reach documents a user actually uploaded.
-const pluginScratchDir = "./plugin-scratch"
+// Rate limiter config (global, not per-IP — shared across every client
+// hitting this server). A single dashboard page load fires off several
+// requests (files or machines, metrics, version), so this needs enough
+// headroom for normal navigation, not just a single request.
+type RateLimitConfig struct {
+	RequestsPerSecond float64 `json:"requests_per_second"` // steady-state requests/sec refill rate
+	Burst             int     `json:"burst"`               // burst allowance on top of the refill rate
+}
 
-// Post-processing (issue #217) — bounds how many idAndSort goroutines
-// (barcode scan + Lua filter plugins + disk copy) can run at once. Without
-// this, a burst of uploads accepted just under the rate limiter could each
-// spin up a full Lua-plugin-running goroutine concurrently with no ceiling,
-// letting them pile up faster than a slow filesystem can drain them.
-const maxConcurrentPostProcessing = 4
+// Database specific config
+type DatabaseConfig struct {
+	MaxOpenConnections          int `json:"max_open_connections"`                  // maximum allowable open connections
+	MaxIdleConnections          int `json:"max_idle_connections"`                  // maximum allowable idle connections
+	ConnectionTimeoutMultiplier int `json:"connection_timeout_multiplier_minutes"` // in minutes
+}
+
+// Plugin specific config
+type PluginConfig struct {
+	PluginDir string `json:"plugin_dir"` // Directory where plugins live
+	// PluginScratchDir is where files.read/files.write (issue #284) confine
+	// a plugin's file access — kept separate from store/cache/backup so a
+	// plugin can never reach documents a user actually uploaded.
+	PluginScratchDir string `json:"plugin_scratch_dir"`
+}
+
+// Post-processing config (issue #217) — bounds how many idAndSort
+// goroutines (barcode scan + Lua filter plugins + disk copy) can run at
+// once. Without this, a burst of uploads accepted just under the rate
+// limiter could each spin up a full Lua-plugin-running goroutine
+// concurrently with no ceiling, letting them pile up faster than a slow
+// filesystem can drain them.
+type PostProcessingConfig struct {
+	MaxConcurrent int `json:"max_concurrent"`
+}
+
+// Package-level vars populated by load() — same identifiers every other
+// file in this package already references, so this is the only file that
+// needed to know config.json exists.
+var (
+	uploadDir         string
+	fileSystemBaseDir string
+	backupDir         string
+	daemonTickTime    int
+
+	maxFileSize int64
+	portNumber  string
+	appVersion  string
+
+	rateLimitPerSecond float64
+	rateLimitBurst     int
+
+	maxOpenDBConnections          int
+	maxIdleDBConnections          int
+	dbConnectionTimeoutMultiplier int
+
+	pluginDir        string
+	pluginScratchDir string
+
+	maxConcurrentPostProcessing int
+)
+
+// load reads configFile and populates every package-level config var
+// above. Called first thing in main(), before anything (plugins, the
+// rate limiter, the DB pool, postProcessingSem) that depends on these
+// values. Fails fast on a missing or malformed config file rather than
+// silently falling back to defaults — same reasoning as DB_DSN's required
+// env var (issue #200): a config error should stop startup loudly, not
+// get masked by a fallback that happens to still work most of the time.
+func load() {
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		Fatal("Failed to read " + configFile + ": " + err.Error())
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		Fatal("Failed to parse " + configFile + ": " + err.Error())
+	}
+
+	uploadDir = cfg.FileSystem.UploadDir
+	fileSystemBaseDir = cfg.FileSystem.FileSystemBaseDir
+	backupDir = cfg.FileSystem.BackupDir
+	daemonTickTime = cfg.FileSystem.DaemonTickTime
+
+	maxFileSize = cfg.Server.MaxFileSize
+	portNumber = cfg.Server.PortNumber
+	appVersion = cfg.Server.AppVersion
+
+	rateLimitPerSecond = cfg.RateLimit.RequestsPerSecond
+	rateLimitBurst = cfg.RateLimit.Burst
+
+	maxOpenDBConnections = cfg.Database.MaxOpenConnections
+	maxIdleDBConnections = cfg.Database.MaxIdleConnections
+	dbConnectionTimeoutMultiplier = cfg.Database.ConnectionTimeoutMultiplier
+
+	pluginDir = cfg.Plugin.PluginDir
+	pluginScratchDir = cfg.Plugin.PluginScratchDir
+
+	maxConcurrentPostProcessing = cfg.PostProcessing.MaxConcurrent
+
+	// postProcessingSem (filemanager.go) can only be sized correctly once
+	// maxConcurrentPostProcessing is known — it used to be a package-level
+	// var initializer, which would have run before load() with this value
+	// still at its zero value, permanently deadlocking every post-processing
+	// goroutine on a zero-capacity channel.
+	postProcessingSem = make(chan struct{}, maxConcurrentPostProcessing)
+}

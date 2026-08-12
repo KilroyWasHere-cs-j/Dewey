@@ -42,6 +42,10 @@ func main() {
 	defer logger.Close()
 	Banner()
 
+	Section("Config")
+	load()
+	Ok("config loaded from " + configFile)
+
 	Section("Plugins")
 	pm := NewPluginManger()
 	defer pm.Close()
@@ -100,7 +104,7 @@ func main() {
 	r.Use(p.HandlerFunc())
 
 	// Rate limiter
-	limiter := rate.NewLimiter(rateLimitPerSecond, rateLimitBurst)
+	limiter := rate.NewLimiter(rate.Limit(rateLimitPerSecond), rateLimitBurst)
 	r.Use(func(c *gin.Context) {
 		if !limiter.Allow() {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
