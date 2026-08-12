@@ -12,11 +12,24 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
 // Atomic counters for PE and ELF detections — read by Prometheus
 var PECount int64
 var ELFCount int64
+
+// pdfcpu otherwise tries to create/read a user config dir (~/.config) on
+// first use, e.g. via api.ReadContext's underlying config lookup — the
+// backend container runs --read-only (issue #213), so that mkdir fails
+// and every PDF upload errors out instead of getting scanned. We don't
+// need custom fonts/config for structural validation, so disabling it
+// entirely is the documented fix (pkg/api/api.go's own comment on
+// DisableConfigDir points here for exactly this case).
+func init() {
+	api.DisableConfigDir()
+}
 
 // oleMagic is the Compound File Binary Format signature used by legacy
 // Microsoft Office formats (.doc, .xls, .ppt) prior to the OOXML/zip switch.
@@ -110,6 +123,52 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 		atomic.AddInt64(&ELFCount, 1)
 		return true, nil
 	}
+	return false, nil
+}
+
+// ContainsPDFJavaScript parses f's structure via pdfcpu and checks the
+// document catalog for /OpenAction, /AA (additional-actions), or a
+// populated /JavaScript name tree. Presence of any of these is grounds
+// for rejection regardless of the action type — issue #245 settled on
+// reject-any-auto-action/JS rather than trying to classify intent.
+//
+// Note: this only checks catalog-level triggers. Per-page or
+// per-annotation /AA (e.g. a form widget's action) would need walking
+// the page tree's /Annots separately — not covered here yet.
+//
+// Args:
+//   - f: seekable file reader (io.ReadSeeker), already confirmed to be a
+//     PDF via MatchesDeclaredType
+//
+// Returns:
+//   - bool: true if any JS/auto-action trigger was found
+//   - error: parse error (malformed PDF, etc.)
+func ContainsPDFJavaScript(f io.ReadSeeker) (bool, error) {
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+
+	ctx, err := api.ReadContext(f, nil)
+	if err != nil {
+		return false, err
+	}
+
+	catalog, err := ctx.Catalog()
+	if err != nil {
+		return false, err
+	}
+
+	if catalog.HasEntry("OpenAction") || catalog.HasEntry("AA") {
+		return true, nil
+	}
+
+	if err := ctx.LocateNameTree("JavaScript", false); err != nil {
+		return false, err
+	}
+	if ctx.Names["JavaScript"] != nil {
+		return true, nil
+	}
+
 	return false, nil
 }
 

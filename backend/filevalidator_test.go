@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"os"
 	"sync/atomic"
 	"testing"
 )
@@ -223,3 +224,43 @@ func TestMatchesDeclaredType(t *testing.T) {
 // io.ReadSeeker interface is satisfied by *bytes.Reader; this is a compile-time
 // reminder that the fixtures above must stay in sync with that interface.
 var _ io.ReadSeeker = (*bytes.Reader)(nil)
+
+// TestContainsPDFJavaScript needs actual structurally-valid PDFs (a full
+// xref table and object graph for pdfcpu to parse), unlike MatchesDeclaredType
+// above which only sniffs a header prefix — so this reads real fixture files
+// from testing_tooling instead of embedding byte literals inline.
+func TestContainsPDFJavaScript(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{
+			name: "PDF with an OpenAction JavaScript trigger",
+			path: "testing_tooling/js_test.pdf",
+			want: true,
+		},
+		{
+			name: "clean PDF, no actions",
+			path: "testing_tooling/test.pdf",
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(tt.path)
+			if err != nil {
+				t.Fatalf("open %s: %v", tt.path, err)
+			}
+			defer f.Close()
+
+			got, err := ContainsPDFJavaScript(f)
+			if err != nil {
+				t.Fatalf("ContainsPDFJavaScript(%s) error = %v", tt.path, err)
+			}
+			if got != tt.want {
+				t.Fatalf("ContainsPDFJavaScript(%s) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
