@@ -689,6 +689,18 @@ bash deploy.sh --reset-db</code></pre>
 					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-backup</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/backup</code></li>
 					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-logs</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/logs</code></li>
 				</ul>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--reset-db</code> and the store/cache
+					wipe (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--keep-data</code> /
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--wipe-data</code>) are independent —
+					running one without the other can leave the database pointing at files that no longer
+					exist on disk, or files on disk with no database record.
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--clean-slate</code> forces both
+					wipes together instead, gated behind a typed <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">yes</code>
+					confirmation at an interactive terminal (it refuses to run non-interactively, since this
+					permanently destroys every stored file and its metadata):
+				</p>
+				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">bash deploy.sh --clean-slate</code></pre>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">package.sh</code>'s generated
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">run.sh</code> uses

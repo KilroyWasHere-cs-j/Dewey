@@ -86,17 +86,51 @@ echo -e "  ${CYAN}${BOLD}\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x9
 # for it — since mysql-data survives by default but the store doesn't, that
 # left MySQL's file-metadata pointing at documents no longer on disk
 # (issue #206). See the TTY check below for the safe default this enables.
+#
+# --clean-slate is the deliberate, all-of-it version of the above: it forces
+# both the mysql-data wipe (same as --reset-db) and the store/cache wipe
+# (same as the default minus --keep-data), regardless of what those
+# individual flags are also passed, since the whole point is an unambiguous
+# full reset rather than something that depends on flag order (issue #296).
+# Gated behind its own typed confirmation — see below — since the other
+# flags' prompts aren't a strong enough gate for permanently destroying
+# every stored file and its metadata in one shot.
 RESET_DB=false
 KEEP_DATA=false
 KEEP_DATA_SET=false
 WIPE_DATA_SET=false
+CLEAN_SLATE=false
 for arg in "$@"; do
   case "$arg" in
     --reset-db) RESET_DB=true ;;
     --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
     --wipe-data) WIPE_DATA_SET=true ;;
+    --clean-slate) CLEAN_SLATE=true ;;
   esac
 done
+
+if [ "$CLEAN_SLATE" = true ]; then
+  # Applied after parsing (not inside the case arm above) so --clean-slate
+  # always wins over --keep-data/--wipe-data no matter which order they're
+  # passed in.
+  RESET_DB=true
+  KEEP_DATA=false
+  KEEP_DATA_SET=true
+  WIPE_DATA_SET=true
+
+  echo ""
+  log "warn" "--clean-slate will PERMANENTLY delete the entire database and all stored files/cache. This cannot be undone."
+  if [ -t 0 ]; then
+    read -r -p "  Type 'yes' to continue: " clean_slate_confirm
+    if [ "$clean_slate_confirm" != "yes" ]; then
+      log "error" "Aborted: --clean-slate not confirmed."
+      exit 1
+    fi
+  else
+    log "error" "--clean-slate requires an interactive terminal to confirm. Refusing to run non-interactively."
+    exit 1
+  fi
+fi
 
 # Prefer the machine's primary LAN IP so the frontend is reachable from other
 # devices on the network, not just this host — falls back to localhost if
