@@ -32,6 +32,9 @@ func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
 			Warn("failed to update last_seen_at for " + ip + ": " + err.Error())
 		}
 
+		stop := trackUser(ip)
+		defer stop()
+
 		c.Next()
 	}
 }
@@ -64,11 +67,12 @@ func main() {
 		Warn("Failed to run OnInit: " + err.Error())
 	}
 
-	Section("Daemon")
+	Section("Daemons")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	startDaemon(ctx, pm)
-	Ok("daemon started")
+
+	Ok("daemons summoned")
 
 	Section("Database")
 	dbm, err := NewDatabaseManager()

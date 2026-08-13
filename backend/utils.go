@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -31,6 +32,15 @@ type observableTicker struct {
 	last     time.Time
 }
 
+type cacheKiller struct {
+	uploadsSinceLastTick int
+	lastTime             time.Time
+	initialized          bool
+	tickInterval         time.Duration
+	rateEst              float64
+	activeUsers          int
+}
+
 // daemonTicker is written once at startup and read from a Prometheus scrape
 // goroutine (TimeUntilNextTick), so the pointer itself needs its own
 // synchronization on top of the mutex already guarding observableTicker's
@@ -51,6 +61,16 @@ func (o *observableTicker) markTick(t time.Time) {
 	o.mu.Lock()
 	o.last = t
 	o.mu.Unlock()
+}
+
+// Reset changes the ticker's period to d, effective immediately — the next
+// tick fires d after this call, discarding whatever was left of the old
+// period. Safe to call while another goroutine is receiving from Chan().
+func (o *observableTicker) Reset(d time.Duration) {
+	o.mu.Lock()
+	o.interval = d
+	o.mu.Unlock()
+	o.ticker.Reset(d)
 }
 
 // Remaining returns the duration until the next tick. If the ticker hasn't
@@ -83,17 +103,34 @@ func (o *observableTicker) Remaining() time.Duration {
 func startDaemon(ctx context.Context, pm *PluginManger) {
 	// Debug("starting cache clear daemon")
 
-	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
+	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Second)
 	daemonTicker.Store(dt)
 
 	go func() {
 		defer dt.Stop()
+
+		// Lives for the goroutine's lifetime so rateEst/lastTime persist
+		// across ticks — a fresh cacheKiller each cycle would reset the EMA
+		// every time and defeat the smoothing entirely.
+		killer := &cacheKiller{}
 
 		for {
 			select {
 			case t := <-dt.Chan():
 				// record tick time so Remaining() can be observed
 				dt.markTick(t)
+
+				// recompute and apply the next interval before the task
+				// runs, so Reset() lands as close to markTick's timestamp
+				// as possible (a slow task here would otherwise widen the
+				// gap Remaining() can't account for).
+				tickTime := calculateTickTime(ActiveUserCount())
+				dt.Reset(time.Duration(tickTime) * time.Second)
+
+				rate := killer.updateRateEstimate(t)
+				SetUploadRateEstimate(rate)
+				Debug(fmt.Sprintf("upload rate estimate: %.4f uploads/sec", rate))
+
 				// run task safely so panic won't kill goroutine
 				func() {
 					defer func() {
@@ -213,4 +250,20 @@ func save() error {
 		_, err = io.Copy(writer, file)
 		return err
 	})
+}
+
+// clamp bounds value to the [tickMin, tickMax] range configured for the
+// daemon tick interval.
+func clamp(value float64) float64 {
+	if value >= float64(tickMax) {
+		return float64(tickMax)
+	}
+	if value <= float64(tickMin) {
+		return float64(tickMin)
+	}
+	return value
+}
+
+func calculateTickTime(activeUsers int) float64 {
+	return clamp(tBase * (1 + math.Log(float64(activeUsers+1))/beta))
 }
