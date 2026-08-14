@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -106,6 +108,10 @@ func main() {
 		upload(host+"/upload", os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
+	case "reset_db":
+		reset_db()
+	case "clean_slate":
+		clean_slate()
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
@@ -143,6 +149,61 @@ func requireArgs(n int, cmdUsage string) {
 	if len(os.Args) < n {
 		fmt.Fprintln(os.Stderr, colorYellow+"usage: dewey-cli "+cmdUsage+colorReset)
 		os.Exit(1)
+	}
+}
+
+// YesNoPrompt asks yes/no questions using the label.
+func YesNoPrompt(label string, def bool) bool {
+	choices := "Y/n"
+	if !def {
+		choices = "y/N"
+	}
+
+	r := bufio.NewReader(os.Stdin)
+	var s string
+
+	for {
+		fmt.Fprintf(os.Stderr, "%s (%s) ", label, choices)
+		s, _ = r.ReadString('\n')
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return def
+		}
+		s = strings.ToLower(s)
+		if s == "y" || s == "yes" {
+			return true
+		}
+		if s == "n" || s == "no" {
+			return false
+		}
+	}
+}
+
+func reset_db() {
+	ok := YesNoPrompt("You are about to reset the database. This is high risk action. Are you sure you want to reset the database? There is no rollback...", true)
+	if ok {
+		cmd := exec.Command("bash", "-c", "podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data")
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"reset_db failed:"+colorReset, err)
+		}
+
+	} else {
+		fmt.Println("Cool cool cool, not resetting.")
+	}
+}
+
+func clean_slate() {
+	ok := YesNoPrompt("Your to nuke all stored data. This is high risk action. Are you sure you want to reset the database? There is no rollback...", true)
+	if ok {
+		cmd := exec.Command("bash", "-c", `for vol in dewey-store dewey-cache dewey-backup dewey-logs dewey-plugin-scratch; do
+  podman volume inspect "$vol" &>/dev/null && podman volume rm "$vol"
+done`)
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"reset_db failed:"+colorReset, err)
+		}
+
+	} else {
+		fmt.Println("Cool cool cool, not resetting.")
 	}
 }
 
