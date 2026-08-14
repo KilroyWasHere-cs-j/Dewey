@@ -31,6 +31,15 @@ type observableTicker struct {
 	last     time.Time
 }
 
+type cacheKiller struct {
+	uploadsSinceLastTick int
+	lastTime             time.Time
+	initialized          bool
+	tickInterval         time.Duration
+	rateEst              float64
+	activeUsers          int
+}
+
 // daemonTicker is written once at startup and read from a Prometheus scrape
 // goroutine (TimeUntilNextTick), so the pointer itself needs its own
 // synchronization on top of the mutex already guarding observableTicker's
@@ -51,6 +60,16 @@ func (o *observableTicker) markTick(t time.Time) {
 	o.mu.Lock()
 	o.last = t
 	o.mu.Unlock()
+}
+
+// Reset changes the ticker's period to d, effective immediately — the next
+// tick fires d after this call, discarding whatever was left of the old
+// period. Safe to call while another goroutine is receiving from Chan().
+func (o *observableTicker) Reset(d time.Duration) {
+	o.mu.Lock()
+	o.interval = d
+	o.mu.Unlock()
+	o.ticker.Reset(d)
 }
 
 // Remaining returns the duration until the next tick. If the ticker hasn't
@@ -83,17 +102,34 @@ func (o *observableTicker) Remaining() time.Duration {
 func startDaemon(ctx context.Context, pm *PluginManger) {
 	// Debug("starting cache clear daemon")
 
-	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Hour)
+	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Second)
 	daemonTicker.Store(dt)
 
 	go func() {
 		defer dt.Stop()
+
+		// Lives for the goroutine's lifetime so the smoothed rate persists
+		// across ticks — a fresh EMA each cycle would reset the smoothing
+		// every time and defeat the point of it.
+		rateEMA := NewEMA(0.3)
 
 		for {
 			select {
 			case t := <-dt.Chan():
 				// record tick time so Remaining() can be observed
 				dt.markTick(t)
+
+				// Uploads + retrievals over the trailing 30s, smoothed so a
+				// single noisy second doesn't yank the estimate around.
+				instantRate := uploadCounter.Rate() + retrievalCounter.Rate()
+				smoothedRate := rateEMA.Update(instantRate)
+				SetUploadRateEstimate(smoothedRate)
+
+				// Both active users and upload/retrieval traffic push the
+				// interval up (slower ticks) — maintenance work backs off
+				// rather than competing with live activity.
+				dt.Reset(computeTickInterval(ActiveUserCount(), smoothedRate))
+
 				// run task safely so panic won't kill goroutine
 				func() {
 					defer func() {
@@ -214,3 +250,133 @@ func save() error {
 		return err
 	})
 }
+
+// clamp bounds value to the [tickMin, tickMax] range configured for the
+// daemon tick interval.
+func clamp(value float64) float64 {
+	if value >= float64(tickMax) {
+		return float64(tickMax)
+	}
+	if value <= float64(tickMin) {
+		return float64(tickMin)
+	}
+	return value
+}
+
+// computeTickInterval maps current system activity to the daemon's next
+// tick interval, in seconds. Both inputs push the interval up: more active
+// users and/or a higher smoothed upload/retrieval rate both mean maintenance
+// work (cache clear + backup zip) should back off rather than compete with
+// live traffic. alpha/beta/tBase are the config-driven coefficients
+// reserved for this (issue #305), clamped to [tickMin, tickMax].
+func computeTickInterval(activeUsers int, smoothedRate float64) time.Duration {
+	seconds := tBase + alpha*float64(activeUsers) + beta*smoothedRate
+	return time.Duration(clamp(seconds)) * time.Second
+}
+
+type EMA struct {
+	alpha    float64 // smoothing factor: 0 < alpha <= 1 (higher = reacts faster, noisier)
+	value    float64 // current smoothed value
+	hasValue bool    // false until the first sample seeds the average
+}
+
+// NewEMA returns an EMA with the given smoothing factor.
+// alpha is clamped to (0, 1] since values outside that range make the
+// formula diverge or degenerate into a no-op.
+func NewEMA(alpha float64) *EMA {
+	if alpha <= 0 {
+		alpha = 0.01
+	}
+	if alpha > 1 {
+		alpha = 1
+	}
+	return &EMA{alpha: alpha}
+}
+
+// Update feeds a new sample in and returns the updated smoothed value.
+// The first call just seeds the average with the raw sample — there's
+// nothing to blend against yet.
+func (e *EMA) Update(sample float64) float64 {
+	if !e.hasValue {
+		e.value = sample
+		e.hasValue = true
+		return e.value
+	}
+
+	e.value = e.alpha*sample + (1-e.alpha)*e.value
+	return e.value
+}
+
+// Value returns the current smoothed value without feeding in a new sample.
+func (e *EMA) Value() float64 {
+	return e.value
+}
+
+// SlidingWindowCounter counts events over a trailing window of windowSeconds,
+// using one bucket per second in a ring buffer. Old buckets are lazily
+// cleared as time passes rather than actively decayed, so idle periods cost
+// nothing until something asks for the count.
+type SlidingWindowCounter struct {
+	mu         sync.Mutex
+	buckets    []int64 // buckets[i] holds the count for one specific second
+	bucketTime []int64 // unix-second timestamp each bucket was last written for
+	windowSecs int64
+}
+
+// NewSlidingWindowCounter creates a counter covering the trailing windowSeconds.
+func NewSlidingWindowCounter(windowSeconds int) *SlidingWindowCounter {
+	return &SlidingWindowCounter{
+		buckets:    make([]int64, windowSeconds),
+		bucketTime: make([]int64, windowSeconds),
+		windowSecs: int64(windowSeconds),
+	}
+}
+
+// Record logs one event (an upload, a retrieval — call sites decide which
+// counter to bump) at the current time.
+func (c *SlidingWindowCounter) Record() {
+	now := time.Now().Unix()
+	idx := now % c.windowSecs
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// This bucket's slot was last written for a different (older) second —
+	// it's stale, so overwrite rather than accumulate onto last time's count.
+	if c.bucketTime[idx] != now {
+		c.buckets[idx] = 0
+		c.bucketTime[idx] = now
+	}
+	c.buckets[idx]++
+}
+
+// Count returns the number of events recorded within the trailing window,
+// as of now. Buckets whose timestamp has aged out of the window are treated
+// as zero without needing to be cleared up front.
+func (c *SlidingWindowCounter) Count() int64 {
+	now := time.Now().Unix()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var total int64
+	for i, t := range c.bucketTime {
+		if now-t < c.windowSecs {
+			total += c.buckets[i]
+		}
+	}
+	return total
+}
+
+// Rate returns events per second, averaged over the trailing window.
+func (c *SlidingWindowCounter) Rate() float64 {
+	return float64(c.Count()) / float64(c.windowSecs)
+}
+
+// uploadCounter and retrievalCounter track upload/retrieval throughput over
+// a trailing 30s window, read from startDaemon's tick loop to feed the
+// upload-rate EMA (app_upload_rate).
+var (
+	uploadCounter    = NewSlidingWindowCounter(30)
+	retrievalCounter = NewSlidingWindowCounter(30)
+)

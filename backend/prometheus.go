@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +28,67 @@ var DBErrors int64
 var FilesInStore int64
 var FilesInBackUp int64
 var FilesInCache int64
+var UploadsSinceLastTick int64
+
+// activeUsers tracks how many in-flight requests each client IP currently
+// has open — an IP counts as connected only while a request is actually
+// being processed, so this rises and falls with real traffic rather than
+// just the known_machines allowlist size.
+var (
+	activeUsers   = make(map[string]int)
+	activeUsersMu sync.Mutex
+)
+
+// trackUser marks ip as having one more in-flight request and returns a
+// function that must be called (typically via defer) when that request
+// finishes.
+func trackUser(ip string) func() {
+	activeUsersMu.Lock()
+	activeUsers[ip]++
+	activeUsersMu.Unlock()
+
+	return func() {
+		activeUsersMu.Lock()
+		activeUsers[ip]--
+		if activeUsers[ip] <= 0 {
+			delete(activeUsers, ip) // don't let the map grow forever with zero-counts
+		}
+		activeUsersMu.Unlock()
+	}
+}
+
+// ActiveUserCount returns how many distinct client IPs currently have an
+// in-flight request.
+func ActiveUserCount() int {
+	activeUsersMu.Lock()
+	defer activeUsersMu.Unlock()
+	return len(activeUsers)
+}
+
+// uploadRateEst holds the latest EMA-smoothed upload rate computed by
+// cacheKiller.updateRateEstimate. A plain mutex guards it rather than an
+// atomic — float64 has no native atomic add/store in this codebase's Go
+// version, and this is only touched once per daemon tick plus once per
+// Prometheus scrape, so contention isn't a concern.
+var (
+	uploadRateEst   float64
+	uploadRateEstMu sync.Mutex
+)
+
+// SetUploadRateEstimate records the latest upload-rate EMA value for the
+// app_upload_rate gauge to read.
+func SetUploadRateEstimate(v float64) {
+	uploadRateEstMu.Lock()
+	uploadRateEst = v
+	uploadRateEstMu.Unlock()
+}
+
+// UploadRateEstimate returns the most recently recorded upload-rate EMA.
+func UploadRateEstimate() float64 {
+	uploadRateEstMu.Lock()
+	defer uploadRateEstMu.Unlock()
+	return uploadRateEst
+}
 
 var (
 	fileOps = prometheus.NewCounterVec(
@@ -135,6 +197,24 @@ var (
 		func() float64 {
 			return float64(atomic.LoadInt64(&FilesInCache))
 		},
+	)
+
+	connectedUsers = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_connected_users",
+			Help: "Number of distinct client IPs with an in-flight request",
+		},
+		func() float64 {
+			return float64(ActiveUserCount())
+		},
+	)
+
+	uploadRate = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_upload_rate",
+			Help: "EMA-smoothed upload rate in uploads/sec",
+		},
+		UploadRateEstimate,
 	)
 
 	filesInStore = prometheus.NewGaugeFunc(
@@ -334,7 +414,7 @@ func init() {
 	prometheus.MustRegister(
 		fileOps, fileBytes, fileDuration,
 		uptime, systemInfo, cpuCount, ramUsage, currentHeap, gcCycles,
-		cacheSize, filesInStore, filesInBackUp, exeCount,
+		cacheSize, filesInStore, filesInBackUp, exeCount, connectedUsers, uploadRate,
 		fileCopys, fileRetries, fileSorts, filtersLoadings, timeTilNextTick,
 		// new in issue #104
 		fileDeletions,

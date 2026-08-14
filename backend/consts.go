@@ -26,10 +26,15 @@ type Config struct {
 
 // FileSystem specific config
 type FileSystemConfig struct {
-	UploadDir         string `json:"upload_dir"`             // temp dir for storing files after files post upload and for fast query access
-	FileSystemBaseDir string `json:"file_system_base_dir"`   // base directory where all stored files start from
-	BackupDir         string `json:"backup_dir"`             // directory where backup files are stored
-	DaemonTickTime    int    `json:"daemon_tick_time_hours"` // system tick interval in hours
+	UploadDir         string  `json:"upload_dir"`             // temp dir for storing files after files post upload and for fast query access
+	FileSystemBaseDir string  `json:"file_system_base_dir"`   // base directory where all stored files start from
+	BackupDir         string  `json:"backup_dir"`             // directory where backup files are stored
+	DaemonTickTime    int     `json:"daemon_tick_time_hours"` // system tick interval in hours
+	Alpha             float64 `json:"alpha"`                  // reserved for issue #305 tick-scaling formula, unused so far
+	Beta              float64 `json:"beta"`                   // reserved for issue #305 tick-scaling formula, unused so far
+	TBase             float64 `json:"t_base"`                 // tick times base value for the tick-scaling formulua
+	TickMax           int     `json:"tick_max"`               // maximum number of space between each tick
+	TickMin           int     `json:"tick_min"`               // minimum number of space between each tick
 }
 
 // Server specific config
@@ -82,6 +87,11 @@ var (
 	fileSystemBaseDir string
 	backupDir         string
 	daemonTickTime    int
+	alpha             float64
+	beta              float64
+	tBase             float64
+	tickMax           int
+	tickMin           int
 
 	maxFileSize int64
 	portNumber  string
@@ -122,6 +132,11 @@ func load() {
 	fileSystemBaseDir = cfg.FileSystem.FileSystemBaseDir
 	backupDir = cfg.FileSystem.BackupDir
 	daemonTickTime = cfg.FileSystem.DaemonTickTime
+	alpha = cfg.FileSystem.Alpha
+	beta = cfg.FileSystem.Beta
+	tBase = cfg.FileSystem.TBase
+	tickMax = cfg.FileSystem.TickMax
+	tickMin = cfg.FileSystem.TickMin
 
 	maxFileSize = cfg.Server.MaxFileSize
 	portNumber = cfg.Server.PortNumber

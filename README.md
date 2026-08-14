@@ -240,6 +240,10 @@ Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on ev
 
 **To guarantee a fully clean, consistent state instead:** pass `--clean-slate` rather than combining `--reset-db` with a store/cache wipe by hand — it's the only path that keeps both sides in sync, since the individual flags don't warn you if they end up wiping just one.
 
+## Repo Stats
+
+As of 2026-08-12: 450 commits on `main` (1 contributor), 68 branches, 6 tags (latest `v0.2.0`), 165 issues filed (150 closed / 15 open), 136 PRs (131 merged / 5 closed). 98 tracked files, 10,221 lines of hand-written source — Go 4,828, Svelte 3,209, Shell 1,572, TypeScript 488, Lua 124.
+
 ## Roadmap
 
 - Plugin validation

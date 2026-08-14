@@ -3,7 +3,12 @@
 		"upload_dir": "./cache",
 		"file_system_base_dir": "./store",
 		"backup_dir": "./backup",
-		"daemon_tick_time_hours": 1
+		"daemon_tick_time_hours": 1,
+		"alpha": 1,
+		"beta": 1,
+		"t_base": 5,
+		"tick_max": 500,
+		"tick_min": 1
 	},
 	"server": {
 		"max_file_size_bytes": 52428800,
