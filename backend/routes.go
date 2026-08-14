@@ -86,6 +86,7 @@ func getFile(c *gin.Context) {
 		// HTML/script must not be executed just because it's served from here.
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.FileAttachment(path, filepath.Base(filename))
+		retrievalCounter.Record()
 
 	case "true":
 		// Return the metadata record linked to this file as JSON
@@ -417,6 +418,7 @@ func uploadFile(c *gin.Context) {
 	}
 	atomic.AddInt64(&FilesInCache, 1)
 	atomic.AddInt64(&UploadsSinceLastTick, 1)
+	uploadCounter.Record()
 
 	// -------------------------
 	// Response
