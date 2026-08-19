@@ -5,11 +5,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
@@ -141,7 +146,7 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 						Warn("Cache clear incomplete: " + err.Error())
 					}
 
-					err := save()
+					err := saveBackup()
 					if err == nil {
 						atomic.AddInt64(&FilesInBackUp, 1)
 					}
@@ -199,7 +204,227 @@ func dumpCache() error {
 	return firstErr
 }
 
-func save() error {
+// backupMySQLDatabase runs mysqldump against a running MySQL server and
+// writes the SQL output to a timestamped file. Password is passed via the
+// MYSQL_PWD env var rather than a -p flag, since command-line args are
+// briefly visible to other processes on the host (e.g. `ps`).
+func backupMySQLDatabase(host, port, user, password, database, outDir string) (string, error) {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return "", fmt.Errorf("creating backup dir: %w", err)
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	outPath := fmt.Sprintf("%s/%s_%s.sql", outDir, database, timestamp)
+
+	outFile, err := os.Create(outPath)
+	if err != nil {
+		return "", fmt.Errorf("creating backup file: %w", err)
+	}
+	defer outFile.Close()
+
+	// --set-gtid-purged=OFF: without it, mysqldump emits a
+	// SET @@GLOBAL.GTID_PURGED=... statement that fails to restore onto the
+	// same server the dump came from, since its GTID_EXECUTED already
+	// overlaps with what the dump tries to purge. Dewey runs standalone
+	// (no replication), so the dump only ever needs to restore onto itself.
+	cmd := exec.Command("mysqldump", "-u", user, "-h", host, "-P", port, "--set-gtid-purged=OFF", database)
+	cmd.Env = append(os.Environ(), "MYSQL_PWD="+password)
+	cmd.Stdout = outFile
+
+	var stderr []byte
+	cmd.Stderr = &stderrCollector{buf: &stderr}
+
+	if err := cmd.Run(); err != nil {
+		os.Remove(outPath) // don't leave a partial/empty dump behind
+		return "", fmt.Errorf("mysqldump failed: %w (stderr: %s)", err, stderr)
+	}
+
+	return outPath, nil
+}
+
+// restoreMySQLDatabase replays a dump produced by backupMySQLDatabase
+// against a running server, restoring it into the given database.
+func restoreMySQLDatabase(host, port, user, password, database, dumpPath string) error {
+	dumpFile, err := os.Open(dumpPath)
+	if err != nil {
+		return fmt.Errorf("opening dump file: %w", err)
+	}
+	defer dumpFile.Close()
+
+	cmd := exec.Command("mysql", "-u", user, "-h", host, "-P", port, database)
+	cmd.Env = append(os.Environ(), "MYSQL_PWD="+password)
+	cmd.Stdin = dumpFile
+
+	var stderr []byte
+	cmd.Stderr = &stderrCollector{buf: &stderr}
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("mysql restore failed: %w (stderr: %s)", err, stderr)
+	}
+
+	return nil
+}
+
+// stderrCollector is a minimal io.Writer that appends to a byte slice,
+// used to surface mysqldump/mysql's stderr in error messages above.
+type stderrCollector struct{ buf *[]byte }
+
+func (w *stderrCollector) Write(p []byte) (int, error) {
+	*w.buf = append(*w.buf, p...)
+	return len(p), nil
+}
+
+// dbConnParamsFromDSN reads DB_DSN — the same required env var
+// NewDatabaseManager (db.go) uses to open the connection pool — and splits
+// it into the separate host/port/user/password/database pieces mysqldump
+// and mysql need as individual CLI flags.
+func dbConnParamsFromDSN() (host, port, user, password, database string, err error) {
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		return "", "", "", "", "", fmt.Errorf("DB_DSN environment variable is required")
+	}
+
+	cfg, err := mysql.ParseDSN(dsn)
+	if err != nil {
+		return "", "", "", "", "", fmt.Errorf("parsing DB_DSN: %w", err)
+	}
+
+	host, port, err = net.SplitHostPort(cfg.Addr)
+	if err != nil {
+		return "", "", "", "", "", fmt.Errorf("parsing DB_DSN address %q: %w", cfg.Addr, err)
+	}
+
+	return host, port, cfg.User, cfg.Passwd, cfg.DBName, nil
+}
+
+// latestBackupZip returns the most recent "<timestamp>_backup.zip" file in
+// dir, matching the naming saveBackup uses when it creates one. Backup
+// filenames sort lexicographically by their yyyymmdd_hhmmss timestamp, so
+// the greatest name is also the newest.
+func latestBackupZip(dir string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("reading backup dir: %w", err)
+	}
+
+	var latest string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), "_backup.zip") {
+			continue
+		}
+		if e.Name() > latest {
+			latest = e.Name()
+		}
+	}
+
+	if latest == "" {
+		return "", fmt.Errorf("no backup zip found in %q", dir)
+	}
+
+	return filepath.Join(dir, latest), nil
+}
+
+// latestBackupDump returns the most recent "<database>_<timestamp>.sql" file
+// in dir, matching the naming backupMySQLDatabase uses when it creates one.
+// Filenames sort lexicographically by their yyyymmdd_hhmmss timestamp, so
+// the greatest name is also the newest.
+func latestBackupDump(dir, database string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("reading dump dir: %w", err)
+	}
+
+	prefix := database + "_"
+	var latest string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), prefix) || !strings.HasSuffix(e.Name(), ".sql") {
+			continue
+		}
+		if e.Name() > latest {
+			latest = e.Name()
+		}
+	}
+
+	if latest == "" {
+		return "", fmt.Errorf("no dump found in %q for database %q", dir, database)
+	}
+
+	return filepath.Join(dir, latest), nil
+}
+
+// restoreFilesFromBackup extracts a zip archive produced by saveBackup's
+// store/ backup back into destDir, restoring each file to the same relative
+// path it was zipped from (issue #297). Each entry is resolved through
+// resolveStorePath so a zip entry path (e.g. "../../etc/passwd") can't write
+// outside destDir.
+func restoreFilesFromBackup(zipPath, destDir string) error {
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return fmt.Errorf("opening backup zip: %w", err)
+	}
+	defer reader.Close()
+
+	for _, f := range reader.File {
+		destPath, err := resolveStorePath(destDir, f.Name)
+		if err != nil {
+			return fmt.Errorf("restoring %q: %w", f.Name, err)
+		}
+
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(destPath, 0o755); err != nil {
+				return fmt.Errorf("creating directory %q: %w", destPath, err)
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+			return fmt.Errorf("creating parent directory for %q: %w", destPath, err)
+		}
+
+		if err := extractZipFile(f, destPath); err != nil {
+			return fmt.Errorf("restoring %q: %w", f.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// extractZipFile copies a single zip entry's contents to destPath,
+// preserving the mode it was zipped with.
+func extractZipFile(f *zip.File, destPath string) error {
+	src, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(destPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, f.Mode())
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	return err
+}
+
+// dbDumpDir is where backupMySQLDatabase writes SQL dumps and where
+// latestBackupDump looks for the most recent one to restore — kept as a
+// single constant so save and load can't drift apart on the path.
+const dbDumpDir = "./backups"
+
+func saveBackup() error {
+	Debug("Backing up the database")
+	host, port, user, password, database, err := dbConnParamsFromDSN()
+	if err != nil {
+		return err
+	}
+	if _, err := backupMySQLDatabase(host, port, user, password, database, dbDumpDir); err != nil {
+		return err
+	}
+
+	Debug("Backup completed successfully")
+
 	Debug("Creating zip backup")
 
 	sourceDir := "store"
@@ -249,6 +474,32 @@ func save() error {
 		_, err = io.Copy(writer, file)
 		return err
 	})
+}
+
+func loadBackup() error {
+	Debug("Loading backup")
+	host, port, user, password, database, err := dbConnParamsFromDSN()
+	if err != nil {
+		return err
+	}
+	dumpPath, err := latestBackupDump(dbDumpDir, database)
+	if err != nil {
+		return err
+	}
+	if err := restoreMySQLDatabase(host, port, user, password, database, dumpPath); err != nil {
+		return err
+	}
+
+	Debug("Loading in store")
+	zipPath, err := latestBackupZip(backupDir)
+	if err != nil {
+		return err
+	}
+	if err := restoreFilesFromBackup(zipPath, "store"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // clamp bounds value to the [tickMin, tickMax] range configured for the
