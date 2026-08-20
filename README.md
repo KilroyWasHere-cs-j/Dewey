@@ -216,7 +216,7 @@ The application and its supporting services are built into Podman containers for
 
 - **`deploy.sh`** — creates `dewey-pod` and starts all four containers (MySQL, Prometheus, backend, frontend) with persistent named volumes for the database and for `store/`, `cache/`, `backup/`, and `logs/`.
 - **`package.sh`** — builds the backend and frontend images against an already-running `dewey-pod`, then exports the whole pod (images + Kubernetes-style pod spec + a self-contained `run.sh`) as a `.tar.gz` bundle that can be moved to another host and deployed without needing a registry or a repo checkout — it also cross-compiles and bundles `dewey-cli`.
-- **`dewey-cli`** — a standalone CLI client for the deployed API (`cli/main.go`), buildable manually (`cd cli && go build -o dewey-cli .`) or already sitting alongside `run.sh` in a `package.sh` bundle.
+- **`dewey-cli`** — a standalone CLI client for the deployed API (`cli/main.go`), buildable manually (`cd cli && go build -o dewey-cli .`) or already sitting alongside `run.sh` in a `package.sh` bundle. List-shaped responses (`list_files`, `list_machines`) render as aligned tables; every other response prints as indented JSON, colored red on a non-2xx status. `dewey-cli` can also generate synthetic test files (`create_docx`, `create_exe`, `create_pdf`) for exercising upload validation.
 
 ### Data Persistence
 
