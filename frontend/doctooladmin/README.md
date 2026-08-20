@@ -40,3 +40,7 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Related: dewey-cli
+
+The backend this admin UI talks to also has a standalone CLI client (`../../cli/main.go`, built as `dewey-cli`) for scripting the same API from a terminal. `list_files` and `list_machines` print as aligned tables; every other command prints indented JSON, colored red on a non-2xx response. See the root [README.md](../../README.md#deployment--packaging) for build/usage details.

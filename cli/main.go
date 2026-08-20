@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -76,36 +78,55 @@ func main() {
 
 	switch os.Args[1] {
 	case "health":
-		get(host + "/")
+		get(host+"/", nil)
 	case "version":
-		get(host + "/version")
+		get(host+"/version", nil)
 	case "dump_cache":
-		get(host + "/admin/dumpCache")
+		get(host+"/admin/dumpCache", nil)
 	case "list_machines":
-		get(host + "/machines")
+		get(host+"/machines", printMachinesTable)
 	case "add_machine":
 		requireArgs(4, "add_machine <ip> <label>")
-		postJSON(host+"/machines", map[string]string{"ip": os.Args[2], "label": os.Args[3]})
+		postJSON(host+"/machines", map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
 	case "delete_machine":
 		requireArgs(3, "delete_machine <ip>")
-		del(host + "/machines/" + os.Args[2])
+		del(host+"/machines/"+os.Args[2], nil)
 	case "list_files":
-		get(host + "/files")
+		get(host+"/files", printFilesTable)
 	case "get_file":
 		requireArgs(3, "get_file <filename>")
-		get(host + "/files/" + os.Args[2] + "/false")
+		get(host+"/files/"+os.Args[2]+"/false", nil)
 	case "get_file_meta":
 		requireArgs(3, "get_file_meta <filename>")
-		get(host + "/files/" + os.Args[2] + "/true")
+		get(host+"/files/"+os.Args[2]+"/true", nil)
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
-		del(host + "/files/" + os.Args[2])
+		del(host+"/files/"+os.Args[2], nil)
 	case "upload":
 		requireArgs(3, "upload <path> [field=value ...]")
 		meta := parseMetadata(os.Args[3:])
 		upload(host+"/upload", os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
+	case "create_docx":
+		requireArgs(2, "create_docx <filename>")
+		fmt.Println(createDocx(os.Args[2]))
+	case "create_exe":
+		requireArgs(2, "create_exe <filename>")
+		fmt.Println(createExe(os.Args[2]))
+	case "create_pdf":
+		requireArgs(5, "create_pdf filename withJS withOpenAction")
+		withJS, err := strconv.ParseBool(os.Args[3])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid withJS: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		withOpenAction, err := strconv.ParseBool(os.Args[4])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid withOpenAction: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		fmt.Println(createPDF(os.Args[2], withJS, withOpenAction))
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
@@ -146,10 +167,12 @@ func requireArgs(n int, cmdUsage string) {
 	}
 }
 
-// doRequest fires req and prints the response body, colored green for a
-// success status and red otherwise. It's shared by every request-shaped
-// command so status coloring stays consistent across GET/POST/DELETE.
-func doRequest(req *http.Request) {
+// doRequest fires req and prints the response body. On success (status <
+// 400) it's handed to formatter for display, falling back to indented JSON
+// if formatter is nil; error bodies always print as indented JSON in red.
+// It's shared by every request-shaped command so output stays consistent
+// across GET/POST/DELETE.
+func doRequest(req *http.Request, formatter func([]byte) string) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"request failed:"+colorReset, err)
@@ -163,32 +186,37 @@ func doRequest(req *http.Request) {
 		os.Exit(1)
 	}
 
-	color := colorGreen
 	if resp.StatusCode >= 400 {
-		color = colorRed
+		fmt.Println(colorRed + prettyJSON(body) + colorReset)
+		return
 	}
-	fmt.Println(color + string(body) + colorReset)
+
+	if formatter != nil {
+		fmt.Println(formatter(body))
+		return
+	}
+	fmt.Println(colorGreen + prettyJSON(body) + colorReset)
 }
 
-func get(url string) {
+func get(url string, formatter func([]byte) string) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
 		os.Exit(1)
 	}
-	doRequest(req)
+	doRequest(req, formatter)
 }
 
-func del(url string) {
+func del(url string, formatter func([]byte) string) {
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
 		os.Exit(1)
 	}
-	doRequest(req)
+	doRequest(req, formatter)
 }
 
-func postJSON(url string, payload any) {
+func postJSON(url string, payload any, formatter func([]byte) string) {
 	buf, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"failed to encode request body:"+colorReset, err)
@@ -200,7 +228,7 @@ func postJSON(url string, payload any) {
 		os.Exit(1)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	doRequest(req)
+	doRequest(req, formatter)
 }
 
 // upload sends filePath to the backend's /upload route as multipart/form-data
@@ -248,7 +276,7 @@ func upload(url, filePath string, meta map[string]string) {
 		os.Exit(1)
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	doRequest(req)
+	doRequest(req, nil)
 }
 
 // selfIP reports the local address the OS would use to reach host. A UDP
@@ -279,4 +307,26 @@ func selfIP(host string) {
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	fmt.Println(colorCyan + localAddr.IP.String() + colorReset)
+}
+
+// askYesNo prompts the user and loops until they give a valid y/n answer.
+func askYesNo(prompt string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("%s [y/n]: ", prompt)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			os.Exit(1)
+		}
+
+		switch strings.ToLower(strings.TrimSpace(input)) {
+		case "y", "yes":
+			return true
+		case "n", "no":
+			return false
+		default:
+			fmt.Println("Please answer y or n.")
+		}
+	}
 }
