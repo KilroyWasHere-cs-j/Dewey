@@ -27,8 +27,8 @@ var PluginErrors int64
 var DBErrors int64
 var FilesInStore int64
 var FilesInBackUp int64
-var FilesInCache int64
 var UploadsSinceLastTick int64
+var CacheCleanCycles int64
 
 // activeUsers tracks how many in-flight requests each client IP currently
 // has open — an IP counts as connected only while a request is actually
@@ -189,13 +189,21 @@ var (
 		},
 	)
 
+	// Counted live off disk rather than tracked incrementally: an
+	// atomic-counter approach requires every code path that adds/removes a
+	// cache file to remember to update it, and deleteFile's cache-copy
+	// removal doesn't (soak-testing #311 surfaced the drift this causes
+	// under sustained upload/retrieval traffic). Scanning uploadDir on
+	// every scrape can never drift, since it has no state to drift from —
+	// cache is expected to stay small (the daemon sweeps it every tick),
+	// so this is cheap.
 	cacheSize = prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
 			Name: "app_cache_size",
 			Help: "Size of the application cache",
 		},
 		func() float64 {
-			return float64(atomic.LoadInt64(&FilesInCache))
+			return float64(countFilesRecursive(uploadDir))
 		},
 	)
 
@@ -293,6 +301,19 @@ var (
 		},
 		func() float64 {
 			return float64(TimeUntilNextTick().Seconds())
+		},
+	)
+
+	// Counts daemon tick cycles that ran a cache clear (issue #311's soak
+	// tool logs this alongside RAM/heap/goroutines to see cache-clean
+	// cadence over a long run, not just current cache size).
+	cacheCleanCycles = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "app_cache_clean_cycles_total",
+			Help: "Number of daemon tick cycles that ran a cache clear since startup",
+		},
+		func() float64 {
+			return float64(atomic.LoadInt64(&CacheCleanCycles))
 		},
 	)
 
@@ -409,7 +430,6 @@ func countFilesRecursive(dir string) int64 {
 func init() {
 	atomic.StoreInt64(&FilesInStore, countFilesRecursive(fileSystemBaseDir))
 	atomic.StoreInt64(&FilesInBackUp, countFilesRecursive(backupDir))
-	atomic.StoreInt64(&FilesInCache, countFilesRecursive(uploadDir))
 
 	prometheus.MustRegister(
 		fileOps, fileBytes, fileDuration,
@@ -418,6 +438,8 @@ func init() {
 		fileCopys, fileRetries, fileSorts, filtersLoadings, timeTilNextTick,
 		// new in issue #104
 		fileDeletions,
+		// new in issue #311
+		cacheCleanCycles,
 		uploadRejections, uploadsByType, uploadSizeBytes,
 		barcodeSuccesses, barcodeFailures,
 		pluginRuns, pluginErrors,

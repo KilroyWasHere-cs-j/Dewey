@@ -145,6 +145,7 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 					if err := dumpCache(); err != nil {
 						Warn("Cache clear incomplete: " + err.Error())
 					}
+					atomic.AddInt64(&CacheCleanCycles, 1)
 
 					err := saveBackup()
 					if err == nil {
@@ -175,11 +176,10 @@ func TimeUntilNextTick() time.Duration {
 
 // dumpCache clears all files from the upload cache directory. Best-effort:
 // a failure removing one entry doesn't stop it from attempting the rest, so
-// one stuck file can't block cleanup forever. FilesInCache is decremented
-// per file actually removed rather than reset in bulk, so it can't be
-// clobbered by a file uploaded concurrently with this pass (which wouldn't
-// have been in the directory snapshot below anyway). Returns the first
-// error encountered, if any, so the caller knows the clear was incomplete.
+// one stuck file can't block cleanup forever. app_cache_size is scanned
+// live off disk rather than tracked here, so there's no counter to keep in
+// sync with what this actually removes. Returns the first error
+// encountered, if any, so the caller knows the clear was incomplete.
 func dumpCache() error {
 	entries, err := os.ReadDir(uploadDir)
 	if err != nil {
@@ -199,7 +199,6 @@ func dumpCache() error {
 			}
 			continue
 		}
-		atomic.AddInt64(&FilesInCache, -1)
 	}
 	return firstErr
 }

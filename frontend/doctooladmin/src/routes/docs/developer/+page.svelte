@@ -18,6 +18,7 @@
 		{ href: '#stack', label: 'Tech Stack' },
 		{ href: '#api', label: 'API Reference' },
 		{ href: '#cli', label: 'CLI Tool' },
+		{ href: '#testing', label: 'Testing Tools' },
 		{ href: '#access', label: 'Access Control' },
 		{ href: '#plugins', label: 'Plugin System' },
 		{ href: '#database', label: 'Database' },
@@ -286,6 +287,7 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
 								{ cmd: 'delete_file <filename>',          route: 'DELETE /files/:filename',     notes: '' },
 								{ cmd: 'upload <path> [field=value ...]', route: 'POST /upload',                notes: 'See metadata fields below.' },
 								{ cmd: 'self_ip',                         route: '—',                           notes: 'Locally-determined outbound IP toward DEWEY_HOST — a starting guess for what to register in Known Machines, not a guarantee (NAT can rewrite the source address in transit).' },
+								{ cmd: 'soak_test [sim_days] [users] [seconds_per_sim_day]', route: '—',       notes: 'Runs soak_test.sh inside the backend container via podman exec. See Testing Tools below.' },
 							] as row}
 								<tr>
 									<td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.cmd}</td>
@@ -310,6 +312,93 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
   claim_number=CL-1024 \
   claimant_name="Jane Doe" \
   acts_id=A-88</code></pre>
+			</section>
+
+			<!-- ── Testing Tools ── -->
+			<section id="testing" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Testing Tools</h2>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/testing_tooling/</code> holds two
+					load-generation scripts, both run from inside the backend container so their requests come
+					from an already-<a href="#access" class="underline">allowlisted</a> source:
+				</p>
+				<ul class="mb-6 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+					<li><strong class="text-gray-700 dark:text-gray-200">load_test.sh</strong> — a fixed-size burst of uploads (plus a retrieval pass) from a single source, done in seconds. Good for a quick sanity check.</li>
+					<li><strong class="text-gray-700 dark:text-gray-200">soak_test.sh</strong> — sustained, multi-user, day/night-shaped traffic over a configurable duration (issue #311). What the rest of this section documents.</li>
+				</ul>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Why soak_test.sh exists</h3>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<a href="#daemon" class="underline">The daemon</a>'s tick interval reacts to an EMA-smoothed
+					upload/retrieval rate and the active-user count — behavior that only meaningfully diverges from
+					steady state under sustained, <em>varying</em> load. A short burst can't exercise that, or the
+					slower trends (cache-clean cadence, memory growth) that only show up over a long run.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Simulating multiple users</h3>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Every container in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-pod</code> shares
+					one network namespace, so extra containers wouldn't produce distinct source IPs for
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">ActiveUserCount()</code> to see. Instead,
+					each simulated user binds its requests to its own loopback alias
+					(<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.2</code>,
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.3</code>, …) via
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">curl --interface</code>, and
+					registers/deregisters that IP through the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/machines</code>
+					routes at start and exit. The backend genuinely sees a different
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">RemoteAddr</code> per user with no network
+					changes required.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Traffic shape</h3>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					Each user's request cadence follows a diurnal curve — quiet overnight, busy through the
+					afternoon — rather than firing at a constant rate:
+				</p>
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">multiplier(hour) = floor + (1 - floor) &middot; max(0, sin(&pi;&middot;(hour-9)/12))
+interval(hour)   = SECONDS_PER_SIM_DAY / (peak_requests_per_day &middot; multiplier(hour))</code></pre>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					The bump is positive only for simulated hour 9 through 21, peaking at 15:00; outside that
+					window the rate sits at a low floor rather than stopping outright. The interval is derived
+					as a requests-per-simulated-day target rather than a fixed number of seconds, so the ramp
+					stays meaningful at any compression factor — jittered &plusmn;50%, and capped at whatever
+					real time is left in the run so a quiet-hour interval can never sleep past the run's own end.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Time compression</h3>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">SECONDS_PER_SIM_DAY</code> controls how
+					many real seconds map to one simulated day — the same parameter either way, not a separate
+					"mode". The default, <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">60</code>, compresses
+					30 simulated days into about 30 real minutes. Passing
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">86400</code> gives true real-time pacing —
+					useful for an actual multi-day soak run, at the cost of it taking that many real days to finish.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Metrics log</h3>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+					A separate background loop samples <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/metrics</code>
+					on a fixed real-time cadence (every 10s, independent of compression) and appends one row to
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/logs/soak_metrics_&lt;run&gt;.csv</code>
+					— plain CSV, readable directly by a plotting script:
+				</p>
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">timestamp,sim_day,sim_hour,time_til_next_tick,cache_clean_cycles_total,
+ram_usage_mb,heap_usage_mb,goroutines,open_fds,connected_users,upload_rate</code></pre>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">cache_clean_cycles_total</code> reads the
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">app_cache_clean_cycles_total</code> gauge
+					— a counter incremented once per <a href="#daemon" class="underline">daemon tick</a> that runs a
+					cache clear, added alongside the other Prometheus metrics so cache-clean cadence is visible
+					over a long run rather than only the current cache size at any one instant.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Running it</h3>
+				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200"># via the CLI, from the deploy host
+dewey-cli soak_test 30 5 60      # default: 30 sim days, 5 users, 60s/simday
+dewey-cli soak_test 7 5 86400    # the real thing: 7 real days, true pacing
+
+# or directly, from inside the backend container
+podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh</code></pre>
 			</section>
 
 			<!-- ── Access Control ── -->

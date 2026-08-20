@@ -416,7 +416,6 @@ func uploadFile(c *gin.Context) {
 		})
 		return
 	}
-	atomic.AddInt64(&FilesInCache, 1)
 	atomic.AddInt64(&UploadsSinceLastTick, 1)
 	uploadCounter.Record()
 
