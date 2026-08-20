@@ -5,7 +5,7 @@
 	import MetricBarChart from '$lib/components/MetricBarChart.svelte';
 	import StatTile from '$lib/components/StatTile.svelte';
 	import { settings, CHART_THEMES } from '$lib/stores/settings.svelte';
-	import type { AppMetrics } from '../api/metrics/+server';
+	import type { AppMetrics } from '$lib/types';
 
 	let metrics = $state<Partial<AppMetrics>>({});
 	let prometheusDown = $state(false);

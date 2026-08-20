@@ -3,11 +3,6 @@ import { backendUrl } from '$lib/server/backend';
 import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
-export interface AppVersionInfo {
-	version: string;
-	git_branch: string;
-}
-
 export const GET: RequestHandler = async () => {
 	try {
 		const res = await fetch(`${backendUrl()}/version`);

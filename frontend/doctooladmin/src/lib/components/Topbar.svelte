@@ -3,7 +3,7 @@
 	import { Avatar } from 'flowbite-svelte';
 	import { BugOutline, MoonSolid, SunSolid } from 'flowbite-svelte-icons';
 	import { settings, ACCENT } from '$lib/stores/settings.svelte';
-	import type { AppVersionInfo } from '../../routes/api/version/+server';
+	import type { AppVersionInfo } from '$lib/types';
 
 	let accentHex = $derived(ACCENT[settings.value.accentColor].hex);
 	let dark = $derived(settings.value.darkMode);
