@@ -244,6 +244,7 @@ log "info" "Starting Prometheus container..."
 podman run -d --pod dewey-pod \
   --name dewey-prometheus \
   --cpus 0.5 --memory 512m \
+  -v "$(pwd)/backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
   docker.io/prom/prometheus:v3.13.1
 
 # Brief pause to let Prometheus spin up internal networking before healthcheck
