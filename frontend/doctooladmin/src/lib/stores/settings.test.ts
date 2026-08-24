@@ -7,9 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // under vitest.
 vi.mock('$app/environment', () => ({ browser: true }));
 
-// jsdom's Storage implementation isn't reliably available under the
-// current jsdom/vitest combo even with a real origin configured — stubbed
-// with a minimal, correct in-memory Storage instead of chasing that.
+// Tests run under vitest's default node environment (no jsdom — see
+// vitest.config.ts), which has no real localStorage. Stubbed with a
+// minimal, correct in-memory Storage instead.
 class MemoryStorage implements Storage {
 	private store = new Map<string, string>();
 	get length() {

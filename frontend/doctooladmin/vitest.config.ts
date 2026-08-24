@@ -7,7 +7,10 @@ import { defineConfig } from 'vitest/config';
 // compilation) is.
 export default defineConfig({
 	plugins: [sveltekit()],
-	test: {
-		environment: 'jsdom'
-	}
+	// Default 'node' environment — nothing under test touches real DOM
+	// globals (settings.test.ts stubs its own minimal localStorage rather
+	// than depend on jsdom's), and jsdom's own Node-version requirements
+	// (a transitive dependency needs Node >=22) are otherwise incompatible
+	// with CI's pinned Node 20.
+	test: {}
 });
