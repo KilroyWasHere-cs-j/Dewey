@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"os"
@@ -20,7 +21,7 @@ type DBEntry struct {
 	Hash     string
 	Path     string
 	Meta     string
-	Barcode  string
+	Barcode  sql.NullString
 }
 
 // barcodeCandidateExt matches upload extensions scanBarCode can plausibly
@@ -90,20 +91,20 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		Hash:     hash,
 		Path:     path,
 		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
-		Barcode:  "barcode",                         // Placeholder, should be determined by barcode scanning
+		Barcode:  sql.NullString{},                  // Placeholder, should be determined by barcode scanning
 	}
 	if barcodeCandidateExt.MatchString(filename) {
 		if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
 			Warn("Unable to process barcodes: " + err.Error())
 			atomic.AddInt64(&BarcodeFailures, 1)
-			entry.Barcode = "Nil"
+			entry.Barcode = sql.NullString{}
 		} else {
 			Debug("Decoded barcode text to: " + barcodeText)
 			atomic.AddInt64(&BarcodeSuccesses, 1)
-			entry.Barcode = barcodeText
+			entry.Barcode = sql.NullString{String: barcodeText, Valid: true}
 		}
 	} else {
-		entry.Barcode = "Nil"
+		entry.Barcode = sql.NullString{}
 	}
 
 	// OnUpload fires first — a notification hook for plugins that just want

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"net"
@@ -430,7 +431,11 @@ func (pm *PluginManger) callHook(sig string, entry DBEntry, plugin Plugin) (DBEn
 	L.SetField(t, "Hash", lua.LString(entry.Hash))
 	L.SetField(t, "Path", lua.LString(entry.Path))
 	L.SetField(t, "Meta", lua.LString(entry.Meta))
-	L.SetField(t, "Barcode", lua.LString(entry.Barcode))
+	if entry.Barcode.Valid {
+		L.SetField(t, "Barcode", lua.LString(entry.Barcode.String))
+	} else {
+		L.SetField(t, "Barcode", lua.LNil)
+	}
 
 	hookFunc := L.GetGlobal(sig)
 	err := L.CallByParam(lua.P{
@@ -453,7 +458,11 @@ func (pm *PluginManger) callHook(sig string, entry DBEntry, plugin Plugin) (DBEn
 	entry.Hash = result.RawGetString("Hash").String()
 	entry.Path = result.RawGetString("Path").String()
 	entry.Meta = result.RawGetString("Meta").String()
-	entry.Barcode = result.RawGetString("Barcode").String()
+	if bc := result.RawGetString("Barcode"); bc.Type() == lua.LTNil {
+		entry.Barcode = sql.NullString{}
+	} else {
+		entry.Barcode = sql.NullString{String: bc.String(), Valid: true}
+	}
 
 	return entry, nil
 }
