@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -232,12 +233,12 @@ end
 		t.Fatalf("LoadPlugins: %v", err)
 	}
 
-	in := DBEntry{Filename: "fn", Act: "act", Hash: "hash", Path: "path", Meta: "meta", Barcode: "bc"}
+	in := DBEntry{Filename: "fn", Act: "act", Hash: "hash", Path: "path", Meta: "meta", Barcode: sql.NullString{String: "bc", Valid: true}}
 	got, err := pm.RunByHook("OnFilter", in)
 	if err != nil {
 		t.Fatalf("RunByHook: %v", err)
 	}
-	want := DBEntry{Filename: "fn-f", Act: "act-a", Hash: "hash-h", Path: "path-p", Meta: "meta-m", Barcode: "bc-b"}
+	want := DBEntry{Filename: "fn-f", Act: "act-a", Hash: "hash-h", Path: "path-p", Meta: "meta-m", Barcode: sql.NullString{String: "bc-b", Valid: true}}
 	if got != want {
 		t.Fatalf("expected every field to round-trip, got %+v, want %+v", got, want)
 	}

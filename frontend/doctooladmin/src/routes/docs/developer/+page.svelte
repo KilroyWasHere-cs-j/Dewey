@@ -496,7 +496,7 @@ function OnFilter(entry)
     -- entry.Hash      — SHA-256 hash of the file
     -- entry.Path      — destination path (OnFilter should modify this)
     -- entry.Meta      — metadata string
-    -- entry.Barcode   — decoded barcode text, or "Nil" if none found
+    -- entry.Barcode   — decoded barcode text, or nil if none found
 
     -- Example: sort PDFs into a subdirectory
     if string.match(entry.Filename, "%.pdf$") then
@@ -543,7 +543,7 @@ end</code></pre>
 								{ col: 'created_at',  type: 'VARCHAR(35)',          notes: 'RFC3339 timestamp of ingest.' },
 								{ col: 'filepath',    type: 'TEXT',                 notes: 'Path within ./store as set by the plugin chain.' },
 								{ col: 'is_deleted',  type: 'TINYINT(1)',           notes: 'Soft delete flag. 0 = active, 1 = deleted.' },
-								{ col: 'barcode',     type: 'VARCHAR(100)',         notes: 'Decoded barcode text, or "Nil".' },
+								{ col: 'barcode',     type: 'VARCHAR(100)',         notes: 'Decoded barcode text, or NULL if none found.' },
 							] as row}
 								<tr>
 									<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.col}</td>

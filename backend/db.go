@@ -249,14 +249,14 @@ func (dm *DatabaseManager) DebugPrintAllRecords() {
 	for rows.Next() {
 		count++
 		var r struct {
-			ID         int    `json:"id"`
-			Filename   string `json:"filename"`
-			ActsID     string `json:"acts_id"`
-			Sha256Hash string `json:"sha256_hash"`
-			CreatedAt  string `json:"created_at"`
-			Filepath   string `json:"filepath"`
-			IsDeleted  int    `json:"is_deleted"`
-			Barcode    string `json:"barcode"`
+			ID         int            `json:"id"`
+			Filename   string         `json:"filename"`
+			ActsID     string         `json:"acts_id"`
+			Sha256Hash string         `json:"sha256_hash"`
+			CreatedAt  string         `json:"created_at"`
+			Filepath   string         `json:"filepath"`
+			IsDeleted  int            `json:"is_deleted"`
+			Barcode    sql.NullString `json:"barcode"`
 		}
 
 		err := rows.Scan(&r.ID, &r.Filename, &r.ActsID, &r.Sha256Hash, &r.CreatedAt, &r.Filepath, &r.IsDeleted, &r.Barcode)
@@ -391,7 +391,7 @@ func (dm *DatabaseManager) Migrate() error {
 		created_at VARCHAR(35) NOT NULL,
 		filepath TEXT NOT NULL,
 		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
-		barcode VARCHAR(100) NOT NULL,
+		barcode VARCHAR(100),
 		INDEX idx_acts_id (acts_id) -- Needed for foreign key reference in meta
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
 
