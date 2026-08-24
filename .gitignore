@@ -43,6 +43,7 @@ backend/testing_tooling/logs/
 # Compiled binary
 backend/Dewey
 cli/dewey-cli
+dewey-mcp/dewey-mcp
 
 # Mac file
 .DS_Store
