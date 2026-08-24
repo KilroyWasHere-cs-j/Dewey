@@ -14,7 +14,7 @@ export interface AppMetrics {
 	app_exe_count: number;
 	app_file_copys: number;
 	app_file_deletions: number;
-	app_file_retries: number;
+	app_file_retrievals: number;
 	app_file_sorts: number;
 	app_filters_loadings: number;
 	app_files_in_backup: number;
