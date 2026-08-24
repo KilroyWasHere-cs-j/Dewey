@@ -318,14 +318,52 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
 			<section id="testing" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Testing Tools</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/testing_tooling/</code> holds two
-					load-generation scripts, both run from inside the backend container so their requests come
-					from an already-<a href="#access" class="underline">allowlisted</a> source:
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/testing_tooling/</code> holds the
+					BIT suite plus two load-generation scripts, all run from inside the backend container so their
+					requests come from an already-<a href="#access" class="underline">allowlisted</a> source:
 				</p>
 				<ul class="mb-6 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+					<li><strong class="text-gray-700 dark:text-gray-200">test_suite.sh</strong> — the BIT (built-in test) suite: a black-box pass over the whole HTTP API, run automatically at every server startup. What the next subsection documents.</li>
 					<li><strong class="text-gray-700 dark:text-gray-200">load_test.sh</strong> — a fixed-size burst of uploads (plus a retrieval pass) from a single source, done in seconds. Good for a quick sanity check.</li>
-					<li><strong class="text-gray-700 dark:text-gray-200">soak_test.sh</strong> — sustained, multi-user, day/night-shaped traffic over a configurable duration (issue #311). What the rest of this section documents.</li>
+					<li><strong class="text-gray-700 dark:text-gray-200">soak_test.sh</strong> — sustained, multi-user, day/night-shaped traffic over a configurable duration (issue #311).</li>
 				</ul>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">BIT suite (test_suite.sh)</h3>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Runs automatically once the server finishes starting up — backgrounded (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">main.go</code>'s
+					BITs goroutine) so it doesn't block the server from listening. A failure only logs a
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">Warn</code>, it doesn't crash the server —
+					this is a self-test, not a startup gate. Run it manually the same way, against any target:
+				</p>
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs text-gray-100"><code>bash backend/testing_tooling/test_suite.sh [base_url]  # defaults to http://localhost:8080
+
+# or, against a running deployment, from inside the backend container:
+podman exec cross-doc-tool-dev bash testing_tooling/test_suite.sh</code></pre>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Structured <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">PASS</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">FAIL</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">SKIP</code>
+					lines go to stdout, human-readable progress to stderr — both are also teed into a timestamped log
+					under <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/logs/bits/</code>, a persisted volume
+					that survives a container restart (issue #213), so a failed self-test on a redeployed container is
+					still debuggable afterward.
+				</p>
+				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">What it checks, in run order:</p>
+				<ol class="mb-6 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">1</span><span><strong class="text-gray-700 dark:text-gray-200">Endpoint health</strong> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/</code>, <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/files</code>, <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/admin/dumpCache</code> all respond.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">2</span><span><strong class="text-gray-700 dark:text-gray-200">JSON upload</strong> — the JSON-only branch of <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/upload</code> accepts valid JSON and rejects malformed JSON.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span><strong class="text-gray-700 dark:text-gray-200">Multipart upload</strong> — every fixture file type uploads successfully with randomized metadata.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">4</span><span><strong class="text-gray-700 dark:text-gray-200">Upload error cases</strong> — a bad content-type and a missing file field are both rejected.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">5</span><span><strong class="text-gray-700 dark:text-gray-200">Disallowed extension</strong> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">.sh</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">.exe</code> uploads are rejected.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">6</span><span><strong class="text-gray-700 dark:text-gray-200">ELF rejection</strong> — an ELF binary disguised with a <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">.txt</code> extension is still detected and blocked.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">7</span><span><strong class="text-gray-700 dark:text-gray-200">PDF JavaScript rejection</strong> — a PDF with an embedded <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/OpenAction</code> trigger is rejected (issue #245).</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">8</span><span><strong class="text-gray-700 dark:text-gray-200">Path traversal</strong> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">../</code>-style paths in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">DELETE</code> requests are blocked.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">9</span><span><strong class="text-gray-700 dark:text-gray-200">SHA256 upload verification</strong> — the server-reported hash in the upload response matches the file's real hash.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">10</span><span><strong class="text-gray-700 dark:text-gray-200">Duplicate upload</strong> — uploading the same file twice produces two distinct stored filenames.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">11</span><span><strong class="text-gray-700 dark:text-gray-200">Roundtrip integrity</strong> — a downloaded file's hash matches what was uploaded, via <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /files/:filename/false</code>.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">12</span><span><strong class="text-gray-700 dark:text-gray-200">Store path verification</strong> — checks the store <em>on disk</em> for the file, not just through the API (issue #270). The roundtrip check above alone can't catch a file that's recorded in the DB but never actually copied to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">fileSystemBaseDir</code> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">locateFile</code> checks the cache first, so a passing roundtrip can be served entirely from there. This polls briefly (the store copy lands asynchronously, behind <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">postProcessingSem</code>), then confirms the store copy's content matches via SHA256.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">13</span><span><strong class="text-gray-700 dark:text-gray-200">Metadata retrieval</strong> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /files/:filename/true</code> returns the expected fields, an unknown <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">:meta</code> value gets 400, and a non-existent file gets 404.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">14</span><span><strong class="text-gray-700 dark:text-gray-200">Catalog</strong> — <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /files</code> lists what was just uploaded.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">15</span><span><strong class="text-gray-700 dark:text-gray-200">Delete</strong> — deleting a real file succeeds, and deleting a nonexistent one returns 404.</span></li>
+				</ol>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Why soak_test.sh exists</h3>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
@@ -413,12 +451,24 @@ podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh</code></pre>
 					other handler.
 				</p>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
-					On each request the middleware looks up <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">c.ClientIP()</code>
-					via <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">checkKnownMachine</code>. An unregistered IP gets
-					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code> before reaching the route
-					handler. A registered IP proceeds, and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">logMachineIP</code>
-					bumps <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">last_seen_at</code> for it — this doubles as
-					the connection log (who talked to the server, and when).
+					On each request the middleware resolves the caller's address via <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">resolveClientIP</code>,
+					which parses <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">c.Request.RemoteAddr</code> directly using
+					Go's <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">net/netip</code> package rather than gin's own
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">c.ClientIP()</code> — the latter calls
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">net.ParseIP</code>, which silently returns an empty
+					string for any zone-qualified address (e.g. <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">fe80::...%eth0</code>),
+					which is exactly what rootless Podman's <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">pasta</code> network
+					helper presents for host-to-forwarded-port connections (issue #315).
+				</p>
+				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
+					Link-local IPv6 addresses (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">fe80::/10</code>) are treated
+					as host-equivalent and skip the allowlist check entirely — only reachable from the local link, and tied to
+					the host's specific network interface rather than something that could be usefully pre-registered the way
+					loopback is. Anything else goes through <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">checkKnownMachine</code>:
+					an unregistered IP gets <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code> before
+					reaching the route handler, while a registered IP proceeds and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">logMachineIP</code>
+					bumps <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">last_seen_at</code> for it — this doubles as the
+					connection log (who talked to the server, and when).
 				</p>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					The server calls <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">r.SetTrustedProxies(nil)</code> so
