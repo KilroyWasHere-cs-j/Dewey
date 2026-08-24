@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 
@@ -13,26 +15,68 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// resolveClientIP parses the raw RemoteAddr Go's net/http sets on every
+// request, preserving any IPv6 zone identifier.
+//
+// Gin's own c.ClientIP() can't be used here — it calls net.ParseIP, which
+// silently returns nil (so an empty ClientIP()) for any zone-qualified
+// address such as "fe80::...%eth0". That's exactly what rootless Podman's
+// pasta network helper presents for host-to-forwarded-port connections
+// (issue #315): SplitHostPort succeeds, but ParseIP then drops the
+// connection's identity entirely, misreading a present-but-unusual address
+// as a missing one. netip.ParseAddr, unlike net.ParseIP, understands zone
+// identifiers and parses these cleanly.
+func resolveClientIP(remoteAddr string) (netip.Addr, error) {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return netip.Addr{}, err
+	}
+	return netip.ParseAddr(host)
+}
+
 // logConnections gates every route behind the known_machines allowlist and
 // records each authorized request — this is both the access control and the
 // "who and when" audit trail for the closed network this server runs on.
 func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-
-		label, err := dbm.checkKnownMachine(ip)
+		ip, err := resolveClientIP(c.Request.RemoteAddr)
 		if err != nil {
-			Warn(fmt.Sprintf("unregistered machine %s hit %s %s", ip, c.Request.Method, c.FullPath()))
+			Warn(fmt.Sprintf("could not resolve client IP from remote addr %q (%s), hit %s %s", c.Request.RemoteAddr, err, c.Request.Method, c.FullPath()))
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "unregistered machine"})
+			return
+		}
+		ipStr := ip.String()
+
+		// Link-local IPv6 (fe80::/10) is only reachable from the local link.
+		// Under rootless Podman's pasta network helper, this is specifically
+		// how host-to-forwarded-port connections present themselves (issue
+		// #315) rather than a routable loopback address. Treated as
+		// host-equivalent here rather than requiring each host's
+		// NIC-derived address to be registered individually — that address
+		// is tied to the host's specific interface and isn't stable across
+		// machines or interface changes, so pre-seeding it into
+		// known_machines the way 127.0.0.1/::1 are wouldn't generalize.
+		if ip.IsLinkLocalUnicast() {
+			Debug(fmt.Sprintf("localhost (link-local %s) -> %s %s", ipStr, c.Request.Method, c.FullPath()))
+			stop := trackUser(ipStr)
+			defer stop()
+			c.Next()
+			return
+		}
+
+		label, err := dbm.checkKnownMachine(ipStr)
+		if err != nil {
+			Warn(fmt.Sprintf("unregistered machine %s (raw remote addr %q) hit %s %s", ipStr, c.Request.RemoteAddr, c.Request.Method, c.FullPath()))
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "unregistered machine"})
 			return
 		}
 
-		Debug(fmt.Sprintf("%s (%s) -> %s %s", label, ip, c.Request.Method, c.FullPath()))
-		if err := dbm.logMachineIP(ip); err != nil {
-			Warn("failed to update last_seen_at for " + ip + ": " + err.Error())
+		Debug(fmt.Sprintf("%s (%s) -> %s %s", label, ipStr, c.Request.Method, c.FullPath()))
+		if err := dbm.logMachineIP(ipStr); err != nil {
+			Warn("failed to update last_seen_at for " + ipStr + ": " + err.Error())
 		}
 
-		stop := trackUser(ip)
+		stop := trackUser(ipStr)
 		defer stop()
 
 		c.Next()
