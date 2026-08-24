@@ -77,7 +77,10 @@ function load(): Settings {
 	return { ...DEFAULTS };
 }
 
-function createSettingsStore() {
+// Exported (rather than kept private) so tests can build isolated
+// instances instead of sharing the module-level `settings` singleton's
+// localStorage-backed state across test cases (issue #240).
+export function createSettingsStore() {
 	let s = $state<Settings>(load());
 
 	return {
