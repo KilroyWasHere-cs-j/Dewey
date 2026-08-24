@@ -1,16 +1,12 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -240,38 +236,23 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
-	// Belt-and-suspenders check against the declared part size, independent
-	// of whatever MaxBytesReader caught at the body-read level.
-	if fileHeader.Size > maxFileSize {
+	if !checkFileSize(fileHeader, c) {
 		Warn(fmt.Sprintf("file too large: %d bytes", fileHeader.Size))
-		uploadRejections.WithLabelValues("too_large").Inc()
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "File exceeds maximum allowed size",
-		})
 		return
 	}
+	Debug(fmt.Sprintf("File size is valid. File size: %d bytes", fileHeader.Size))
 
 	Debug("checking formats")
 
 	// -------------------------
 	// Validate extension
 	// -------------------------
-	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-
-	allowedExts := map[string]struct{}{
-		".pdf": {}, ".txt": {}, ".doc": {}, ".docx": {},
-		".xls": {}, ".xlsx": {}, ".csv": {}, ".ppt": {},
-		".png": {}, ".jpg": {}, ".jpeg": {},
-	}
-
-	if _, ok := allowedExts[ext]; !ok {
-		Warn("invalid file type: " + ext)
-		uploadRejections.WithLabelValues("invalid_ext").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid file type",
-		})
+	ok, ext := validateFileExtensionType(fileHeader, c)
+	if !ok {
+		Warn("Incorrect file type")
 		return
 	}
+
 	Debug("Vaild file type")
 
 	// Track accepted extension so the frontend can show upload distribution
@@ -280,12 +261,8 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Open file
 	// -------------------------
-	file, err := fileHeader.Open()
+	err, file := OpenFile(fileHeader, c)
 	if err != nil {
-		Warn("Failed to open file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to open file",
-		})
 		return
 	}
 	defer file.Close()
@@ -293,91 +270,33 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Security checks
 	// -------------------------
-	if isPE, _ := IsPEFile(file); isPE {
-		uploadRejections.WithLabelValues("pe_blocked").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Executable file detected (PE blocked)",
-		})
+	if checkFileForExe(file, c) != nil {
 		return
 	}
 
-	file.Seek(0, io.SeekStart)
-
-	if isELF, _ := IsELFFile(file); isELF {
-		uploadRejections.WithLabelValues("elf_blocked").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Executable file detected (ELF blocked)",
-		})
+	if checkFileContent(file, ext, c) != nil {
 		return
 	}
 
-	file.Seek(0, io.SeekStart)
-
-	// Sniff actual content and reject anything that doesn't match what the
-	// extension claims — e.g. a "report.txt" that's really an HTML/script
-	// payload passes the extension allowlist otherwise.
-	matches, err := MatchesDeclaredType(ext, file)
-	if err != nil {
-		Warn("Failed to sniff file content: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to validate file content",
-		})
+	if CheckPDFJavaScript(ext, file, c) != nil {
 		return
-	}
-	if !matches {
-		Warn("file content does not match declared extension: " + ext)
-		uploadRejections.WithLabelValues("content_mismatch").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "File content does not match its extension",
-		})
-		return
-	}
-
-	file.Seek(0, io.SeekStart)
-
-	// PDFs get one more check beyond the sniff above: reject any PDF
-	// carrying embedded JavaScript or auto-actions (issue #245). Unlike the
-	// checks above, this needs to happen after we know it's really a PDF —
-	// ContainsPDFJavaScript parses the full object structure via pdfcpu.
-	if ext == ".pdf" {
-		hasJS, err := ContainsPDFJavaScript(file)
-		if err != nil {
-			Warn("Failed to scan PDF for embedded JavaScript: " + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to validate file content",
-			})
-			return
-		}
-		if hasJS {
-			Warn("PDF rejected: contains embedded JavaScript or an auto-action")
-			uploadRejections.WithLabelValues("pdf_js_blocked").Inc()
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "PDF contains embedded JavaScript or auto-actions and was rejected",
-			})
-			return
-		}
-		file.Seek(0, io.SeekStart)
 	}
 
 	// -------------------------
 	// Generate filename
 	// -------------------------
-	timestamp := time.Now().Unix()
-	safeFilename := fmt.Sprintf("%d_%s", timestamp, filepath.Base(fileHeader.Filename))
+	safeFilename := CreateTimestamp(fileHeader.Filename)
 
 	// -------------------------
 	// Hash file
 	// -------------------------
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		Warn("Failed to read file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to read file",
-		})
+	var hashString string
+	err, hashString = CreateFileHash(file, c)
+	if err != nil {
+		Warn("Failed to hash file: " + err.Error())
 		return
 	}
 
-	hashString := hex.EncodeToString(hasher.Sum(nil))
 	Debug("SHA256: " + hashString)
 
 	// Record file size distribution for the histogram
@@ -390,33 +309,11 @@ func uploadFile(c *gin.Context) {
 	// which re-opens and re-copies the same bytes from the multipart source
 	// a second time — the hashing pass above already read this file once
 	// (issue #166).
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		Warn("Failed to rewind file before save: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
-		return
-	}
-
-	dst := filepath.Join(uploadDir, safeFilename)
-	dstFile, err := os.Create(dst)
+	err = SaveFile(safeFilename, file, c)
 	if err != nil {
-		Warn("Failed to create destination file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
-		return
-	}
-	defer dstFile.Close()
-
-	if _, err := io.Copy(dstFile, file); err != nil {
 		Warn("Failed to save file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
 		return
 	}
-	atomic.AddInt64(&UploadsSinceLastTick, 1)
 	uploadCounter.Record()
 
 	// -------------------------
@@ -435,7 +332,6 @@ func uploadFile(c *gin.Context) {
 	// Post-processing
 	// -------------------------
 	queueIdAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
-
 }
 
 // deleteFile removes a file from upload storage by filename.
@@ -457,57 +353,15 @@ func uploadFile(c *gin.Context) {
 //   - 500 Internal Server Error: filesystem or DB failure
 func deleteFile(c *gin.Context) {
 	filename := filepath.Base(c.Param("filename")) // prevent path traversal
-	pm := c.MustGet("plugins").(*PluginManger)
-	dbm := c.MustGet("db").(*DatabaseManager)
+	err := DeleteFile(filename, c)
 
-	storeRelPath, err := dbm.pullRecordByFilename(filename)
 	if err != nil {
-		Warn("file record not found: " + err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "File not found",
-		})
-		return
-	}
-
-	// OnDelete runs synchronously, before anything is actually removed —
-	// unlike OnFilter/OnUpload, no response has been sent yet at this
-	// point, so a plugin calling error(...) genuinely vetoes the deletion
-	// instead of racing an already-sent 200 OK.
-	entry := DBEntry{Filename: filename, Path: storeRelPath}
-	if _, err := pm.RunByHook("OnDelete", entry); err != nil {
-		Warn("deletion vetoed by plugin: " + err.Error())
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Deletion blocked by plugin: " + err.Error(),
-		})
-		return
-	}
-
-	storePath := filepath.Join(fileSystemBaseDir, storeRelPath)
-	if err := os.Remove(storePath); err != nil && !os.IsNotExist(err) {
-		Warn("failed to delete file from store: " + err.Error())
+		Warn(err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete file",
+			"error": err.Error(),
 		})
 		return
 	}
-
-	// Cache copy may already be gone (dumpCache runs independently) — not an error either way.
-	cachePath := filepath.Join(uploadDir, filename)
-	if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
-		Warn("failed to delete cached file copy: " + err.Error())
-	}
-
-	if err := dbm.deleteFileRecord(filename); err != nil {
-		Warn("failed to mark file record deleted: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete file",
-		})
-		return
-	}
-
-	Debug("file deleted: " + filename)
-	atomic.AddInt64(&FileDeletions, 1)
-	atomic.AddInt64(&FilesInStore, -1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File deleted",

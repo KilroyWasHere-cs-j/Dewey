@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -260,6 +262,193 @@ func TestContainsPDFJavaScript(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Fatalf("ContainsPDFJavaScript(%s) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestValidateFileExtensionType covers the extension allowlist (issue #233's
+// extraction of uploadFile's extension check into its own function),
+// including case normalization and the no-extension edge case.
+func TestValidateFileExtensionType(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		wantOK   bool
+		wantExt  string
+	}{
+		{name: "allowed extension passes", filename: "report.pdf", wantOK: true, wantExt: ".pdf"},
+		{name: "extension case is normalized", filename: "report.PDF", wantOK: true, wantExt: ".pdf"},
+		{name: "disallowed extension is rejected", filename: "malware.exe", wantOK: false, wantExt: ".exe"},
+		{name: "no extension is rejected", filename: "noext", wantOK: false, wantExt: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, w := newTestGinContext(t)
+			fh := &multipart.FileHeader{Filename: tt.filename}
+
+			ok, ext := validateFileExtensionType(fh, c)
+
+			if ok != tt.wantOK {
+				t.Fatalf("validateFileExtensionType(%q) ok = %v, want %v", tt.filename, ok, tt.wantOK)
+			}
+			if ext != tt.wantExt {
+				t.Fatalf("validateFileExtensionType(%q) ext = %q, want %q", tt.filename, ext, tt.wantExt)
+			}
+			if !tt.wantOK && w.Code != http.StatusBadRequest {
+				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+// TestCheckFileForExe confirms PE and ELF signatures are rejected and
+// ordinary content passes, mirroring the byte fixtures TestIsPEFile/
+// TestIsELFFile already use above.
+func TestCheckFileForExe(t *testing.T) {
+	tests := []struct {
+		name    string
+		content []byte
+		wantErr bool
+	}{
+		{
+			name:    "PE executable is rejected",
+			content: buildPEBytes(64, [4]byte{'P', 'E', 0, 0}),
+			wantErr: true,
+		},
+		{
+			name:    "ELF executable is rejected",
+			content: []byte{0x7F, 'E', 'L', 'F'},
+			wantErr: true,
+		},
+		{
+			name:    "plain content passes",
+			content: []byte("just a normal text file"),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fh := newUploadedFile(t, "upload.bin", tt.content)
+			file, err := fh.Open()
+			if err != nil {
+				t.Fatalf("opening fixture file: %v", err)
+			}
+			defer file.Close()
+
+			c, w := newTestGinContext(t)
+			gotErr := checkFileForExe(file, c)
+
+			if tt.wantErr && gotErr == nil {
+				t.Fatal("checkFileForExe() = nil error, want an error")
+			}
+			if !tt.wantErr && gotErr != nil {
+				t.Fatalf("checkFileForExe() unexpected error: %v", gotErr)
+			}
+			if tt.wantErr && w.Code != http.StatusBadRequest {
+				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+// TestCheckFileContent confirms the content-sniff-vs-declared-extension
+// check passes matching content and rejects an extension/content mismatch
+// (e.g. HTML masquerading as a ".txt" upload).
+func TestCheckFileContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		ext     string
+		content []byte
+		wantErr bool
+	}{
+		{
+			name:    "content matches declared extension",
+			ext:     ".txt",
+			content: []byte("plain text content"),
+			wantErr: false,
+		},
+		{
+			name:    "content does not match declared extension",
+			ext:     ".txt",
+			content: []byte("<html><body>not text</body></html>"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fh := newUploadedFile(t, "upload"+tt.ext, tt.content)
+			file, err := fh.Open()
+			if err != nil {
+				t.Fatalf("opening fixture file: %v", err)
+			}
+			defer file.Close()
+
+			c, w := newTestGinContext(t)
+			gotErr := checkFileContent(file, tt.ext, c)
+
+			if tt.wantErr && gotErr == nil {
+				t.Fatal("checkFileContent() = nil error, want an error")
+			}
+			if !tt.wantErr && gotErr != nil {
+				t.Fatalf("checkFileContent() unexpected error: %v", gotErr)
+			}
+			if tt.wantErr && w.Code != http.StatusBadRequest {
+				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+// TestCheckPDFJavaScript confirms the wrapper only runs the check for a
+// ".pdf" extension, and correctly turns ContainsPDFJavaScript's bool result
+// into an error/nil outcome, using the same fixtures as
+// TestContainsPDFJavaScript above.
+func TestCheckPDFJavaScript(t *testing.T) {
+	tests := []struct {
+		name    string
+		ext     string
+		path    string
+		wantErr bool
+	}{
+		{
+			name:    "non-pdf extension skips the check entirely",
+			ext:     ".txt",
+			path:    "testing_tooling/js_test.pdf", // content is irrelevant — ext gates the check
+			wantErr: false,
+		},
+		{
+			name:    "PDF with embedded JavaScript is rejected",
+			ext:     ".pdf",
+			path:    "testing_tooling/js_test.pdf",
+			wantErr: true,
+		},
+		{
+			name:    "clean PDF passes",
+			ext:     ".pdf",
+			path:    "testing_tooling/test.pdf",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := os.Open(tt.path)
+			if err != nil {
+				t.Fatalf("open %s: %v", tt.path, err)
+			}
+			defer f.Close()
+
+			c, w := newTestGinContext(t)
+			gotErr := CheckPDFJavaScript(tt.ext, f, c)
+
+			if tt.wantErr && gotErr == nil {
+				t.Fatal("CheckPDFJavaScript() = nil error, want an error")
+			}
+			if !tt.wantErr && gotErr != nil {
+				t.Fatalf("CheckPDFJavaScript() unexpected error: %v", gotErr)
+			}
+			if tt.wantErr && w.Code != http.StatusBadRequest {
+				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
 			}
 		})
 	}

@@ -1,14 +1,21 @@
 package main
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync/atomic"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // var filters *Config
@@ -246,4 +253,134 @@ func locateFile(dbm *DatabaseManager, filename string) (string, error) {
 
 	atomic.AddInt64(&FileRetrievals, 1)
 	return fullPath, nil
+}
+
+func checkFileSize(fileHeader *multipart.FileHeader, c *gin.Context) bool {
+	// Belt-and-suspenders check against the declared part size, independent
+	// of whatever MaxBytesReader caught at the body-read level.
+	if fileHeader.Size > maxFileSize {
+		Warn(fmt.Sprintf("file too large: %d bytes", fileHeader.Size))
+		uploadRejections.WithLabelValues("too_large").Inc()
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": "File exceeds maximum allowed size",
+		})
+		return false
+	}
+	return true
+}
+
+func CreateTimestamp(filename string) string {
+	timestamp := time.Now().Unix()
+	return fmt.Sprintf("%d_%s", timestamp, filename)
+}
+
+func CreateFileHash(file multipart.File, c *gin.Context) (error, string) {
+	hasher := sha256.New()
+	if _, err := io.Copy(hasher, file); err != nil {
+		Warn("Failed to read file: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to read file",
+		})
+		return err, ""
+	}
+
+	return nil, hex.EncodeToString(hasher.Sum(nil))
+}
+
+func SaveFile(filename string, file multipart.File, c *gin.Context) error {
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		Warn("Failed to rewind file before save: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save file",
+		})
+		return err
+	}
+
+	dst := filepath.Join(uploadDir, filename)
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		Warn("Failed to create destination file: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save file",
+		})
+		return err
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, file); err != nil {
+		Warn("Failed to save file: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to save file",
+		})
+		return err
+	}
+	atomic.AddInt64(&UploadsSinceLastTick, 1)
+	return nil
+}
+
+func DeleteFile(filename string, c *gin.Context) error {
+	pm := c.MustGet("plugins").(*PluginManger)
+	dbm := c.MustGet("db").(*DatabaseManager)
+
+	storeRelPath, err := dbm.pullRecordByFilename(filename)
+	if err != nil {
+		Warn("file record not found: " + err.Error())
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "File not found",
+		})
+		return err
+	}
+
+	// OnDelete runs synchronously, before anything is actually removed —
+	// unlike OnFilter/OnUpload, no response has been sent yet at this
+	// point, so a plugin calling error(...) genuinely vetoes the deletion
+	// instead of racing an already-sent 200 OK.
+	entry := DBEntry{Filename: filename, Path: storeRelPath}
+	if _, err := pm.RunByHook("OnDelete", entry); err != nil {
+		Warn("deletion vetoed by plugin: " + err.Error())
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Deletion blocked by plugin: " + err.Error(),
+		})
+		return err
+	}
+
+	storePath := filepath.Join(fileSystemBaseDir, storeRelPath)
+	if err := os.Remove(storePath); err != nil && !os.IsNotExist(err) {
+		Warn("failed to delete file from store: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete file",
+		})
+		return err
+	}
+
+	// Cache copy may already be gone (dumpCache runs independently) — not an error either way.
+	cachePath := filepath.Join(uploadDir, filename)
+	if err := os.Remove(cachePath); err != nil && !os.IsNotExist(err) {
+		Warn("failed to delete cached file copy: " + err.Error())
+	}
+
+	if err := dbm.deleteFileRecord(filename); err != nil {
+		Warn("failed to mark file record deleted: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to delete file",
+		})
+		return err
+	}
+
+	Debug("file deleted: " + filename)
+	atomic.AddInt64(&FileDeletions, 1)
+	atomic.AddInt64(&FilesInStore, -1)
+	return nil
+}
+
+func OpenFile(fileHeader *multipart.FileHeader, c *gin.Context) (error, multipart.File) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		Warn("Failed to open file: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to open file",
+		})
+		return err, nil
+	}
+	return nil, file
 }
