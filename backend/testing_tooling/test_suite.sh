@@ -6,6 +6,13 @@ BASE="${BASE%/}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOWNLOAD_DIR="$(mktemp -d)"
 
+# Mirrors config.json's file_system.file_system_base_dir ("./store" relative
+# to the app's WORKDIR) — this script runs as a direct subprocess of the Go
+# backend (issue #99's BITs, exec'd from main.go with no Dir override), so
+# it shares the backend's own working directory and this resolves to the
+# real store the backend writes into, same reasoning as LOG_DIR below.
+STORE_DIR="$(dirname "$SCRIPT_DIR")/store"
+
 # --- LOGGING ---
 # Mirror both streams into a timestamped log file, keeping stdout (structured
 # PASS/FAIL results) and stderr (human-readable progress) separately teed so
@@ -550,7 +557,85 @@ run_roundtrip_tests() {
     done
 }
 
-# ── Section 11: Metadata retrieval (GET /files/:filename/true) ───────────────
+# ── Section 11: Store path verification ──────────────────────────────────────
+#
+# The roundtrip check above only proves the API serves back byte-identical
+# content — but locateFile checks the upload cache before ever falling back
+# to the DB-recorded store path, so a passing roundtrip alone doesn't prove
+# idAndSort's async post-processing actually copied the file into
+# fileSystemBaseDir at all (issue #270). This checks the store directly on
+# disk instead of through the API.
+
+run_store_path_verification_test() {
+    section "STORE PATH VERIFICATION"
+
+    local f="lenna.jpg"
+    local src="$SCRIPT_DIR/$f"
+
+    if [ ! -f "$src" ]; then
+        result_skip "STORE PATH verify [$f]" "source file not found"
+        return
+    fi
+
+    if [ ! -d "$STORE_DIR" ]; then
+        result_skip "STORE PATH verify [$f]" "store directory not found at $STORE_DIR"
+        return
+    fi
+
+    info "  Uploading $f ..."
+    local resp
+    resp=$(upload_file "$src")
+
+    if [ $? -ne 0 ]; then
+        result_fail "STORE PATH verify [$f]" "curl error"
+        return
+    fi
+
+    local server_file
+    server_file=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$server_file" ]; then
+        result_fail "STORE PATH verify [$f]" "no filename in response: $resp"
+        return
+    fi
+
+    # idAndSort's disk copy runs asynchronously in a background goroutine
+    # queued behind postProcessingSem (issue #217) — poll for a few seconds
+    # rather than checking once immediately, so this doesn't flake on a
+    # slow or backed-up post-processing pass.
+    info "  Waiting for $server_file to land in the store ..."
+    local store_path=""
+    for _ in $(seq 1 15); do
+        store_path=$(find "$STORE_DIR" -type f -name "$server_file" 2>/dev/null | head -1)
+        if [ -n "$store_path" ]; then
+            break
+        fi
+        sleep 1
+    done
+
+    if [ -z "$store_path" ]; then
+        result_fail "STORE PATH verify [$server_file]" "not found anywhere under $STORE_DIR after upload"
+        return
+    fi
+    result_pass "STORE PATH verify [$server_file] -> found at $store_path"
+
+    if [ ! -s "$store_path" ]; then
+        result_fail "STORE PATH verify [$server_file]" "store copy exists but is empty: $store_path"
+        return
+    fi
+
+    local expected_hash actual_hash
+    expected_hash=$(sha256sum "$src" | cut -d' ' -f1)
+    actual_hash=$(sha256sum "$store_path" | cut -d' ' -f1)
+
+    if [ "$expected_hash" = "$actual_hash" ]; then
+        result_pass "STORE PATH verify [$server_file] content matches (SHA256 $actual_hash)"
+    else
+        result_fail "STORE PATH verify [$server_file]" "store copy content mismatch: local=$expected_hash store=$actual_hash"
+    fi
+}
+
+# ── Section 12: Metadata retrieval (GET /files/:filename/true) ───────────────
 
 run_metadata_tests() {
     section "METADATA RETRIEVAL (meta=true)"
@@ -653,7 +738,7 @@ run_metadata_tests() {
     fi
 }
 
-# ── Section 12: File listing / catalog ───────────────────────────────────────
+# ── Section 13: File listing / catalog ───────────────────────────────────────
 
 run_catalog_test() {
     section "CATALOG VERIFICATION"
@@ -680,7 +765,7 @@ run_catalog_test() {
     info "  ${body:0:500}"
 }
 
-# ── Section 13: Delete tests ─────────────────────────────────────────────────
+# ── Section 14: Delete tests ─────────────────────────────────────────────────
 
 run_delete_tests() {
     section "DELETE TESTS"
@@ -740,7 +825,7 @@ run_delete_tests() {
     fi
 }
 
-# ── Section 14: PDF embedded JavaScript rejection ─────────────────────────────
+# ── Section 15: PDF embedded JavaScript rejection ─────────────────────────────
 
 run_pdf_javascript_test() {
     section "PDF EMBEDDED JAVASCRIPT REJECTION"
@@ -810,6 +895,7 @@ run_path_traversal_tests
 run_sha256_upload_test
 run_duplicate_upload_test
 run_roundtrip_tests
+run_store_path_verification_test
 run_metadata_tests
 run_catalog_test
 run_delete_tests
