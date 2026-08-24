@@ -65,7 +65,9 @@
 
 	// Alert conditions derived from live metrics + user thresholds
 	let ramAlert = $derived((metrics.app_ram_usage ?? 0) > settings.value.ramAlertThresholdMb);
-	let retryAlert = $derived((metrics.app_file_retries ?? 0) > settings.value.retryAlertThreshold);
+	let retrievalAlert = $derived(
+		(metrics.app_file_retrievals ?? 0) > settings.value.retryAlertThreshold
+	);
 
 	function round2(v: number) {
 		return Math.round(v * 100) / 100;
@@ -112,14 +114,14 @@
 		</div>
 	{/if}
 
-	<!-- Retry alert -->
-	{#if retryAlert}
+	<!-- Retrieval alert -->
+	{#if retrievalAlert}
 		<div
 			role="alert"
 			class="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 		>
 			<span
-				>⚠ File retries ({metrics.app_file_retries}) exceeds threshold ({settings.value
+				>⚠ File retrievals ({metrics.app_file_retrievals}) exceeds threshold ({settings.value
 					.retryAlertThreshold})</span
 			>
 		</div>
@@ -238,8 +240,8 @@
 					maxHistory={settings.value.analyticsHistoryWindow}
 				/>
 				<MetricGraph
-					label="File Retries"
-					value={metrics.app_file_retries ?? 0}
+					label="File Retrievals"
+					value={metrics.app_file_retrievals ?? 0}
 					color={colors[9]}
 					maxHistory={settings.value.analyticsHistoryWindow}
 				/>

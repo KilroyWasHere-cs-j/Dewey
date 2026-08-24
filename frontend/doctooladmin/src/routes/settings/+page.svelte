@@ -242,23 +242,23 @@
 
 			<div class="flex items-center justify-between gap-4">
 				<div>
-					<p class="font-medium text-gray-700 dark:text-gray-200">Retry Alert Threshold</p>
+					<p class="font-medium text-gray-700 dark:text-gray-200">Retrieval Alert Threshold</p>
 					<p class="text-sm text-gray-500 dark:text-gray-400">
-						Warn when file retries exceed this count.
+						Warn when file retrievals exceed this count.
 					</p>
 				</div>
 				<div class="flex shrink-0 items-center gap-2">
 					<input
 						type="number"
 						min="0"
-						aria-label="File retry alert threshold"
+						aria-label="File retrieval alert threshold"
 						autocomplete="off"
 						class="w-24 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-right text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
 						value={settings.value.retryAlertThreshold}
 						oninput={(e) =>
 							update('retryAlertThreshold', Number((e.target as HTMLInputElement).value))}
 					/>
-					<span class="text-sm text-gray-500 dark:text-gray-400">retries</span>
+					<span class="text-sm text-gray-500 dark:text-gray-400">retrievals</span>
 				</div>
 			</div>
 		</section>

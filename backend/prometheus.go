@@ -274,10 +274,10 @@ var (
 		},
 	)
 
-	fileRetries = prometheus.NewGaugeFunc(
+	fileRetrievals = prometheus.NewGaugeFunc(
 		prometheus.GaugeOpts{
-			Name: "app_file_retries",
-			Help: "Number of times a file has been retried",
+			Name: "app_file_retrievals",
+			Help: "Number of times a file has been retrieved",
 		},
 		func() float64 {
 			return float64(atomic.LoadInt64(&FileRetrievals))
@@ -435,7 +435,7 @@ func init() {
 		fileOps, fileBytes, fileDuration,
 		uptime, systemInfo, cpuCount, ramUsage, currentHeap, gcCycles,
 		cacheSize, filesInStore, filesInBackUp, exeCount, connectedUsers, uploadRate,
-		fileCopys, fileRetries, fileSorts, filtersLoadings, timeTilNextTick,
+		fileCopys, fileRetrievals, fileSorts, filtersLoadings, timeTilNextTick,
 		// new in issue #104
 		fileDeletions,
 		// new in issue #311
