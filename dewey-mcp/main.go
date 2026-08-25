@@ -15,6 +15,10 @@ func main() {
 		server.WithToolCapabilities(false),
 	)
 
+	// Added this in so I don't go crazy debugging.
+	// The \n is so it looks PrEtTy
+	fmt.Print("Server up\n")
+
 	// Add tool
 	//
 	// Annotation hints (read-only/destructive/idempotent/open-world) are set

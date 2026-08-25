@@ -12,6 +12,7 @@ A backend file sorting and storage service with a RESTful API, built for stable 
   - [Backup & Maintenance Daemon](#backup--maintenance-daemon)
 - [API Reference](#api-reference)
 - [Plugin System](#plugin-system)
+- [MCP Server](#mcp-server)
 - [Technology Stack](#technology-stack)
 - [External Libraries](#external-libraries)
 - [Testing](#testing)
@@ -184,6 +185,35 @@ In place of raw `os`/`io`, plugins get two narrow, Go-implemented capability API
 
 A Go-side error on any of these four raises a normal Lua error, catchable with `pcall` like any other plugin error. `OnTick.lua` uses all four together as one real workflow: fetch, cache, read the cache back, beacon out.
 
+## MCP Server
+
+`dewey-mcp/` is a standalone Go module implementing an [MCP](https://modelcontextprotocol.io) (Model Context Protocol) server, exposing Dewey and its Podman pod to AI model clients (Claude Desktop, Claude Code, etc.) as a set of callable tools. Unlike the REST API above, it communicates over stdio rather than HTTP — a client spawns the built binary as a subprocess per connection rather than dialing a port.
+
+| Tool | Kind | Description |
+|---|---|---|
+| `is_up` | read-only | Checks whether the Dewey backend is reachable, via `GET /` |
+| `version` | read-only | Returns the backend's release version and the git branch it was built from |
+| `get_podman_health` | read-only | Status of the `dewey-pod` Podman pod (`podman pod ps`) |
+| `get_podman_containers` | read-only | Lists every running Podman container (`podman ps`) |
+| `get_podman_container_logs` | read-only | Recent log output of a single container, by name or ID |
+| `restart_podman_container` | destructive | Restarts a single container by name or ID — interrupts whatever it was serving. The only non-idempotent tool here |
+| `create_file` | destructive | Writes contents to a file at `path`, creating or truncating it |
+| `read_file` | read-only | Returns a file's contents |
+| `move_file` | destructive | Moves/renames a file from `src` to `dst`. Skips rather than overwrites if `dst` already exists |
+| `delete_file` | destructive | Removes a file |
+
+**Path-traversal protection:** `read_file`, `move_file`, and `delete_file` all resolve their path arguments through `resolveSafePath`, which rejects anything that resolves outside the server's working directory (an absolute path or a `../` escape) — mirroring the backend's own `resolveStorePath` guard used for uploaded file paths. Without it, any connected MCP client would have unrestricted read/move/delete access to whatever the server process itself can reach on the host.
+
+```
+cd dewey-mcp
+go build -o dewey-mcp .
+
+# Talks to the backend at http://localhost:8080 by default — override with DEWEY_HOST
+DEWEY_HOST=http://<host>:8080 ./dewey-mcp
+```
+
+Point an MCP client's stdio transport at the built binary to connect — there's no port to publish or firewall rule to open. `package.sh` also cross-compiles and bundles it alongside `dewey-cli` — see [Deployment & Packaging](#deployment--packaging).
+
 ## Technology Stack
 
 The backend is written entirely in Go, chosen for the balance it strikes between simplicity and performance: a shallow learning curve, fast compile times, and static-binary deployment, without giving up the control and speed of a compiled language.
@@ -215,8 +245,9 @@ Two layers of tests cover the backend:
 The application and its supporting services are built into Podman containers for portable, controlled deployment.
 
 - **`deploy.sh`** — creates `dewey-pod` and starts all four containers (MySQL, Prometheus, backend, frontend) with persistent named volumes for the database and for `store/`, `cache/`, `backup/`, and `logs/`.
-- **`package.sh`** — builds the backend and frontend images against an already-running `dewey-pod`, then exports the whole pod (images + Kubernetes-style pod spec + a self-contained `run.sh`) as a `.tar.gz` bundle that can be moved to another host and deployed without needing a registry or a repo checkout — it also cross-compiles and bundles `dewey-cli`.
+- **`package.sh`** — builds the backend and frontend images against an already-running `dewey-pod`, then exports the whole pod (images + Kubernetes-style pod spec + a self-contained `run.sh`) as a `.tar.gz` bundle that can be moved to another host and deployed without needing a registry or a repo checkout — it also cross-compiles and bundles `dewey-cli` and `dewey-mcp`.
 - **`dewey-cli`** — a standalone CLI client for the deployed API (`cli/main.go`), buildable manually (`cd cli && go build -o dewey-cli .`) or already sitting alongside `run.sh` in a `package.sh` bundle. List-shaped responses (`list_files`, `list_machines`) render as aligned tables; every other response prints as indented JSON, colored red on a non-2xx status. `dewey-cli` can also generate synthetic test files (`create_docx`, `create_exe`, `create_pdf`) for exercising upload validation.
+- **`dewey-mcp`** — a standalone MCP server (`dewey-mcp/`) exposing Dewey and its Podman pod to AI model clients over stdio; see [MCP Server](#mcp-server).
 
 ### Data Persistence
 

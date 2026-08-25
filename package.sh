@@ -81,6 +81,13 @@ log "info" "Building dewey-cli..."
 (cd cli && GOOS=linux GOARCH=amd64 go build -o dewey-cli .)
 log "success" "dewey-cli built"
 
+log "info" "Building dewey-mcp..."
+# Same fixed linux/amd64 target as dewey-cli above (issue #280) — dewey-mcp
+# is a stdio MCP server, not a pod container, so it's bundled as a plain
+# binary the same way dewey-cli is rather than built into a podman image.
+(cd dewey-mcp && GOOS=linux GOARCH=amd64 go build -o dewey-mcp .)
+log "success" "dewey-mcp built"
+
 # ---------------- PACKAGE ----------------
 # Exports the full pod as a self-contained bundle: images + pod spec + run script.
 # The resulting .tar.gz can be transferred to any server and deployed with ./run.sh
@@ -119,6 +126,11 @@ log "info" "Bundling dewey-cli..."
 cp cli/dewey-cli "${BUNDLE_DIR}/dewey-cli"
 chmod +x "${BUNDLE_DIR}/dewey-cli"
 rm -f cli/dewey-cli
+
+log "info" "Bundling dewey-mcp..."
+cp dewey-mcp/dewey-mcp "${BUNDLE_DIR}/dewey-mcp"
+chmod +x "${BUNDLE_DIR}/dewey-mcp"
+rm -f dewey-mcp/dewey-mcp
 
 log "info" "Writing run script..."
 cat > "${BUNDLE_DIR}/run.sh" <<'EOF'
@@ -301,6 +313,7 @@ echo -e "  ${DIM}\xe2\x94\x82${NC} List running containers:      ${CYAN}podman p
 echo -e "  ${DIM}\xe2\x94\x82${NC} Watch backend logs (BITs):    ${CYAN}podman logs -f dewey-pod-cross-doc-tool-dev${NC}"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Attach to backend container:  ${CYAN}podman attach dewey-pod-cross-doc-tool-dev${NC}"
 echo -e "  ${DIM}\xe2\x94\x82${NC} Use the CLI:                  ${CYAN}./dewey-cli --help${NC}"
+echo -e "  ${DIM}\xe2\x94\x82${NC} Connect an MCP client:        ${CYAN}./dewey-mcp${NC} (stdio; point your MCP client's command at this binary)"
 echo ""
 EOF
 chmod +x "${BUNDLE_DIR}/run.sh"
