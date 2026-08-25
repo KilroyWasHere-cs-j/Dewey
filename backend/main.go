@@ -167,29 +167,50 @@ func main() {
 	})
 
 	// Routes with plugin context
-	api := r.Group("/")
-	api.Use(logConnections(dbm))
-	api.Use(func(c *gin.Context) {
+	base := r.Group("/")
+	base.Use(logConnections(dbm))
+	{
+		base.GET("/", index)
+		base.GET("/version", versionInfo)
+		base.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
+	}
+
+	admin := r.Group("/admin")
+	admin.Use(logConnections(dbm))
+	{
+		admin.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
+		admin.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
+	}
+
+	core := r.Group("/core")
+	core.Use(logConnections(dbm))
+	core.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
 		c.Set("db", dbm)
 		c.Next()
 	})
+
+	// Separate passwords per capability (issue #332) — deleting stored
+	// documents and altering who can reach the server at all are different
+	// enough risks that one shared secret for both didn't make sense.
+	files := core.Group("")
+	files.Use(requirePassword("files"))
 	{
-		api.GET("/", index)
-		api.GET("/version", versionInfo)
-		api.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
-		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
-		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
-		api.POST("/upload", uploadFile)
-		api.GET("/files/:filename/:meta", getFile)
-		api.GET("/files", listFiles)
-		api.DELETE("/files/:filename", deleteFile)
-		api.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
-		api.GET("/admin/dumpCache", triggerCacheDump)
-		api.GET("/admin/reloadPlugins", reloadPlugins)
-		api.GET("/machines", listMachines)
-		api.POST("/machines", addMachine)
-		api.DELETE("/machines/:ip", deleteMachine)
+		files.POST("/upload", uploadFile)
+		files.GET("/files/:filename/:meta", getFile)
+		files.GET("/files", listFiles)
+		files.DELETE("/files/:filename", deleteFile)
+		files.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
+		files.GET("/admin/dumpCache", triggerCacheDump)
+		files.GET("/admin/reloadPlugins", reloadPlugins)
+	}
+
+	machines := core.Group("")
+	machines.Use(requirePassword("machines"))
+	{
+		machines.GET("/machines", listMachines)
+		machines.POST("/machines", addMachine)
+		machines.DELETE("/machines/:ip", deleteMachine)
 	}
 
 	// Run BITs in the background so they fire at startup after all init is complete,

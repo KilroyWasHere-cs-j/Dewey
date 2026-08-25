@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
-import { backendUrl } from '$lib/server/backend';
+import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
 import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ request }) => {
 	try {
-		const res = await fetch(`${backendUrl()}/machines`);
+		const res = await fetch(`${backendUrl()}/core/machines`, { headers: forwardAuthHeader(request) });
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
@@ -16,9 +16,9 @@ export const GET: RequestHandler = async () => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const res = await fetch(`${backendUrl()}/machines`, {
+		const res = await fetch(`${backendUrl()}/core/machines`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', ...forwardAuthHeader(request) },
 			body: JSON.stringify(body)
 		});
 
