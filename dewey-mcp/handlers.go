@@ -68,3 +68,57 @@ func GetPodmanHealthHandler(ctx context.Context, request mcp.CallToolRequest) (*
 
 	return mcp.NewToolResultText(fmt.Sprintf("Command ran with message: %s", out)), nil
 }
+
+func CreateFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	contents, err := request.RequireString("contents")
+	path, err := request.RequireString("path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := CreateFile(contents, path); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return mcp.NewToolResultText("File created successfully"), nil
+}
+
+func ReadFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path, err := request.RequireString("path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	err, contents := ReadFile(path)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return mcp.NewToolResultText(contents), nil
+}
+
+func MoveFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	src, err := request.RequireString("src")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	dst, err := request.RequireString("dst")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := MoveFile(src, dst); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return mcp.NewToolResultText("File moved successfully"), nil
+}
+
+func DeleteFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path, err := request.RequireString("path")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := DeleteFile(path); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	return mcp.NewToolResultText("File deleted successfully"), nil
+}

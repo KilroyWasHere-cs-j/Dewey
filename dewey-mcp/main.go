@@ -78,6 +78,58 @@ func main() {
 		mcp.WithIdempotentHintAnnotation(false),
 		mcp.WithOpenWorldHintAnnotation(false),
 	)
+	createFileTool := mcp.NewTool("create_file",
+		mcp.WithDescription("Creates a file on the local filesystem and writes the given contents to it"),
+		mcp.WithString("contents",
+			mcp.Required(),
+			mcp.Description("The text content to write into the created file"),
+		),
+		mcp.WithString("path",
+			mcp.Required(),
+			mcp.Description("The path where the file should be created"),
+		),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOpenWorldHintAnnotation(false),
+	)
+	readFileTool := mcp.NewTool("read_file",
+		mcp.WithDescription("Reads and returns the contents of a file on the local filesystem"),
+		mcp.WithString("path",
+			mcp.Required(),
+			mcp.Description("Path of the file to read"),
+		),
+		mcp.WithReadOnlyHintAnnotation(true),
+		mcp.WithDestructiveHintAnnotation(false),
+		mcp.WithIdempotentHintAnnotation(true),
+		mcp.WithOpenWorldHintAnnotation(false),
+	)
+	moveFileTool := mcp.NewTool("move_file",
+		mcp.WithDescription("Moves a file from src to dst on the local filesystem"),
+		mcp.WithString("src",
+			mcp.Required(),
+			mcp.Description("Path of the file to move"),
+		),
+		mcp.WithString("dst",
+			mcp.Required(),
+			mcp.Description("Destination path for the file"),
+		),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(false),
+	)
+	deleteFileTool := mcp.NewTool("delete_file",
+		mcp.WithDescription("Deletes a file from the local filesystem"),
+		mcp.WithString("path",
+			mcp.Required(),
+			mcp.Description("Path of the file to delete"),
+		),
+		mcp.WithReadOnlyHintAnnotation(false),
+		mcp.WithDestructiveHintAnnotation(true),
+		mcp.WithIdempotentHintAnnotation(false),
+		mcp.WithOpenWorldHintAnnotation(false),
+	)
 
 	// Add tool handler
 	s.AddTool(isUpTool, IsUpHandler)
@@ -86,6 +138,10 @@ func main() {
 	s.AddTool(getPodmanContainersTool, GetPodmanContainersHandler)
 	s.AddTool(getPodmanContainerLogsTool, GetPodmanContainerLogsHandler)
 	s.AddTool(restartPodmanContainerTool, RestartPodmanContainerHandler)
+	s.AddTool(createFileTool, CreateFileHandler)
+	s.AddTool(readFileTool, ReadFileHandler)
+	s.AddTool(moveFileTool, MoveFileHandler)
+	s.AddTool(deleteFileTool, DeleteFileHandler)
 
 	// Start the stdio server
 	if err := server.ServeStdio(s); err != nil {
