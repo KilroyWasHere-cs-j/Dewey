@@ -13,7 +13,7 @@ function WhoAmI()
 end
 
 function OnUpload(entry)
-    if entry.Barcode ~= "" and entry.Barcode ~= "Nil" then
+    if entry.Barcode ~= "" and entry.Barcode ~= nil then
         entry.Meta = "barcode:" .. entry.Barcode
     end
 

@@ -166,6 +166,7 @@
 								{ method: 'GET',    path: '/files',                                   handler: 'listFiles',              desc: 'List all filenames currently in the upload cache.' },
 								{ method: 'GET',    path: '/files/:filename/:meta',                   handler: 'getFile',                desc: 'Retrieve a file by name. Set :meta to false for file stream; true is not yet implemented.' },
 								{ method: 'DELETE', path: '/files/:filename',                         handler: 'deleteFile',             desc: 'Remove a file from the cache directory.' },
+								{ method: 'POST',   path: '/files/move/:currentfilepathandname/:newfilepathandname', handler: 'moveFile', desc: "Move/rename a stored file and update its DB filepath (issue #333). Known broken: gin's :param can't contain \"/\", so any real subfolder path 404s, and MoveFile doesn't prefix fileSystemBaseDir, so even a bare filename hits the container's read-only root instead of the store/ volume." },
 								{ method: 'GET',    path: '/admin',                                   handler: '—',                      desc: 'Serves the admin portal HTML page.' },
 								{ method: 'GET',    path: '/settings',                                handler: '—',                      desc: 'Serves the settings HTML page.' },
 								{ method: 'GET',    path: '/admin/dumpCache',                         handler: 'triggerCacheDump',       desc: 'Immediately clear all files from the cache directory.' },

@@ -284,19 +284,18 @@ func TestValidateFileExtensionType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, w := newTestGinContext(t)
 			fh := &multipart.FileHeader{Filename: tt.filename}
 
-			ok, ext := validateFileExtensionType(fh, c)
+			ext, err := validateFileExtensionType(fh)
 
-			if ok != tt.wantOK {
-				t.Fatalf("validateFileExtensionType(%q) ok = %v, want %v", tt.filename, ok, tt.wantOK)
+			if got := err == nil; got != tt.wantOK {
+				t.Fatalf("validateFileExtensionType(%q) ok = %v, want %v", tt.filename, got, tt.wantOK)
 			}
 			if ext != tt.wantExt {
 				t.Fatalf("validateFileExtensionType(%q) ext = %q, want %q", tt.filename, ext, tt.wantExt)
 			}
-			if !tt.wantOK && w.Code != http.StatusBadRequest {
-				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			if !tt.wantOK {
+				wantAPIErrorStatus(t, err, http.StatusBadRequest)
 			}
 		})
 	}
@@ -336,8 +335,7 @@ func TestCheckFileForExe(t *testing.T) {
 			}
 			defer file.Close()
 
-			c, w := newTestGinContext(t)
-			gotErr := checkFileForExe(file, c)
+			gotErr := checkFileForExe(file)
 
 			if tt.wantErr && gotErr == nil {
 				t.Fatal("checkFileForExe() = nil error, want an error")
@@ -345,8 +343,8 @@ func TestCheckFileForExe(t *testing.T) {
 			if !tt.wantErr && gotErr != nil {
 				t.Fatalf("checkFileForExe() unexpected error: %v", gotErr)
 			}
-			if tt.wantErr && w.Code != http.StatusBadRequest {
-				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			if tt.wantErr {
+				wantAPIErrorStatus(t, gotErr, http.StatusBadRequest)
 			}
 		})
 	}
@@ -384,8 +382,7 @@ func TestCheckFileContent(t *testing.T) {
 			}
 			defer file.Close()
 
-			c, w := newTestGinContext(t)
-			gotErr := checkFileContent(file, tt.ext, c)
+			gotErr := checkFileContent(file, tt.ext)
 
 			if tt.wantErr && gotErr == nil {
 				t.Fatal("checkFileContent() = nil error, want an error")
@@ -393,8 +390,8 @@ func TestCheckFileContent(t *testing.T) {
 			if !tt.wantErr && gotErr != nil {
 				t.Fatalf("checkFileContent() unexpected error: %v", gotErr)
 			}
-			if tt.wantErr && w.Code != http.StatusBadRequest {
-				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			if tt.wantErr {
+				wantAPIErrorStatus(t, gotErr, http.StatusBadRequest)
 			}
 		})
 	}
@@ -438,8 +435,7 @@ func TestCheckPDFJavaScript(t *testing.T) {
 			}
 			defer f.Close()
 
-			c, w := newTestGinContext(t)
-			gotErr := CheckPDFJavaScript(tt.ext, f, c)
+			gotErr := CheckPDFJavaScript(tt.ext, f)
 
 			if tt.wantErr && gotErr == nil {
 				t.Fatal("CheckPDFJavaScript() = nil error, want an error")
@@ -447,8 +443,8 @@ func TestCheckPDFJavaScript(t *testing.T) {
 			if !tt.wantErr && gotErr != nil {
 				t.Fatalf("CheckPDFJavaScript() unexpected error: %v", gotErr)
 			}
-			if tt.wantErr && w.Code != http.StatusBadRequest {
-				t.Fatalf("response code = %d, want %d", w.Code, http.StatusBadRequest)
+			if tt.wantErr {
+				wantAPIErrorStatus(t, gotErr, http.StatusBadRequest)
 			}
 		})
 	}

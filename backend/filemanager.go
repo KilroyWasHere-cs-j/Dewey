@@ -14,8 +14,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 // var filters *Config
@@ -30,6 +28,34 @@ type DBEntry struct {
 	Meta     string
 	Barcode  sql.NullString
 }
+
+// apiError pairs the HTTP status and client-facing message a validation or
+// storage failure should produce with its underlying cause, so helpers like
+// checkFileSize/SaveFile/DeleteFile/etc. can report exactly how a route
+// handler should respond without needing a *gin.Context themselves.
+// respondError (routes.go) is the one place that turns this into an actual
+// HTTP response.
+type apiError struct {
+	status  int
+	message string
+	cause   error
+}
+
+func newAPIError(status int, message string, cause error) *apiError {
+	return &apiError{status: status, message: message, cause: cause}
+}
+
+// Error returns the underlying cause's message when there is one, so
+// existing "Warn(... + err.Error())" call sites keep logging the real
+// failure instead of the sanitized client-facing message.
+func (e *apiError) Error() string {
+	if e.cause != nil {
+		return e.cause.Error()
+	}
+	return e.message
+}
+
+func (e *apiError) Unwrap() error { return e.cause }
 
 // barcodeCandidateExt matches upload extensions scanBarCode can plausibly
 // decode. scanBarCode only calls image.Decode, which has PNG/JPEG decoders
@@ -255,18 +281,15 @@ func locateFile(dbm *DatabaseManager, filename string) (string, error) {
 	return fullPath, nil
 }
 
-func checkFileSize(fileHeader *multipart.FileHeader, c *gin.Context) bool {
+func checkFileSize(fileHeader *multipart.FileHeader) error {
 	// Belt-and-suspenders check against the declared part size, independent
 	// of whatever MaxBytesReader caught at the body-read level.
 	if fileHeader.Size > maxFileSize {
 		Warn(fmt.Sprintf("file too large: %d bytes", fileHeader.Size))
 		uploadRejections.WithLabelValues("too_large").Inc()
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "File exceeds maximum allowed size",
-		})
-		return false
+		return newAPIError(http.StatusRequestEntityTooLarge, "File exceeds maximum allowed size", nil)
 	}
-	return true
+	return nil
 }
 
 func CreateTimestamp(filename string) string {
@@ -274,61 +297,43 @@ func CreateTimestamp(filename string) string {
 	return fmt.Sprintf("%d_%s", timestamp, filename)
 }
 
-func CreateFileHash(file multipart.File, c *gin.Context) (error, string) {
+func CreateFileHash(file multipart.File) (error, string) {
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
 		Warn("Failed to read file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to read file",
-		})
-		return err, ""
+		return newAPIError(http.StatusInternalServerError, "Failed to read file", err), ""
 	}
 
 	return nil, hex.EncodeToString(hasher.Sum(nil))
 }
 
-func SaveFile(filename string, file multipart.File, c *gin.Context) error {
+func SaveFile(filename string, file multipart.File) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		Warn("Failed to rewind file before save: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
 	}
 
 	dst := filepath.Join(uploadDir, filename)
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		Warn("Failed to create destination file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
 	}
 	defer dstFile.Close()
 
 	if _, err := io.Copy(dstFile, file); err != nil {
 		Warn("Failed to save file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to save file",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
 	}
 	atomic.AddInt64(&UploadsSinceLastTick, 1)
 	return nil
 }
 
-func DeleteFile(filename string, c *gin.Context) error {
-	pm := c.MustGet("plugins").(*PluginManger)
-	dbm := c.MustGet("db").(*DatabaseManager)
-
+func DeleteFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
 	storeRelPath, err := dbm.pullRecordByFilename(filename)
 	if err != nil {
 		Warn("file record not found: " + err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "File not found",
-		})
-		return err
+		return newAPIError(http.StatusNotFound, "File not found", err)
 	}
 
 	// OnDelete runs synchronously, before anything is actually removed —
@@ -338,19 +343,13 @@ func DeleteFile(filename string, c *gin.Context) error {
 	entry := DBEntry{Filename: filename, Path: storeRelPath}
 	if _, err := pm.RunByHook("OnDelete", entry); err != nil {
 		Warn("deletion vetoed by plugin: " + err.Error())
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Deletion blocked by plugin: " + err.Error(),
-		})
-		return err
+		return newAPIError(http.StatusForbidden, "Deletion blocked by plugin: "+err.Error(), err)
 	}
 
 	storePath := filepath.Join(fileSystemBaseDir, storeRelPath)
 	if err := os.Remove(storePath); err != nil && !os.IsNotExist(err) {
 		Warn("failed to delete file from store: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete file",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to delete file", err)
 	}
 
 	// Cache copy may already be gone (dumpCache runs independently) — not an error either way.
@@ -361,10 +360,7 @@ func DeleteFile(filename string, c *gin.Context) error {
 
 	if err := dbm.deleteFileRecord(filename); err != nil {
 		Warn("failed to mark file record deleted: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to delete file",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to delete file", err)
 	}
 
 	Debug("file deleted: " + filename)
@@ -373,14 +369,24 @@ func DeleteFile(filename string, c *gin.Context) error {
 	return nil
 }
 
-func OpenFile(fileHeader *multipart.FileHeader, c *gin.Context) (error, multipart.File) {
+func OpenFile(fileHeader *multipart.FileHeader) (error, multipart.File) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		Warn("Failed to open file: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to open file",
-		})
-		return err, nil
+		return newAPIError(http.StatusInternalServerError, "Failed to open file", err), nil
 	}
 	return nil, file
+}
+
+func MoveFile(currentPath string, newPath string, dbm *DatabaseManager) error {
+	if err := os.Rename(currentPath, newPath); err != nil {
+		return err
+	}
+
+	filename := filepath.Base(currentPath)
+	if err := dbm.updateFilePath(filename, newPath); err != nil {
+		return err
+	}
+
+	return nil
 }

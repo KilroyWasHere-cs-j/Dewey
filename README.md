@@ -154,6 +154,7 @@ All routes below sit behind the IP-allowlist middleware (`known_machines`), whic
 | GET | `/files/:filename/:meta` | Stream a file (`meta=false`) or return its metadata as JSON (`meta=true`) |
 | GET | `/files` | List files currently sitting in `cache/` |
 | DELETE | `/files/:filename` | Remove a file's `store/` copy and mark its DB record deleted |
+| POST | `/files/move/:currentfilepathandname/:newfilepathandname` | Move/rename a stored file and update its DB `filepath` (issue #333) — **known broken:** gin's `:param` segments can't contain `/`, so any path with a subfolder (i.e. almost every real stored file) 404s; a bare filename still fails since `MoveFile` doesn't prefix `fileSystemBaseDir` and hits the container's read-only root instead of the mounted `store/` volume |
 | GET | `/admin/dumpCache` | Trigger an async clear of `cache/` |
 | GET | `/admin/reloadPlugins` | Reload plugins from disk unconditionally, without restarting the server |
 | GET | `/machines` | List machines on the IP allowlist |
