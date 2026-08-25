@@ -241,10 +241,19 @@ log "info" "Pulling Prometheus image..."
 podman pull docker.io/prom/prometheus:v3.13.1
 
 log "info" "Starting Prometheus container..."
+# prometheus-data persists Prometheus's own TSDB (/prometheus) across pod
+# recreations the same way mysql-data does (issue #306) — without it, every
+# redeploy's `podman pod rm -f dewey-pod` above wiped all metrics history
+# even though the scrape config itself was already correct. Unlike
+# store/cache/backup/logs, this volume isn't touched by --keep-data/
+# --wipe-data/--clean-slate: those flags exist to keep the DB and on-disk
+# files in sync with each other, and Prometheus's history has no such
+# cross-reference to anything else that a stale copy could contradict.
 podman run -d --pod dewey-pod \
   --name dewey-prometheus \
   --cpus 0.5 --memory 512m \
   -v "$(pwd)/backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
+  -v prometheus-data:/prometheus:Z \
   docker.io/prom/prometheus:v3.13.1
 
 # Brief pause to let Prometheus spin up internal networking before healthcheck

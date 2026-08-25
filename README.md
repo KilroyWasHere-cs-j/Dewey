@@ -257,6 +257,7 @@ Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on ev
 |---|---|---|
 | MySQL database (file records, metadata, the `known_machines` allowlist) | `mysql-data` | `deploy.sh` only — `--reset-db` |
 | Backend data (`store/`, `cache/`, `backup/`, `logs/`, `plugin-scratch/`) | `dewey-store`, `dewey-cache`, `dewey-backup`, `dewey-logs`, `dewey-plugin-scratch` | `deploy.sh` — `--keep-data` / `--wipe-data`, or the interactive prompt (`package.sh`'s bundled `run.sh` doesn't yet mount `dewey-plugin-scratch`) |
+| Prometheus's own metrics history (`/prometheus`) | `prometheus-data` | Nothing — always persists, same as `mysql-data`'s default. Untouched by `--reset-db`/`--keep-data`/`--wipe-data`/`--clean-slate`, since it has no cross-reference to the database or store that those flags exist to keep in sync (issue #306) |
 
 **`deploy.sh` flags:**
 - `--reset-db` — wipes the `mysql-data` volume before starting MySQL. Not passing this is the default and keeps the database across redeploys. Since MySQL only honors `MYSQL_ROOT_PASSWORD` on first init of an empty data directory, the root password is persisted to a local, gitignored `.mysql-root-password` file and reused on every run that keeps `mysql-data` — it's only regenerated when `--reset-db` actually wipes the volume.
