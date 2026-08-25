@@ -151,6 +151,21 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 					if err == nil {
 						atomic.AddInt64(&FilesInBackUp, 1)
 					}
+
+					// Reload only if the plugin directory actually changed
+					// since the last tick — hashing every plugin file on
+					// every tick is cheap for a handful of .lua files, but
+					// an unconditional reload would still needlessly rerun
+					// static validation and rebuild the Lua sandbox state
+					// for every plugin even when nothing changed.
+					if err, changed := pm.HavePluginsChanged(); err != nil {
+						Warn("Unable to check for plugin changes: " + err.Error())
+					} else if changed {
+						if err := pm.ReloadPlugins(); err != nil {
+							Warn("Plugin reload failed: " + err.Error())
+						}
+					}
+
 					if _, err := pm.RunByHook("OnTick", DBEntry{}); err != nil {
 						Warn("Failed to run OnTick: " + err.Error())
 					}

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -42,7 +44,8 @@ type PluginManger struct {
 	// dir is where LoadPlugins reads plugin files from. Defaults to the
 	// package-level pluginDir const; tests override it with a temp
 	// directory so they don't have to touch the real plugins/ folder.
-	dir string
+	dir          string
+	pluginHashes map[string]string
 }
 
 func NewPluginManger() *PluginManger {
@@ -51,6 +54,7 @@ func NewPluginManger() *PluginManger {
 		hooks:           make(map[string][]Plugin),
 		loadedPlugins:   make([]Plugin, 0),
 		dir:             pluginDir,
+		pluginHashes:    make(map[string]string),
 	}
 }
 
@@ -491,4 +495,68 @@ func (pm *PluginManger) Close() {}
 // how many hooks currently have at least one plugin attached.
 func (pm *PluginManger) ListPlugins() {
 	Ok(fmt.Sprintf("%d plugins loaded across %d hooks", len(pm.loadedPlugins), len(pm.hooks)))
+}
+
+func (pm *PluginManger) ReloadPlugins() error {
+	Debug("Reloading plugins")
+	pm.loadedPlugins = nil
+	pm.hooks = make(map[string][]Plugin)
+
+	pm.LoadPlugins()
+	return nil
+}
+
+func (pm *PluginManger) HavePluginsChanged() (error, bool) {
+	Debug("Checking if plugins have changed")
+
+	entries, err := os.ReadDir(pm.dir)
+	if err != nil {
+		return err, false
+	}
+
+	changed := false
+	seen := make(map[string]struct{}, len(entries))
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // There should be no subdirectories
+		}
+		seen[entry.Name()] = struct{}{}
+
+		newHash, err := hashFile(filepath.Join(pm.dir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		if oldHash, ok := pm.pluginHashes[entry.Name()]; ok && oldHash == newHash {
+			continue
+		}
+		pm.pluginHashes[entry.Name()] = newHash
+		changed = true
+	}
+
+	// A hash we're tracking for a file that's no longer on disk means that
+	// file was removed — also a change, not just an addition/modification.
+	for name := range pm.pluginHashes {
+		if _, ok := seen[name]; !ok {
+			delete(pm.pluginHashes, name)
+			changed = true
+		}
+	}
+
+	return nil, changed
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

@@ -126,14 +126,19 @@ flowchart TD
 
 ### Backup & Maintenance Daemon
 
-A background ticker (default interval: hourly, see `daemonTickTime` in `consts.go`) handles cleanup and backups without blocking the request path.
+A background ticker (default interval: hourly, see `daemonTickTime` in `consts.go`) handles cleanup, backups, and plugin hot-reloading without blocking the request path.
 
 ```mermaid
 flowchart LR
     T(("Hourly tick")) --> A["Clear cache/"]
     A --> B["Zip store/ into a timestamped file under backup/"]
-    B --> C["Run OnTick plugins"]
+    B --> D{"Plugin dir changed?"}
+    D -- Yes --> E["Reload plugins"]
+    D -- No --> C
+    E --> C["Run OnTick plugins"]
 ```
+
+**Plugin hot-reload (issue #325):** each tick, `HavePluginsChanged()` hashes every file in the plugin directory and compares against the hashes from the previous check. Only if something was added, removed, or edited does the daemon call `ReloadPlugins()` before running `OnTick` — an unconditional reload every tick would rerun static validation and rebuild the Lua sandbox for every plugin file even when nothing changed. `ReloadPlugins()` resets loaded plugins and hook attachments and re-runs `LoadPlugins()`, but deliberately leaves the registered hook *names* (`OnUpload`, `OnFilter`, etc.) alone — those are a static declaration made once at startup, not per-load state. The same reload can also be triggered on demand via `GET /admin/reloadPlugins`, which reloads unconditionally rather than checking for changes first.
 
 ## API Reference
 
@@ -150,6 +155,7 @@ All routes below sit behind the IP-allowlist middleware (`known_machines`), whic
 | GET | `/files` | List files currently sitting in `cache/` |
 | DELETE | `/files/:filename` | Remove a file's `store/` copy and mark its DB record deleted |
 | GET | `/admin/dumpCache` | Trigger an async clear of `cache/` |
+| GET | `/admin/reloadPlugins` | Reload plugins from disk unconditionally, without restarting the server |
 | GET | `/machines` | List machines on the IP allowlist |
 | POST | `/machines` | Add a machine to the IP allowlist |
 | DELETE | `/machines/:ip` | Remove a machine from the IP allowlist |
@@ -157,6 +163,8 @@ All routes below sit behind the IP-allowlist middleware (`known_machines`), whic
 ## Plugin System
 
 Sorting and filtering logic is written in Lua rather than hardcoded in Go, so it can change without a rebuild. Plugin files live in `backend/plugins/` and are loaded from `pluginDir` at startup, against a dynamic registry of hook names Go registers up front (`main.go`) — there's no fixed set of plugin "types" baked into the loader.
+
+Plugins can also be added, removed, or edited after startup without restarting the server (issue #325) — the daemon picks up the change automatically on its next tick, or it can be forced immediately via `GET /admin/reloadPlugins`. See [Backup & Maintenance Daemon](#backup--maintenance-daemon) above for how change-detection and reload work.
 
 Every plugin declares a `WhoAmI()` function returning its salience only. Which hook(s) it attaches to comes from the global functions it defines: a file attaches to a hook by defining a function with that hook's exact name (e.g. `OnFilter(entry)`), and a single file can implement more than one hook. Each such function receives the file's DB entry as a Lua table and returns the (possibly modified) table back.
 
