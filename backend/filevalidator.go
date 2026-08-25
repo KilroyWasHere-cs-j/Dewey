@@ -8,7 +8,6 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/gin-gonic/gin"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
@@ -236,7 +234,7 @@ func MatchesDeclaredType(ext string, f io.ReadSeeker) (bool, error) {
 	return false, nil
 }
 
-func validateFileExtensionType(fileHeader *multipart.FileHeader, c *gin.Context) (bool, string) {
+func validateFileExtensionType(fileHeader *multipart.FileHeader) (string, error) {
 	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
 
 	allowedExts := map[string]struct{}{
@@ -248,22 +246,16 @@ func validateFileExtensionType(fileHeader *multipart.FileHeader, c *gin.Context)
 	if _, ok := allowedExts[ext]; !ok {
 		Warn("invalid file type: " + ext)
 		uploadRejections.WithLabelValues("invalid_ext").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid file type",
-		})
-		return false, ext
+		return ext, newAPIError(http.StatusBadRequest, "Invalid file type", nil)
 	}
-	return true, ext
+	return ext, nil
 }
 
-func checkFileForExe(file multipart.File, c *gin.Context) error {
+func checkFileForExe(file multipart.File) error {
 	if isPE, _ := IsPEFile(file); isPE {
 		uploadRejections.WithLabelValues("pe_blocked").Inc()
 		Warn("Executable file detected (PE blocked)")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Executable file detected (PE blocked)",
-		})
-		return errors.New("executable file detected (PE blocked)")
+		return newAPIError(http.StatusBadRequest, "Executable file detected (PE blocked)", nil)
 	}
 
 	file.Seek(0, io.SeekStart)
@@ -271,35 +263,26 @@ func checkFileForExe(file multipart.File, c *gin.Context) error {
 	if isELF, _ := IsELFFile(file); isELF {
 		uploadRejections.WithLabelValues("elf_blocked").Inc()
 		Warn("Executable file detected (ELF blocked)")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Executable file detected (ELF blocked)",
-		})
-		return errors.New("executable file detected (ELF blocked)")
+		return newAPIError(http.StatusBadRequest, "Executable file detected (ELF blocked)", nil)
 	}
 
 	file.Seek(0, io.SeekStart)
 	return nil
 }
 
-func checkFileContent(file multipart.File, ext string, c *gin.Context) error {
+func checkFileContent(file multipart.File, ext string) error {
 	// Sniff actual content and reject anything that doesn't match what the
 	// extension claims — e.g. a "report.txt" that's really an HTML/script
 	// payload passes the extension allowlist otherwise.
 	matches, err := MatchesDeclaredType(ext, file)
 	if err != nil {
 		Warn("Failed to sniff file content: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to validate file content",
-		})
-		return err
+		return newAPIError(http.StatusInternalServerError, "Failed to validate file content", err)
 	}
 	if !matches {
 		Warn("file content does not match declared extension: " + ext)
 		uploadRejections.WithLabelValues("content_mismatch").Inc()
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "File content does not match its extension",
-		})
-		return errors.New("file content does not match declared extension")
+		return newAPIError(http.StatusBadRequest, "File content does not match its extension", nil)
 	}
 
 	file.Seek(0, io.SeekStart)
@@ -311,23 +294,17 @@ func checkFileContent(file multipart.File, ext string, c *gin.Context) error {
 // auto-actions (issue #245). Unlike the checks above, this needs to run
 // after we know the upload is really a PDF — ContainsPDFJavaScript parses
 // the full object structure via pdfcpu.
-func CheckPDFJavaScript(ext string, file multipart.File, c *gin.Context) error {
+func CheckPDFJavaScript(ext string, file multipart.File) error {
 	if ext == ".pdf" {
 		hasJS, err := ContainsPDFJavaScript(file)
 		if err != nil {
 			Warn("Failed to scan PDF for embedded JavaScript: " + err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to validate file content",
-			})
-			return err
+			return newAPIError(http.StatusInternalServerError, "Failed to validate file content", err)
 		}
 		if hasJS {
 			Warn("PDF rejected: contains embedded JavaScript or an auto-action")
 			uploadRejections.WithLabelValues("pdf_js_blocked").Inc()
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "PDF contains embedded JavaScript or auto-actions and was rejected",
-			})
-			return errors.New("pdf contains embedded javascript or auto-actions")
+			return newAPIError(http.StatusBadRequest, "PDF contains embedded JavaScript or auto-actions and was rejected", nil)
 		}
 		file.Seek(0, io.SeekStart)
 		return nil

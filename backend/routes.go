@@ -17,6 +17,21 @@ type UploadPayload struct {
 	Data string `json:"data"` // or whatever fields you expect
 }
 
+// respondError writes the HTTP response for err returned by a validation or
+// storage helper (filemanager.go/filevalidator.go) — those helpers report
+// the intended status/message via *apiError rather than writing to c
+// directly, so this is the one place that turns that into an actual
+// response. Falls back to 500 for a plain error, matching the generic
+// failure response those call sites already used before this existed.
+func respondError(c *gin.Context, err error) {
+	var apiErr *apiError
+	if errors.As(err, &apiErr) {
+		c.JSON(apiErr.status, gin.H{"error": apiErr.message})
+		return
+	}
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+}
+
 // index is the default health-check route.
 //
 // Behavior:
@@ -236,8 +251,9 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
-	if !checkFileSize(fileHeader, c) {
+	if err := checkFileSize(fileHeader); err != nil {
 		Warn(fmt.Sprintf("file too large: %d bytes", fileHeader.Size))
+		respondError(c, err)
 		return
 	}
 	Debug(fmt.Sprintf("File size is valid. File size: %d bytes", fileHeader.Size))
@@ -247,9 +263,10 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Validate extension
 	// -------------------------
-	ok, ext := validateFileExtensionType(fileHeader, c)
-	if !ok {
+	ext, err := validateFileExtensionType(fileHeader)
+	if err != nil {
 		Warn("Incorrect file type")
+		respondError(c, err)
 		return
 	}
 
@@ -261,8 +278,9 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Open file
 	// -------------------------
-	err, file := OpenFile(fileHeader, c)
+	err, file := OpenFile(fileHeader)
 	if err != nil {
+		respondError(c, err)
 		return
 	}
 	defer file.Close()
@@ -270,15 +288,18 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Security checks
 	// -------------------------
-	if checkFileForExe(file, c) != nil {
+	if err := checkFileForExe(file); err != nil {
+		respondError(c, err)
 		return
 	}
 
-	if checkFileContent(file, ext, c) != nil {
+	if err := checkFileContent(file, ext); err != nil {
+		respondError(c, err)
 		return
 	}
 
-	if CheckPDFJavaScript(ext, file, c) != nil {
+	if err := CheckPDFJavaScript(ext, file); err != nil {
+		respondError(c, err)
 		return
 	}
 
@@ -291,9 +312,10 @@ func uploadFile(c *gin.Context) {
 	// Hash file
 	// -------------------------
 	var hashString string
-	err, hashString = CreateFileHash(file, c)
+	err, hashString = CreateFileHash(file)
 	if err != nil {
 		Warn("Failed to hash file: " + err.Error())
+		respondError(c, err)
 		return
 	}
 
@@ -309,9 +331,10 @@ func uploadFile(c *gin.Context) {
 	// which re-opens and re-copies the same bytes from the multipart source
 	// a second time — the hashing pass above already read this file once
 	// (issue #166).
-	err = SaveFile(safeFilename, file, c)
+	err = SaveFile(safeFilename, file)
 	if err != nil {
 		Warn("Failed to save file: " + err.Error())
+		respondError(c, err)
 		return
 	}
 	uploadCounter.Record()
@@ -352,14 +375,15 @@ func uploadFile(c *gin.Context) {
 //   - 404 Not Found: no active file record for this filename
 //   - 500 Internal Server Error: filesystem or DB failure
 func deleteFile(c *gin.Context) {
+	pm := c.MustGet("plugins").(*PluginManger)
+	dbm := c.MustGet("db").(*DatabaseManager)
+
 	filename := filepath.Base(c.Param("filename")) // prevent path traversal
-	err := DeleteFile(filename, c)
+	err := DeleteFile(filename, pm, dbm)
 
 	if err != nil {
 		Warn(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		respondError(c, err)
 		return
 	}
 

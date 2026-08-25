@@ -4,27 +4,30 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
-// newTestGinContext returns a *gin.Context backed by a ResponseRecorder, so
-// handler-style functions under test can be called directly and their
-// JSON response inspected via the returned recorder.
-func newTestGinContext(t *testing.T) (*gin.Context, *httptest.ResponseRecorder) {
+// wantAPIErrorStatus fails the test unless err is an *apiError carrying
+// wantStatus — the validation/storage helpers in filemanager.go/
+// filevalidator.go report their intended HTTP response this way instead of
+// writing to a *gin.Context directly.
+func wantAPIErrorStatus(t *testing.T, err error, wantStatus int) {
 	t.Helper()
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	return c, w
+	var apiErr *apiError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *apiError, got %T (%v)", err, err)
+	}
+	if apiErr.status != wantStatus {
+		t.Fatalf("apiError.status = %d, want %d", apiErr.status, wantStatus)
+	}
 }
 
 // newUploadedFile builds a real *multipart.FileHeader backed by an actual
@@ -132,16 +135,15 @@ func TestCheckFileSize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, w := newTestGinContext(t)
 			fh := &multipart.FileHeader{Filename: "big.pdf", Size: tt.size}
 
-			got := checkFileSize(fh, c)
+			err := checkFileSize(fh)
 
-			if got != tt.wantOK {
-				t.Fatalf("checkFileSize() = %v, want %v", got, tt.wantOK)
+			if got := err == nil; got != tt.wantOK {
+				t.Fatalf("checkFileSize() ok = %v, want %v", got, tt.wantOK)
 			}
-			if !tt.wantOK && w.Code != http.StatusRequestEntityTooLarge {
-				t.Fatalf("response code = %d, want %d", w.Code, http.StatusRequestEntityTooLarge)
+			if !tt.wantOK {
+				wantAPIErrorStatus(t, err, http.StatusRequestEntityTooLarge)
 			}
 		})
 	}
@@ -176,8 +178,7 @@ func TestCreateFileHash(t *testing.T) {
 	}
 	defer file.Close()
 
-	c, _ := newTestGinContext(t)
-	err, got := CreateFileHash(file, c)
+	err, got := CreateFileHash(file)
 	if err != nil {
 		t.Fatalf("CreateFileHash() unexpected error: %v", err)
 	}
@@ -203,8 +204,7 @@ func TestSaveFile(t *testing.T) {
 	}
 	defer file.Close()
 
-	c, _ := newTestGinContext(t)
-	if err := SaveFile("saved.txt", file, c); err != nil {
+	if err := SaveFile("saved.txt", file); err != nil {
 		t.Fatalf("SaveFile() unexpected error: %v", err)
 	}
 
@@ -223,8 +223,7 @@ func TestOpenFile(t *testing.T) {
 	content := []byte("openable")
 	fh := newUploadedFile(t, "note.txt", content)
 
-	c, _ := newTestGinContext(t)
-	err, file := OpenFile(fh, c)
+	err, file := OpenFile(fh)
 	if err != nil {
 		t.Fatalf("OpenFile() unexpected error: %v", err)
 	}
