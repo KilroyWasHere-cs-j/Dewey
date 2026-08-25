@@ -169,6 +169,7 @@
 								{ method: 'GET',    path: '/admin',                                   handler: '—',                      desc: 'Serves the admin portal HTML page.' },
 								{ method: 'GET',    path: '/settings',                                handler: '—',                      desc: 'Serves the settings HTML page.' },
 								{ method: 'GET',    path: '/admin/dumpCache',                         handler: 'triggerCacheDump',       desc: 'Immediately clear all files from the cache directory.' },
+								{ method: 'GET',    path: '/admin/reloadPlugins',                     handler: 'reloadPlugins',          desc: 'Reload plugins from disk unconditionally, without restarting the server.' },
 								{ method: 'GET',    path: '/admin/set/daemonTickInterval/:val',       handler: 'setDaemonTickInterval',  desc: 'Update how often the background daemon fires (hours).' },
 								{ method: 'GET',    path: '/admin/set/maxUpSize/:val',                handler: 'setMaxUploadSize',       desc: 'Update the maximum permitted upload file size (MB).' },
 								{ method: 'GET',    path: '/admin/set/maxDBOpenConn/:val',            handler: 'setMaxDBOpenConn',       desc: 'Update the DB connection pool open connection limit.' },
@@ -590,6 +591,10 @@ podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh</code></pre>
 					loader. Every plugin exports <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">WhoAmI</code>, plus one function
 					per hook it wants to attach to, named exactly after that hook. A single file can implement more than one hook.
 				</p>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Plugins can be added, removed, or edited after startup without restarting the server (issue #325) — see the
+					<a href="#daemon" class="underline">Daemon</a> section for how change-detection and reload work.
+				</p>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Hooks</h3>
 				<div class="mb-4 overflow-x-auto">
@@ -773,8 +778,19 @@ end</code></pre>
 				<ol class="mb-4 space-y-1 text-sm text-gray-600 dark:text-gray-300">
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">1</span><span>Clears all files from <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./cache</code> (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dumpCache</code>).</span></li>
 					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">2</span><span>Creates a timestamped zip of <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./store</code> in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./backup</code> (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">save</code>).</span></li>
-					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span>Runs all registered OnTick plugins.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">3</span><span>Checks whether the plugin directory changed since the last tick (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">HavePluginsChanged</code>, SHA-256 hash per file) and reloads plugins (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">ReloadPlugins</code>) only if something was added, removed, or edited — issue #325.</span></li>
+					<li class="flex gap-3"><span class="font-mono text-xs font-bold text-gray-400">4</span><span>Runs all registered OnTick plugins.</span></li>
 				</ol>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">ReloadPlugins</code> resets loaded plugins and hook
+					attachments and re-runs <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">LoadPlugins</code>, but leaves
+					the registered hook <em>names</em> (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">OnUpload</code>,
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">OnFilter</code>, etc.) untouched — those are declared
+					once at startup (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">main.go</code>), not per-load state.
+					The same reload can also be forced on demand via
+					<a href="#api" class="underline"><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">GET /admin/reloadPlugins</code></a>,
+					which reloads unconditionally rather than checking for changes first.
+				</p>
 				<p class="text-sm text-gray-600 dark:text-gray-300">
 					The daemon uses an <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">observableTicker</code> wrapper around
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">time.Ticker</code>, which exposes
