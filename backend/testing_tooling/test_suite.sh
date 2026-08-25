@@ -105,7 +105,7 @@ rand_date()   { date -d "2024-01-01 + $((RANDOM % 730)) days" +%Y-%m-%d 2>/dev/n
 upload_file() {
     local src="$1"
     pace
-    curl -s -X POST "$BASE/upload" \
+    curl -s -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=$(rand_claim)" \
         -F "claimant_name=$(rnd FIRST_NAMES) $(rnd LAST_NAMES)" \
@@ -128,8 +128,8 @@ run_health_checks() {
 
     local -A endpoints=(
         ["GET /"]="$BASE/"
-        ["GET /files"]="$BASE/files"
-        ["GET /admin/dumpCache"]="$BASE/admin/dumpCache"
+        ["GET /core/files"]="$BASE/core/files"
+        ["GET /core/admin/dumpCache"]="$BASE/core/admin/dumpCache"
     )
 
     for label in "${!endpoints[@]}"; do
@@ -157,7 +157,7 @@ run_json_upload_test() {
     pace
     local body code
     body=$(curl -s -w "\n%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -H "Content-Type: application/json" \
         -d '{"name":"json-test","data":"hello"}' 2>/dev/null)
     code=$(echo "$body" | tail -1)
@@ -181,7 +181,7 @@ run_json_upload_test() {
     info "  Testing POST /upload with invalid JSON ..."
     pace
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -H "Content-Type: application/json" \
         -d 'not json at all' 2>/dev/null)
 
@@ -241,7 +241,7 @@ run_upload_error_tests() {
     pace
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -H "Content-Type: text/plain" \
         -d "invalid" 2>/dev/null)
 
@@ -256,7 +256,7 @@ run_upload_error_tests() {
     info "  Testing empty multipart (no file field) ..."
     pace
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -F "claim_number=CLM-00000" 2>/dev/null)
 
     if [ "$code" -ge 400 ]; then
@@ -281,7 +281,7 @@ run_bad_extension_test() {
     pace
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -F "file=@$tmpfile" \
         -F "claim_number=CLM-00000" \
         -F "claimant_name=Bad Actor" \
@@ -309,7 +309,7 @@ run_bad_extension_test() {
     info "  Uploading .exe file (should be rejected) ..."
     pace
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -F "file=@$tmpexe" \
         -F "claim_number=CLM-00000" \
         -F "claimant_name=Bad Actor" \
@@ -348,7 +348,7 @@ run_elf_rejection_test() {
     pace
     local body code
     body=$(curl -s -w "\n%{http_code}" --max-time 30 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-00000" \
         -F "claimant_name=ELF Test" \
@@ -389,7 +389,7 @@ run_path_traversal_tests() {
         pace
         local code
         code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-            "$BASE/files/$tp/false" 2>/dev/null)
+            "$BASE/core/files/$tp/false" 2>/dev/null)
 
         if [ "$code" = "000" ]; then
             result_fail "GET /files/$tp/false (traversal)" "connection failed"
@@ -406,7 +406,7 @@ run_path_traversal_tests() {
     pace
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X DELETE "$BASE/files/../../etc/passwd" 2>/dev/null)
+        -X DELETE "$BASE/core/files/../../etc/passwd" 2>/dev/null)
 
     if [ "$code" = "000" ]; then
         result_fail "DELETE /files/../../etc/passwd (traversal)" "connection failed"
@@ -511,7 +511,7 @@ run_roundtrip_tests() {
         info "  Uploading $f for roundtrip ..."
         pace
         local resp
-        resp=$(curl -s -X POST "$BASE/upload" \
+        resp=$(curl -s -X POST "$BASE/core/upload" \
             -F "file=@$src" \
             -F "claim_number=CLM-99999" \
             -F "claimant_name=Roundtrip Test" \
@@ -538,7 +538,7 @@ run_roundtrip_tests() {
         pace
         local dst="$DOWNLOAD_DIR/$server_file"
         local code
-        code=$(curl -s -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/files/$server_file/false" 2>/dev/null)
+        code=$(curl -s -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/core/files/$server_file/false" 2>/dev/null)
 
         if [ "$code" != "200" ]; then
             result_fail "ROUNDTRIP [$f] download" "HTTP $code"
@@ -651,7 +651,7 @@ run_metadata_tests() {
     info "  Uploading lenna.jpg with fixed metadata ..."
     pace
     local resp
-    resp=$(curl -s -X POST "$BASE/upload" \
+    resp=$(curl -s -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-META-01" \
         -F "claimant_name=Meta Tester" \
@@ -679,7 +679,7 @@ run_metadata_tests() {
     info "  Fetching metadata for $server_file ..."
     pace
     local body code
-    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/files/$server_file/true" 2>/dev/null)
+    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/core/files/$server_file/true" 2>/dev/null)
     code=$(echo "$body" | tail -1)
     body=$(echo "$body" | sed '$d')
 
@@ -714,7 +714,7 @@ run_metadata_tests() {
     info "  Testing unknown meta flag ..."
     pace
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        "$BASE/files/$server_file/maybe" 2>/dev/null)
+        "$BASE/core/files/$server_file/maybe" 2>/dev/null)
     if [ "$code" = "400" ]; then
         result_pass "GET /files/$server_file/maybe -> HTTP 400 (bad flag rejected)"
     elif [ "$code" = "000" ]; then
@@ -728,7 +728,7 @@ run_metadata_tests() {
     pace
     local ghost="ghost_$(printf '%08x' $RANDOM$RANDOM).jpg"
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        "$BASE/files/$ghost/true" 2>/dev/null)
+        "$BASE/core/files/$ghost/true" 2>/dev/null)
     if [ "$code" = "404" ]; then
         result_pass "GET /files/$ghost/true -> HTTP 404"
     elif [ "$code" = "000" ]; then
@@ -746,7 +746,7 @@ run_catalog_test() {
     info "  Fetching file index ..."
     pace
     local body code
-    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/files" 2>/dev/null)
+    body=$(curl -s -w "\n%{http_code}" --max-time 10 "$BASE/core/files" 2>/dev/null)
     code=$(echo "$body" | tail -1)
     body=$(echo "$body" | sed '$d')
 
@@ -779,7 +779,7 @@ run_delete_tests() {
         pace
         local code
         code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-            -X DELETE "$BASE/files/$target" 2>/dev/null)
+            -X DELETE "$BASE/core/files/$target" 2>/dev/null)
 
         if [ "$code" = "000" ]; then
             result_fail "DELETE /files/$target" "connection failed"
@@ -790,7 +790,7 @@ run_delete_tests() {
             pace
             local verify_code
             verify_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-                "$BASE/files/$target/false" 2>/dev/null)
+                "$BASE/core/files/$target/false" 2>/dev/null)
             if [ "$verify_code" -ge 400 ]; then
                 result_pass "DELETE verify $target gone -> HTTP $verify_code"
             elif [ "$verify_code" = "000" ]; then
@@ -812,7 +812,7 @@ run_delete_tests() {
     pace
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
-        -X DELETE "$BASE/files/$ghost" 2>/dev/null)
+        -X DELETE "$BASE/core/files/$ghost" 2>/dev/null)
 
     if [ "$code" = "404" ]; then
         result_pass "DELETE /files/$ghost (non-existent) -> HTTP 404"
@@ -841,7 +841,7 @@ run_pdf_javascript_test() {
     pace
     local body code
     body=$(curl -s -w "\n%{http_code}" --max-time 30 \
-        -X POST "$BASE/upload" \
+        -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-00000" \
         -F "claimant_name=PDF JS Test" \

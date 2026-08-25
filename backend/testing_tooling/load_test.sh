@@ -31,7 +31,7 @@ upload_one() {
 	# ~1KB per file, so even a few thousand of these stays trivial.
 	head -c 512 /dev/urandom | base64 >"$f"
 	local resp
-	resp="$(curl -s -F "file=@${f}" "$BASE/upload")"
+	resp="$(curl -s -F "file=@${f}" "$BASE/core/upload")"
 	echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4
 }
 export -f upload_one
@@ -46,7 +46,7 @@ echo "Uploaded $UPLOADED/$COUNT files."
 echo "Retrieving them back to exercise retrievalCounter..."
 retrieve_one() {
 	local name="$1"
-	curl -s -o /dev/null -w "%{http_code}\n" "$BASE/files/${name}/false"
+	curl -s -o /dev/null -w "%{http_code}\n" "$BASE/core/files/${name}/false"
 }
 export -f retrieve_one
 export BASE

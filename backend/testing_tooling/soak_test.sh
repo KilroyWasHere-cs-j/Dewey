@@ -67,7 +67,7 @@ REGISTERED_IPS=()
 register_machine() {
 	local ip="$1" label="$2"
 	curl -s -o /dev/null -X POST -H "Content-Type: application/json" \
-		-d "{\"ip\":\"${ip}\",\"label\":\"${label}\"}" "$BASE/machines"
+		-d "{\"ip\":\"${ip}\",\"label\":\"${label}\"}" "$BASE/core/machines"
 	REGISTERED_IPS+=("$ip")
 }
 
@@ -76,7 +76,7 @@ cleanup() {
 	jobs -p | xargs -r kill 2>/dev/null
 	wait 2>/dev/null
 	for ip in "${REGISTERED_IPS[@]:-}"; do
-		[ -n "$ip" ] && curl -s -o /dev/null -X DELETE "$BASE/machines/${ip}"
+		[ -n "$ip" ] && curl -s -o /dev/null -X DELETE "$BASE/core/machines/${ip}"
 	done
 	rm -rf "$TMP_DIR"
 }
@@ -159,12 +159,12 @@ simulate_user() {
 			local f="$user_dir/soak_${user_id}_$(date +%s%N).txt"
 			head -c 512 /dev/urandom | base64 >"$f"
 			local resp name
-			resp="$(curl -s --interface "$ip" -F "file=@${f}" "$BASE/upload")"
+			resp="$(curl -s --interface "$ip" -F "file=@${f}" "$BASE/core/upload")"
 			name=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
 			[ -n "$name" ] && uploaded_file="$name"
 			rm -f "$f"
 		else
-			curl -s -o /dev/null --interface "$ip" "$BASE/files/${uploaded_file}/false"
+			curl -s -o /dev/null --interface "$ip" "$BASE/core/files/${uploaded_file}/false"
 		fi
 	done
 }
