@@ -26,6 +26,10 @@ set -uo pipefail
 # request needs a source IP registered in known_machines, and the loopback
 # aliasing trick above only works from inside the container being tested:
 #   podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh
+#
+# Also requires FILES_PASSWORD and MACHINES_PASSWORD in the environment
+# (issue #332) — both are already set on the backend container, so running
+# via podman exec picks them up for free.
 
 BASE="${1:-http://localhost:8080}"
 BASE="${BASE%/}"
@@ -66,7 +70,7 @@ REGISTERED_IPS=()
 
 register_machine() {
 	local ip="$1" label="$2"
-	curl -s -o /dev/null -X POST -H "Content-Type: application/json" \
+	curl -s -o /dev/null -X POST -H "Content-Type: application/json" -H "X-Dewey-Password: $MACHINES_PASSWORD" \
 		-d "{\"ip\":\"${ip}\",\"label\":\"${label}\"}" "$BASE/core/machines"
 	REGISTERED_IPS+=("$ip")
 }
@@ -76,7 +80,7 @@ cleanup() {
 	jobs -p | xargs -r kill 2>/dev/null
 	wait 2>/dev/null
 	for ip in "${REGISTERED_IPS[@]:-}"; do
-		[ -n "$ip" ] && curl -s -o /dev/null -X DELETE "$BASE/core/machines/${ip}"
+		[ -n "$ip" ] && curl -s -o /dev/null -X DELETE -H "X-Dewey-Password: $MACHINES_PASSWORD" "$BASE/core/machines/${ip}"
 	done
 	rm -rf "$TMP_DIR"
 }
@@ -159,12 +163,12 @@ simulate_user() {
 			local f="$user_dir/soak_${user_id}_$(date +%s%N).txt"
 			head -c 512 /dev/urandom | base64 >"$f"
 			local resp name
-			resp="$(curl -s --interface "$ip" -F "file=@${f}" "$BASE/core/upload")"
+			resp="$(curl -s --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" "$BASE/core/upload")"
 			name=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
 			[ -n "$name" ] && uploaded_file="$name"
 			rm -f "$f"
 		else
-			curl -s -o /dev/null --interface "$ip" "$BASE/core/files/${uploaded_file}/false"
+			curl -s -o /dev/null --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" "$BASE/core/files/${uploaded_file}/false"
 		fi
 	done
 }
