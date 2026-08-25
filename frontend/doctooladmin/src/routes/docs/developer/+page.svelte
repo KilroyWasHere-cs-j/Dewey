@@ -913,6 +913,7 @@ bash deploy.sh --reset-db</code></pre>
 					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-cache</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/cache</code></li>
 					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-backup</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/backup</code></li>
 					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-logs</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/app/logs</code></li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">prometheus-data</code> → <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/prometheus</code> (Prometheus's own metrics history; always persists, untouched by any of the flags below)</li>
 				</ul>
 				<p class="mb-2 text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--reset-db</code> and the store/cache
