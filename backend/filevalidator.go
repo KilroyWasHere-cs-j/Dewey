@@ -39,7 +39,7 @@ func init() {
 // directly.
 var oleMagic = [8]byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 
-// IsPEFile checks whether the provided file is a Windows Portable Executable (PE).
+// isPEFile checks whether the provided file is a Windows Portable Executable (PE).
 //
 // It validates:
 //   - DOS header signature ("MZ")
@@ -51,7 +51,7 @@ var oleMagic = [8]byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 // Returns:
 //   - bool: true if file is a valid PE binary
 //   - error: I/O or parsing error
-func IsPEFile(f io.ReadSeeker) (bool, error) {
+func isPEFile(f io.ReadSeeker) (bool, error) {
 	// Reset file pointer
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
@@ -95,7 +95,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 	return true, nil
 }
 
-// IsELFFile checks whether the provided file is a Linux ELF binary.
+// isELFFile checks whether the provided file is a Linux ELF binary.
 //
 // It validates the ELF magic number:
 //
@@ -107,7 +107,7 @@ func IsPEFile(f io.ReadSeeker) (bool, error) {
 // Returns:
 //   - bool: true if file is an ELF binary
 //   - error: I/O or read error
-func IsELFFile(f io.ReadSeeker) (bool, error) {
+func isELFFile(f io.ReadSeeker) (bool, error) {
 	// Reset reader
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
@@ -128,7 +128,7 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 	return false, nil
 }
 
-// ContainsPDFJavaScript parses f's structure via pdfcpu and checks the
+// containsPDFJavaScript parses f's structure via pdfcpu and checks the
 // document catalog for /OpenAction, /AA (additional-actions), or a
 // populated /JavaScript name tree. Presence of any of these is grounds
 // for rejection regardless of the action type — issue #245 settled on
@@ -140,12 +140,12 @@ func IsELFFile(f io.ReadSeeker) (bool, error) {
 //
 // Args:
 //   - f: seekable file reader (io.ReadSeeker), already confirmed to be a
-//     PDF via MatchesDeclaredType
+//     PDF via matchesDeclaredType
 //
 // Returns:
 //   - bool: true if any JS/auto-action trigger was found
 //   - error: parse error (malformed PDF, etc.)
-func ContainsPDFJavaScript(f io.ReadSeeker) (bool, error) {
+func containsPDFJavaScript(f io.ReadSeeker) (bool, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
 	}
@@ -174,7 +174,7 @@ func ContainsPDFJavaScript(f io.ReadSeeker) (bool, error) {
 	return false, nil
 }
 
-// MatchesDeclaredType sniffs the actual content of f and checks it against
+// matchesDeclaredType sniffs the actual content of f and checks it against
 // what the given extension claims to be. Extension + PE/ELF checks alone
 // still let a script or HTML payload through under an allowed extension
 // (e.g. "notes.txt") — if that file is ever served back, a browser that
@@ -187,7 +187,7 @@ func ContainsPDFJavaScript(f io.ReadSeeker) (bool, error) {
 // Returns:
 //   - bool: true if the sniffed content is consistent with ext
 //   - error: I/O error while reading
-func MatchesDeclaredType(ext string, f io.ReadSeeker) (bool, error) {
+func matchesDeclaredType(ext string, f io.ReadSeeker) (bool, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return false, err
 	}
@@ -252,7 +252,7 @@ func validateFileExtensionType(fileHeader *multipart.FileHeader) (string, error)
 }
 
 func checkFileForExe(file multipart.File) error {
-	if isPE, _ := IsPEFile(file); isPE {
+	if isPE, _ := isPEFile(file); isPE {
 		uploadRejections.WithLabelValues("pe_blocked").Inc()
 		Warn("Executable file detected (PE blocked)")
 		return newAPIError(http.StatusBadRequest, "Executable file detected (PE blocked)", nil)
@@ -260,7 +260,7 @@ func checkFileForExe(file multipart.File) error {
 
 	file.Seek(0, io.SeekStart)
 
-	if isELF, _ := IsELFFile(file); isELF {
+	if isELF, _ := isELFFile(file); isELF {
 		uploadRejections.WithLabelValues("elf_blocked").Inc()
 		Warn("Executable file detected (ELF blocked)")
 		return newAPIError(http.StatusBadRequest, "Executable file detected (ELF blocked)", nil)
@@ -274,7 +274,7 @@ func checkFileContent(file multipart.File, ext string) error {
 	// Sniff actual content and reject anything that doesn't match what the
 	// extension claims — e.g. a "report.txt" that's really an HTML/script
 	// payload passes the extension allowlist otherwise.
-	matches, err := MatchesDeclaredType(ext, file)
+	matches, err := matchesDeclaredType(ext, file)
 	if err != nil {
 		Warn("Failed to sniff file content: " + err.Error())
 		return newAPIError(http.StatusInternalServerError, "Failed to validate file content", err)
@@ -289,14 +289,14 @@ func checkFileContent(file multipart.File, ext string) error {
 	return nil
 }
 
-// CheckPDFJavaScript is one more check beyond the content sniff in
+// checkPDFJavaScript is one more check beyond the content sniff in
 // checkFileContent: reject any PDF carrying embedded JavaScript or
 // auto-actions (issue #245). Unlike the checks above, this needs to run
-// after we know the upload is really a PDF — ContainsPDFJavaScript parses
+// after we know the upload is really a PDF — containsPDFJavaScript parses
 // the full object structure via pdfcpu.
-func CheckPDFJavaScript(ext string, file multipart.File) error {
+func checkPDFJavaScript(ext string, file multipart.File) error {
 	if ext == ".pdf" {
-		hasJS, err := ContainsPDFJavaScript(file)
+		hasJS, err := containsPDFJavaScript(file)
 		if err != nil {
 			Warn("Failed to scan PDF for embedded JavaScript: " + err.Error())
 			return newAPIError(http.StatusInternalServerError, "Failed to validate file content", err)

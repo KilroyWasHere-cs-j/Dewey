@@ -97,7 +97,7 @@ func getFile(c *gin.Context) {
 		// HTML/script must not be executed just because it's served from here.
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.FileAttachment(path, filepath.Base(filename))
-		retrievalCounter.Record()
+		retrievalCounter.record()
 
 	case "true":
 		// Return the metadata record linked to this file as JSON
@@ -278,7 +278,7 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Open file
 	// -------------------------
-	err, file := OpenFile(fileHeader)
+	file, err := openFile(fileHeader)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -298,7 +298,7 @@ func uploadFile(c *gin.Context) {
 		return
 	}
 
-	if err := CheckPDFJavaScript(ext, file); err != nil {
+	if err := checkPDFJavaScript(ext, file); err != nil {
 		respondError(c, err)
 		return
 	}
@@ -306,13 +306,13 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Generate filename
 	// -------------------------
-	safeFilename := CreateTimestamp(fileHeader.Filename)
+	safeFilename := createTimestamp(fileHeader.Filename)
 
 	// -------------------------
 	// Hash file
 	// -------------------------
 	var hashString string
-	err, hashString = CreateFileHash(file)
+	hashString, err = createFileHash(file)
 	if err != nil {
 		Warn("Failed to hash file: " + err.Error())
 		respondError(c, err)
@@ -331,13 +331,13 @@ func uploadFile(c *gin.Context) {
 	// which re-opens and re-copies the same bytes from the multipart source
 	// a second time — the hashing pass above already read this file once
 	// (issue #166).
-	err = SaveFile(safeFilename, file)
+	err = saveFile(safeFilename, file)
 	if err != nil {
 		Warn("Failed to save file: " + err.Error())
 		respondError(c, err)
 		return
 	}
-	uploadCounter.Record()
+	uploadCounter.record()
 
 	// -------------------------
 	// Response
@@ -379,7 +379,7 @@ func deleteFile(c *gin.Context) {
 	dbm := c.MustGet("db").(*DatabaseManager)
 
 	filename := filepath.Base(c.Param("filename")) // prevent path traversal
-	err := DeleteFile(filename, pm, dbm)
+	err := deleteStoredFile(filename, pm, dbm)
 
 	if err != nil {
 		Warn(err.Error())
@@ -479,7 +479,7 @@ func deleteMachine(c *gin.Context) {
 func reloadPlugins(c *gin.Context) {
 	Debug("reloadPlugins called")
 	pm := c.MustGet("plugins").(*PluginManger)
-	if err := pm.ReloadPlugins(); err != nil {
+	if err := pm.reloadPlugins(); err != nil {
 		Warn("reloadPlugins failed: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to reload plugins"})
 		return
@@ -491,7 +491,7 @@ func moveFile(c *gin.Context) {
 	dbm := c.MustGet("db").(*DatabaseManager)
 	filepathname := c.Param("currentfilepathandname")
 	newfilepathname := c.Param("newfilepathandname")
-	if err := MoveFile(filepathname, newfilepathname, dbm); err != nil {
+	if err := moveStoredFile(filepathname, newfilepathname, dbm); err != nil {
 		Warn("moveFile failed: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to move file"})
 		return

@@ -36,11 +36,11 @@ type DatabaseManager struct {
 	db *sql.DB
 }
 
-// NewDatabaseManager initializes and verifies the database connection pool.
+// newDatabaseManager initializes and verifies the database connection pool.
 // Reads connection string from the required DB_DSN env var — no hardcoded
 // fallback (issue #200), since a fallback credential baked into the binary
 // would be the same password for every deployment that forgets to set one.
-func NewDatabaseManager() (*DatabaseManager, error) {
+func newDatabaseManager() (*DatabaseManager, error) {
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
 		return nil, fmt.Errorf("DB_DSN environment variable is required")
@@ -116,11 +116,11 @@ func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) (int64, error) {
 	return fileID, nil
 }
 
-// CreateNewMetaDataRecord inserts a claim metadata row linked to fileID via
+// createNewMetaDataRecord inserts a claim metadata row linked to fileID via
 // meta.file_id (issue #228) — a real foreign key populated from the files
 // row's own auto-increment id, rather than the client-suppliable acts_id
 // string previously used to join the two tables.
-func (dm *DatabaseManager) CreateNewMetaDataRecord(metaData MetaData, fileID int64) {
+func (dm *DatabaseManager) createNewMetaDataRecord(metaData MetaData, fileID int64) {
 	tx, err := dm.db.Begin()
 
 	if err != nil {
@@ -257,7 +257,9 @@ func (dm *DatabaseManager) updateFilePath(filename, newPath string) error {
 	return nil
 }
 
-func (dm *DatabaseManager) DebugPrintAllRecords() {
+// debugPrintAllRecords dumps every row of the files table to stdout —
+// unused by any current caller, kept as an ad hoc debugging aid.
+func (dm *DatabaseManager) debugPrintAllRecords() {
 	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, barcode FROM files`
 
 	rows, err := dm.db.Query(query)
@@ -402,9 +404,9 @@ func (dm *DatabaseManager) getKnownMachines() ([]struct {
 	return machines, nil
 }
 
-// Migrate executes the DDL script to ensure all tables ('files' and 'meta')
+// migrate executes the DDL script to ensure all tables ('files' and 'meta')
 // and their performance indexes exist.
-func (dm *DatabaseManager) Migrate() error {
+func (dm *DatabaseManager) migrate() error {
 	// --- 1. CREATE FILES TABLE ---
 	filesQuery := `
 	CREATE TABLE IF NOT EXISTS files (
@@ -455,7 +457,7 @@ func (dm *DatabaseManager) Migrate() error {
 	// on the client-suppliable acts_id string, which had no uniqueness
 	// guarantee and could match the wrong claimant's row (issue #228).
 	// file_id is populated at insert time from the files row's own
-	// auto-increment id (see CreateNewMetaDataRecord), so this join is now
+	// auto-increment id (see createNewMetaDataRecord), so this join is now
 	// deterministic. Added via ALTER rather than in metaQuery's CREATE TABLE
 	// IF NOT EXISTS above, since that statement is a no-op against a table
 	// that already exists from before this fix.
@@ -522,7 +524,7 @@ func isDuplicateKeyError(err error) bool {
 // addColumnSafe adds a column to an existing table and gracefully ignores
 // MySQL's "Duplicate column name" error (1060) if it already exists —
 // mirrors createIndexSafe's re-run-safe pattern for migrations that ALTER
-// a table created by an earlier version of Migrate.
+// a table created by an earlier version of migrate.
 func (dm *DatabaseManager) addColumnSafe(table, column, definition string) {
 	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
 	_, err := dm.db.Exec(query)

@@ -152,15 +152,15 @@ func TestCheckFileSize(t *testing.T) {
 // TestCreateTimestamp checks the "<unix-seconds>_<filename>" format
 // uploadFile relies on to generate a collision-resistant stored filename.
 func TestCreateTimestamp(t *testing.T) {
-	got := CreateTimestamp("report.pdf")
+	got := createTimestamp("report.pdf")
 
 	if !strings.HasSuffix(got, "_report.pdf") {
-		t.Fatalf("CreateTimestamp(%q) = %q, want suffix %q", "report.pdf", got, "_report.pdf")
+		t.Fatalf("createTimestamp(%q) = %q, want suffix %q", "report.pdf", got, "_report.pdf")
 	}
 
 	prefix := strings.TrimSuffix(got, "_report.pdf")
 	if _, err := strconv.ParseInt(prefix, 10, 64); err != nil {
-		t.Fatalf("CreateTimestamp(%q) = %q, timestamp prefix not numeric: %v", "report.pdf", got, err)
+		t.Fatalf("createTimestamp(%q) = %q, timestamp prefix not numeric: %v", "report.pdf", got, err)
 	}
 }
 
@@ -178,12 +178,12 @@ func TestCreateFileHash(t *testing.T) {
 	}
 	defer file.Close()
 
-	err, got := CreateFileHash(file)
+	got, err := createFileHash(file)
 	if err != nil {
-		t.Fatalf("CreateFileHash() unexpected error: %v", err)
+		t.Fatalf("createFileHash() unexpected error: %v", err)
 	}
 	if got != wantHex {
-		t.Fatalf("CreateFileHash() = %q, want %q", got, wantHex)
+		t.Fatalf("createFileHash() = %q, want %q", got, wantHex)
 	}
 }
 
@@ -204,8 +204,8 @@ func TestSaveFile(t *testing.T) {
 	}
 	defer file.Close()
 
-	if err := SaveFile("saved.txt", file); err != nil {
-		t.Fatalf("SaveFile() unexpected error: %v", err)
+	if err := saveFile("saved.txt", file); err != nil {
+		t.Fatalf("saveFile() unexpected error: %v", err)
 	}
 
 	got, err := os.ReadFile(filepath.Join(uploadDir, "saved.txt"))
@@ -223,9 +223,9 @@ func TestOpenFile(t *testing.T) {
 	content := []byte("openable")
 	fh := newUploadedFile(t, "note.txt", content)
 
-	err, file := OpenFile(fh)
+	file, err := openFile(fh)
 	if err != nil {
-		t.Fatalf("OpenFile() unexpected error: %v", err)
+		t.Fatalf("openFile() unexpected error: %v", err)
 	}
 	defer file.Close()
 
@@ -234,6 +234,6 @@ func TestOpenFile(t *testing.T) {
 		t.Fatalf("reading opened file: %v", err)
 	}
 	if string(got) != string(content) {
-		t.Fatalf("OpenFile content = %q, want %q", got, content)
+		t.Fatalf("openFile content = %q, want %q", got, content)
 	}
 }

@@ -15,12 +15,12 @@ import (
 // depend on the actual shipped plugin files.
 func newTestManager(t *testing.T) *PluginManger {
 	t.Helper()
-	pm := NewPluginManger()
+	pm := newPluginManger()
 	pm.dir = t.TempDir()
 	return pm
 }
 
-// writePlugin drops a fixture .lua file into dir for LoadPlugins to pick up.
+// writePlugin drops a fixture .lua file into dir for loadPlugins to pick up.
 func writePlugin(t *testing.T, dir, name, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
@@ -29,28 +29,28 @@ func writePlugin(t *testing.T, dir, name, content string) {
 }
 
 func TestRegisterHookIsIdempotent(t *testing.T) {
-	pm := NewPluginManger()
+	pm := newPluginManger()
 
-	if pm.IsRegistered("OnFilter") {
-		t.Fatal("hook should not be registered before RegisterHook is called")
+	if pm.isRegistered("OnFilter") {
+		t.Fatal("hook should not be registered before registerHook is called")
 	}
 
-	if err := pm.RegisterHook("OnFilter"); err != nil {
-		t.Fatalf("RegisterHook: %v", err)
+	if err := pm.registerHook("OnFilter"); err != nil {
+		t.Fatalf("registerHook: %v", err)
 	}
-	if !pm.IsRegistered("OnFilter") {
-		t.Fatal("hook should be registered after RegisterHook")
+	if !pm.isRegistered("OnFilter") {
+		t.Fatal("hook should be registered after registerHook")
 	}
 
 	// Registering the same name again should be a harmless no-op, not an error.
-	if err := pm.RegisterHook("OnFilter"); err != nil {
+	if err := pm.registerHook("OnFilter"); err != nil {
 		t.Fatalf("re-registering an existing hook should not error, got: %v", err)
 	}
 }
 
 func TestLoadPluginsAttachesOnlyRegisteredHooks(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	// OnDelete deliberately left unregistered.
 
 	writePlugin(t, pm.dir, "filter.lua", `
@@ -60,8 +60,8 @@ function OnFilter(entry) entry.Path = "routed/" .. entry.Path; return entry end
 function OnDelete(entry) return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 
 	if got := len(pm.hooks["OnFilter"]); got != 1 {
@@ -74,7 +74,7 @@ function OnDelete(entry) return entry end
 
 func TestLoadPluginsSkipsFileImplementingNoRegisteredHook(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	writePlugin(t, pm.dir, "useless.lua", `
 Salience = 1
@@ -82,8 +82,8 @@ function WhoAmI() return Salience end
 function OnSomethingElse(entry) return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if len(pm.loadedPlugins) != 0 {
 		t.Fatalf("expected a plugin implementing no registered hook to be skipped, got %d loaded", len(pm.loadedPlugins))
@@ -92,15 +92,15 @@ function OnSomethingElse(entry) return entry end
 
 func TestLoadPluginsDefaultsSalienceWhenNonNumeric(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	writePlugin(t, pm.dir, "badSalience.lua", `
 function WhoAmI() return "not a number" end
 function OnFilter(entry) return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if len(pm.loadedPlugins) != 1 {
 		t.Fatalf("expected plugin to still load with a default salience, got %d loaded", len(pm.loadedPlugins))
@@ -112,11 +112,11 @@ function OnFilter(entry) return entry end
 
 func TestLoadPluginsSkipsFileWithSyntaxError(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	writePlugin(t, pm.dir, "broken.lua", `this is not valid lua {{{`)
 
-	if err := pm.LoadPlugins(); err != nil {
+	if err := pm.loadPlugins(); err != nil {
 		t.Fatalf("one broken plugin file should not fail the whole load: %v", err)
 	}
 	if len(pm.loadedPlugins) != 0 {
@@ -125,30 +125,30 @@ func TestLoadPluginsSkipsFileWithSyntaxError(t *testing.T) {
 }
 
 func TestLoadPluginsErrorsOnMissingDir(t *testing.T) {
-	pm := NewPluginManger()
+	pm := newPluginManger()
 	pm.dir = filepath.Join(t.TempDir(), "does-not-exist")
 
-	if err := pm.LoadPlugins(); err == nil {
+	if err := pm.loadPlugins(); err == nil {
 		t.Fatal("expected an error when the plugin directory doesn't exist")
 	}
 }
 
 func TestRunByHookErrorsOnUnregisteredHook(t *testing.T) {
-	pm := NewPluginManger()
+	pm := newPluginManger()
 
-	if _, err := pm.RunByHook("OnNope", DBEntry{}); err == nil {
+	if _, err := pm.runByHook("OnNope", DBEntry{}); err == nil {
 		t.Fatal("expected an error running a hook that was never registered")
 	}
 }
 
 func TestRunByHookIsNoopWithNoAttachedPlugins(t *testing.T) {
-	pm := NewPluginManger()
-	pm.RegisterHook("OnFilter")
+	pm := newPluginManger()
+	pm.registerHook("OnFilter")
 
 	entry := DBEntry{Path: "original.txt"}
-	got, err := pm.RunByHook("OnFilter", entry)
+	got, err := pm.runByHook("OnFilter", entry)
 	if err != nil {
-		t.Fatalf("RunByHook: %v", err)
+		t.Fatalf("runByHook: %v", err)
 	}
 	if got != entry {
 		t.Fatalf("expected entry unchanged when no plugin is attached, got %+v, want %+v", got, entry)
@@ -157,7 +157,7 @@ func TestRunByHookIsNoopWithNoAttachedPlugins(t *testing.T) {
 
 func TestRunByHookRunsInSalienceOrder(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	// Higher salience runs first, so "high" should be appended before "low".
 	writePlugin(t, pm.dir, "low.lua", `
@@ -171,13 +171,13 @@ function WhoAmI() return Salience end
 function OnFilter(entry) entry.Path = entry.Path .. "-high"; return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 
-	got, err := pm.RunByHook("OnFilter", DBEntry{Path: "start"})
+	got, err := pm.runByHook("OnFilter", DBEntry{Path: "start"})
 	if err != nil {
-		t.Fatalf("RunByHook: %v", err)
+		t.Fatalf("runByHook: %v", err)
 	}
 	if want := "start-high-low"; got.Path != want {
 		t.Fatalf("expected salience-ordered chain %q, got %q", want, got.Path)
@@ -186,7 +186,7 @@ function OnFilter(entry) entry.Path = entry.Path .. "-high"; return entry end
 
 func TestRunByHookPluginErrorVetoes(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnDelete")
+	pm.registerHook("OnDelete")
 
 	writePlugin(t, pm.dir, "veto.lua", `
 Salience = 1
@@ -199,21 +199,21 @@ function OnDelete(entry)
 end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 
-	if _, err := pm.RunByHook("OnDelete", DBEntry{Filename: "protected.txt"}); err == nil {
+	if _, err := pm.runByHook("OnDelete", DBEntry{Filename: "protected.txt"}); err == nil {
 		t.Fatal("expected the plugin's error() call to propagate as a veto")
 	}
-	if _, err := pm.RunByHook("OnDelete", DBEntry{Filename: "fine.txt"}); err != nil {
+	if _, err := pm.runByHook("OnDelete", DBEntry{Filename: "fine.txt"}); err != nil {
 		t.Fatalf("unexpected veto for a non-protected file: %v", err)
 	}
 }
 
 func TestRunByHookRoundTripsAllFields(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	writePlugin(t, pm.dir, "mutateAll.lua", `
 Salience = 1
@@ -229,14 +229,14 @@ function OnFilter(entry)
 end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 
 	in := DBEntry{Filename: "fn", Act: "act", Hash: "hash", Path: "path", Meta: "meta", Barcode: sql.NullString{String: "bc", Valid: true}}
-	got, err := pm.RunByHook("OnFilter", in)
+	got, err := pm.runByHook("OnFilter", in)
 	if err != nil {
-		t.Fatalf("RunByHook: %v", err)
+		t.Fatalf("runByHook: %v", err)
 	}
 	want := DBEntry{Filename: "fn-f", Act: "act-a", Hash: "hash-h", Path: "path-p", Meta: "meta-m", Barcode: sql.NullString{String: "bc-b", Valid: true}}
 	if got != want {
@@ -245,8 +245,8 @@ end
 }
 
 func TestListPluginsDoesNotPanicOnEmptyManager(t *testing.T) {
-	pm := NewPluginManger()
-	pm.ListPlugins()
+	pm := newPluginManger()
+	pm.listPlugins()
 }
 
 // --- Runtime sandbox (issue #284) ---
@@ -257,7 +257,7 @@ func TestListPluginsDoesNotPanicOnEmptyManager(t *testing.T) {
 // newSandboxedState's setup.
 func TestSandboxBlocksDangerousGlobalsAndStdlib(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "sandboxCheck.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -274,11 +274,11 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook: %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook: %v", err)
 	}
 }
 
@@ -305,7 +305,7 @@ func TestHTTPGetWiringRoundTrip(t *testing.T) {
 	defer srv.Close()
 
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "httpGet.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -317,11 +317,11 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook: %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook: %v", err)
 	}
 }
 
@@ -338,7 +338,7 @@ func TestHTTPPostWiringRoundTrip(t *testing.T) {
 	defer srv.Close()
 
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "httpPost.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -350,11 +350,11 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook: %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook: %v", err)
 	}
 	if !strings.Contains(receivedBody, "hello-post-body") {
 		t.Fatalf("server did not receive posted body, got %q", receivedBody)
@@ -374,7 +374,7 @@ func TestHTTPGetBlocksLoopback(t *testing.T) {
 	defer srv.Close()
 
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "httpBlocked.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -386,11 +386,11 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook (plugin should have caught the blocked call itself via pcall): %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook (plugin should have caught the blocked call itself via pcall): %v", err)
 	}
 }
 
@@ -403,7 +403,7 @@ func TestFilesReadWriteRoundTrip(t *testing.T) {
 	t.Cleanup(func() { os.RemoveAll(pluginScratchDir) })
 
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "filesRoundTrip.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -416,22 +416,22 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook: %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook: %v", err)
 	}
 }
 
 // TestReloadPluginsPreservesHookRegistration confirms a reload doesn't lose
 // track of which hooks exist (issue #325's whole point is picking up
 // filter changes without a restart, so a reload that forgets which hooks
-// are registered — the way RegisterHook calls in main.go do it once at
+// are registered — the way registerHook calls in main.go do it once at
 // startup — would silently stop every plugin from attaching to anything).
 func TestReloadPluginsPreservesHookRegistration(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	writePlugin(t, pm.dir, "filter.lua", `
 Salience = 5
@@ -439,15 +439,15 @@ function WhoAmI() return Salience end
 function OnFilter(entry) entry.Path = "routed/" .. entry.Path; return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if got := len(pm.hooks["OnFilter"]); got != 1 {
 		t.Fatalf("expected 1 plugin attached to OnFilter before reload, got %d", got)
 	}
 
-	if err := pm.ReloadPlugins(); err != nil {
-		t.Fatalf("ReloadPlugins: %v", err)
+	if err := pm.reloadPlugins(); err != nil {
+		t.Fatalf("reloadPlugins: %v", err)
 	}
 
 	if got := len(pm.hooks["OnFilter"]); got != 1 {
@@ -460,10 +460,10 @@ function OnFilter(entry) entry.Path = "routed/" .. entry.Path; return entry end
 // without restarting the server.
 func TestReloadPluginsPicksUpNewlyAddedPlugin(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if got := len(pm.hooks["OnFilter"]); got != 0 {
 		t.Fatalf("expected 0 plugins attached before any file exists, got %d", got)
@@ -475,8 +475,8 @@ function WhoAmI() return Salience end
 function OnFilter(entry) return entry end
 `)
 
-	if err := pm.ReloadPlugins(); err != nil {
-		t.Fatalf("ReloadPlugins: %v", err)
+	if err := pm.reloadPlugins(); err != nil {
+		t.Fatalf("reloadPlugins: %v", err)
 	}
 	if got := len(pm.hooks["OnFilter"]); got != 1 {
 		t.Fatalf("expected the newly-added plugin to be attached after reload, got %d", got)
@@ -488,7 +488,7 @@ function OnFilter(entry) return entry end
 // disk shouldn't still be attached after the next reload.
 func TestReloadPluginsDropsRemovedPlugin(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 
 	pluginPath := filepath.Join(pm.dir, "temp.lua")
 	writePlugin(t, pm.dir, "temp.lua", `
@@ -497,8 +497,8 @@ function WhoAmI() return Salience end
 function OnFilter(entry) return entry end
 `)
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if got := len(pm.hooks["OnFilter"]); got != 1 {
 		t.Fatalf("expected 1 plugin attached before removal, got %d", got)
@@ -508,8 +508,8 @@ function OnFilter(entry) return entry end
 		t.Fatalf("removing fixture plugin: %v", err)
 	}
 
-	if err := pm.ReloadPlugins(); err != nil {
-		t.Fatalf("ReloadPlugins: %v", err)
+	if err := pm.reloadPlugins(); err != nil {
+		t.Fatalf("reloadPlugins: %v", err)
 	}
 	if got := len(pm.hooks["OnFilter"]); got != 0 {
 		t.Fatalf("expected the removed plugin to be gone after reload, got %d still attached", got)
@@ -521,7 +521,7 @@ function OnFilter(entry) return entry end
 // unlike the round-trip test above, this never touches a real file.
 func TestFilesWriteBlocksTraversal(t *testing.T) {
 	pm := newTestManager(t)
-	pm.RegisterHook("OnFilter")
+	pm.registerHook("OnFilter")
 	writePlugin(t, pm.dir, "filesTraversal.lua", `
 Salience = 1
 function WhoAmI() return Salience end
@@ -533,10 +533,10 @@ function OnFilter(entry)
     return entry
 end
 `)
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
-	if _, err := pm.RunByHook("OnFilter", DBEntry{}); err != nil {
-		t.Fatalf("RunByHook: %v", err)
+	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
+		t.Fatalf("runByHook: %v", err)
 	}
 }

@@ -31,7 +31,7 @@ type DBEntry struct {
 
 // apiError pairs the HTTP status and client-facing message a validation or
 // storage failure should produce with its underlying cause, so helpers like
-// checkFileSize/SaveFile/DeleteFile/etc. can report exactly how a route
+// checkFileSize/saveFile/deleteStoredFile/etc. can report exactly how a route
 // handler should respond without needing a *gin.Context themselves.
 // respondError (routes.go) is the one place that turns this into an actual
 // HTTP response.
@@ -145,14 +145,14 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 	// Both run here (async, after the 200 OK is already sent) rather than
 	// synchronously in uploadFile, so neither can veto the upload itself.
 	atomic.AddInt64(&PluginRuns, 1)
-	entry, err := pm.RunByHook("OnUpload", entry)
+	entry, err := pm.runByHook("OnUpload", entry)
 	if err != nil {
 		Warn("Failed to run OnUpload: " + err.Error())
 		atomic.AddInt64(&PluginErrors, 1)
 	}
 
 	atomic.AddInt64(&PluginRuns, 1)
-	entry, err = pm.RunByHook("OnFilter", entry)
+	entry, err = pm.runByHook("OnFilter", entry)
 	if err != nil {
 		Warn("Failed to run filter " + err.Error())
 		atomic.AddInt64(&PluginErrors, 1)
@@ -168,7 +168,7 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		atomic.AddInt64(&PluginErrors, 1)
 		return
 	}
-	err = CopyFile(
+	err = copyFile(
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
@@ -186,7 +186,7 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 	if err != nil {
 		return
 	}
-	dbm.CreateNewMetaDataRecord(metaData, fileID)
+	dbm.createNewMetaDataRecord(metaData, fileID)
 
 	atomic.AddInt64(&FilesInStore, 1)
 	atomic.AddInt64(&FileSorts, 1)
@@ -213,7 +213,9 @@ func resolveStorePath(base, rel string) (string, error) {
 	return full, nil
 }
 
-func CopyFile(src, dst string) error {
+// copyFile copies src to dst, creating dst's parent directory if needed, and
+// fsyncs the destination before returning so the copy is durable on disk.
+func copyFile(src, dst string) error {
 	// open source
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -292,22 +294,28 @@ func checkFileSize(fileHeader *multipart.FileHeader) error {
 	return nil
 }
 
-func CreateTimestamp(filename string) string {
+// createTimestamp prefixes filename with the current Unix timestamp so
+// concurrent uploads of the same name can't collide in the store.
+func createTimestamp(filename string) string {
 	timestamp := time.Now().Unix()
 	return fmt.Sprintf("%d_%s", timestamp, filename)
 }
 
-func CreateFileHash(file multipart.File) (error, string) {
+// createFileHash reads file to EOF computing its SHA-256, so callers must
+// seek back to the start themselves before reading it again (see saveFile).
+func createFileHash(file multipart.File) (string, error) {
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
 		Warn("Failed to read file: " + err.Error())
-		return newAPIError(http.StatusInternalServerError, "Failed to read file", err), ""
+		return "", newAPIError(http.StatusInternalServerError, "Failed to read file", err)
 	}
 
-	return nil, hex.EncodeToString(hasher.Sum(nil))
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func SaveFile(filename string, file multipart.File) error {
+// saveFile rewinds file (it may already have been read once, e.g. by
+// createFileHash) and writes it into uploadDir under filename.
+func saveFile(filename string, file multipart.File) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		Warn("Failed to rewind file before save: " + err.Error())
 		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
@@ -329,7 +337,10 @@ func SaveFile(filename string, file multipart.File) error {
 	return nil
 }
 
-func DeleteFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
+// deleteStoredFile removes filename's DB record, on-disk store copy, and
+// cache copy, after giving OnDelete plugins a chance to veto the deletion
+// synchronously (unlike OnFilter/OnUpload, no response has been sent yet).
+func deleteStoredFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
 	storeRelPath, err := dbm.pullRecordByFilename(filename)
 	if err != nil {
 		Warn("file record not found: " + err.Error())
@@ -341,7 +352,7 @@ func DeleteFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
 	// point, so a plugin calling error(...) genuinely vetoes the deletion
 	// instead of racing an already-sent 200 OK.
 	entry := DBEntry{Filename: filename, Path: storeRelPath}
-	if _, err := pm.RunByHook("OnDelete", entry); err != nil {
+	if _, err := pm.runByHook("OnDelete", entry); err != nil {
 		Warn("deletion vetoed by plugin: " + err.Error())
 		return newAPIError(http.StatusForbidden, "Deletion blocked by plugin: "+err.Error(), err)
 	}
@@ -369,16 +380,20 @@ func DeleteFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
 	return nil
 }
 
-func OpenFile(fileHeader *multipart.FileHeader) (error, multipart.File) {
+// openFile opens the multipart file behind fileHeader, wrapping any failure
+// in an apiError so the caller can respond without inspecting the cause.
+func openFile(fileHeader *multipart.FileHeader) (multipart.File, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		Warn("Failed to open file: " + err.Error())
-		return newAPIError(http.StatusInternalServerError, "Failed to open file", err), nil
+		return nil, newAPIError(http.StatusInternalServerError, "Failed to open file", err)
 	}
-	return nil, file
+	return file, nil
 }
 
-func MoveFile(currentPath string, newPath string, dbm *DatabaseManager) error {
+// moveStoredFile renames the file on disk and updates its DB path record to
+// match, so the two stay in sync.
+func moveStoredFile(currentPath string, newPath string, dbm *DatabaseManager) error {
 	if err := os.Rename(currentPath, newPath); err != nil {
 		return err
 	}

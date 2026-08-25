@@ -300,7 +300,7 @@ var (
 			Help: "Time until the next daemon tick",
 		},
 		func() float64 {
-			return float64(TimeUntilNextTick().Seconds())
+			return float64(timeUntilNextTick().Seconds())
 		},
 	)
 

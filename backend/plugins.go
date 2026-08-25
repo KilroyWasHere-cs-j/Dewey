@@ -33,22 +33,24 @@ type PluginManger struct {
 	// registeredHooks is a set (empty-struct values cost nothing) of hook
 	// names that have been declared — membership is a single map lookup
 	// instead of scanning a slice. A hook must be registered before
-	// LoadPlugins runs, since LoadPlugins only checks plugin files against
+	// loadPlugins runs, since loadPlugins only checks plugin files against
 	// already-registered names.
 	registeredHooks map[string]struct{}
 	// hooks maps a registered hook name to every plugin that implements it
 	// (i.e. defines a global function with that exact name), sorted by
-	// salience descending. This is the actual dispatch table RunByHook uses.
+	// salience descending. This is the actual dispatch table runByHook uses.
 	hooks         map[string][]Plugin
 	loadedPlugins []Plugin
-	// dir is where LoadPlugins reads plugin files from. Defaults to the
+	// dir is where loadPlugins reads plugin files from. Defaults to the
 	// package-level pluginDir const; tests override it with a temp
 	// directory so they don't have to touch the real plugins/ folder.
 	dir          string
 	pluginHashes map[string]string
 }
 
-func NewPluginManger() *PluginManger {
+// newPluginManger constructs an empty PluginManger with no plugins loaded
+// yet — callers still need to call loadPlugins to populate it.
+func newPluginManger() *PluginManger {
 	return &PluginManger{
 		registeredHooks: make(map[string]struct{}),
 		hooks:           make(map[string][]Plugin),
@@ -283,7 +285,7 @@ func (pm *PluginManger) newSandboxedState() *lua.LState {
 }
 
 // Plugin loader
-func (pm *PluginManger) LoadPlugins() error {
+func (pm *PluginManger) loadPlugins() error {
 	entries, err := os.ReadDir(pm.dir)
 	if err != nil {
 		Warn("Unable to read plugin directory: " + err.Error())
@@ -399,13 +401,13 @@ func (pm *PluginManger) LoadPlugins() error {
 	return nil
 }
 
-// RunByHook runs every plugin attached to sig, in salience order, threading
+// runByHook runs every plugin attached to sig, in salience order, threading
 // the (possibly modified) entry from one plugin to the next. If no plugin
 // implements sig, pm.hooks[sig] is simply empty and entry passes through
 // unchanged — that's expected for hooks like OnInit/OnTick until a plugin
 // file actually defines them, not an error.
-func (pm *PluginManger) RunByHook(sig string, entry DBEntry) (DBEntry, error) {
-	if !pm.IsRegistered(sig) {
+func (pm *PluginManger) runByHook(sig string, entry DBEntry) (DBEntry, error) {
+	if !pm.isRegistered(sig) {
 		return entry, fmt.Errorf("hook %q is not registered", sig)
 	}
 
@@ -471,47 +473,54 @@ func (pm *PluginManger) callHook(sig string, entry DBEntry, plugin Plugin) (DBEn
 	return entry, nil
 }
 
-// RegisterHook declares that a hook name exists. Map assignment is
+// registerHook declares that a hook name exists. Map assignment is
 // idempotent — registering the same sig twice is a harmless no-op, unlike
 // the old slice-append which would have just duplicated the entry.
-func (pm *PluginManger) RegisterHook(sig string) error {
-	if !pm.IsRegistered(sig) {
+func (pm *PluginManger) registerHook(sig string) error {
+	if !pm.isRegistered(sig) {
 		pm.registeredHooks[sig] = struct{}{}
 	}
 	return nil
 }
 
-// IsRegistered reports whether sig has already been declared via
-// RegisterHook — a single map lookup instead of scanning a slice.
-func (pm *PluginManger) IsRegistered(sig string) bool {
+// isRegistered reports whether sig has already been declared via
+// registerHook — a single map lookup instead of scanning a slice.
+func (pm *PluginManger) isRegistered(sig string) bool {
 	_, exists := pm.registeredHooks[sig]
 	return exists
 }
 
-// Close is a no-op — sync.Pool has no drain method; states are released by the GC.
-func (pm *PluginManger) Close() {}
+// close is a no-op — sync.Pool has no drain method; states are released by the GC.
+func (pm *PluginManger) close() {}
 
-// ListPlugins logs a one-line summary of how many plugins were loaded and
+// listPlugins logs a one-line summary of how many plugins were loaded and
 // how many hooks currently have at least one plugin attached.
-func (pm *PluginManger) ListPlugins() {
+func (pm *PluginManger) listPlugins() {
 	Ok(fmt.Sprintf("%d plugins loaded across %d hooks", len(pm.loadedPlugins), len(pm.hooks)))
 }
 
-func (pm *PluginManger) ReloadPlugins() error {
+// reloadPlugins clears the current plugin/hook state and reloads everything
+// from disk via loadPlugins, so a plugin file added, edited, or removed
+// since the last load takes effect without restarting the process.
+func (pm *PluginManger) reloadPlugins() error {
 	Debug("Reloading plugins")
 	pm.loadedPlugins = nil
 	pm.hooks = make(map[string][]Plugin)
 
-	pm.LoadPlugins()
+	pm.loadPlugins()
 	return nil
 }
 
-func (pm *PluginManger) HavePluginsChanged() (error, bool) {
+// havePluginsChanged hashes every file in the plugin directory and compares
+// it against the hashes recorded on the previous call, reporting true if any
+// plugin was added, edited, or removed since then — including deletions,
+// which show up as a tracked hash with no matching file left in dir.
+func (pm *PluginManger) havePluginsChanged() (bool, error) {
 	Debug("Checking if plugins have changed")
 
 	entries, err := os.ReadDir(pm.dir)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 
 	changed := false
@@ -543,7 +552,7 @@ func (pm *PluginManger) HavePluginsChanged() (error, bool) {
 		}
 	}
 
-	return nil, changed
+	return changed, nil
 }
 
 func hashFile(path string) (string, error) {

@@ -29,19 +29,19 @@ func TestValidatorAcceptsRealPlugins(t *testing.T) {
 	}
 }
 
-// TestValidatorEndToEndLoadsRealPlugins confirms LoadPlugins itself (not
+// TestValidatorEndToEndLoadsRealPlugins confirms loadPlugins itself (not
 // just validatePluginSource directly) actually loads all four real
-// plugins — i.e. the wiring in LoadPlugins doesn't silently skip anything.
+// plugins — i.e. the wiring in loadPlugins doesn't silently skip anything.
 func TestValidatorEndToEndLoadsRealPlugins(t *testing.T) {
-	pm := NewPluginManger()
+	pm := newPluginManger()
 	pm.dir = pluginDir
-	pm.RegisterHook("OnFilter")
-	pm.RegisterHook("OnDelete")
-	pm.RegisterHook("OnUpload")
-	pm.RegisterHook("OnTick")
+	pm.registerHook("OnFilter")
+	pm.registerHook("OnDelete")
+	pm.registerHook("OnUpload")
+	pm.registerHook("OnTick")
 
-	if err := pm.LoadPlugins(); err != nil {
-		t.Fatalf("LoadPlugins: %v", err)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
 	}
 	if len(pm.loadedPlugins) != 4 {
 		t.Fatalf("expected all 4 real shipped plugins to load, got %d", len(pm.loadedPlugins))
