@@ -424,6 +424,98 @@ end
 	}
 }
 
+// TestReloadPluginsPreservesHookRegistration confirms a reload doesn't lose
+// track of which hooks exist (issue #325's whole point is picking up
+// filter changes without a restart, so a reload that forgets which hooks
+// are registered — the way RegisterHook calls in main.go do it once at
+// startup — would silently stop every plugin from attaching to anything).
+func TestReloadPluginsPreservesHookRegistration(t *testing.T) {
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+
+	writePlugin(t, pm.dir, "filter.lua", `
+Salience = 5
+function WhoAmI() return Salience end
+function OnFilter(entry) entry.Path = "routed/" .. entry.Path; return entry end
+`)
+
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if got := len(pm.hooks["OnFilter"]); got != 1 {
+		t.Fatalf("expected 1 plugin attached to OnFilter before reload, got %d", got)
+	}
+
+	if err := pm.ReloadPlugins(); err != nil {
+		t.Fatalf("ReloadPlugins: %v", err)
+	}
+
+	if got := len(pm.hooks["OnFilter"]); got != 1 {
+		t.Fatalf("expected 1 plugin still attached to OnFilter after reload, got %d", got)
+	}
+}
+
+// TestReloadPluginsPicksUpNewlyAddedPlugin is the actual feature issue #325
+// asks for: dropping a new plugin file in and reloading should attach it
+// without restarting the server.
+func TestReloadPluginsPicksUpNewlyAddedPlugin(t *testing.T) {
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if got := len(pm.hooks["OnFilter"]); got != 0 {
+		t.Fatalf("expected 0 plugins attached before any file exists, got %d", got)
+	}
+
+	writePlugin(t, pm.dir, "new.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry) return entry end
+`)
+
+	if err := pm.ReloadPlugins(); err != nil {
+		t.Fatalf("ReloadPlugins: %v", err)
+	}
+	if got := len(pm.hooks["OnFilter"]); got != 1 {
+		t.Fatalf("expected the newly-added plugin to be attached after reload, got %d", got)
+	}
+}
+
+// TestReloadPluginsDropsRemovedPlugin confirms a reload's reset of
+// loadedPlugins/hooks actually takes effect — a plugin file deleted from
+// disk shouldn't still be attached after the next reload.
+func TestReloadPluginsDropsRemovedPlugin(t *testing.T) {
+	pm := newTestManager(t)
+	pm.RegisterHook("OnFilter")
+
+	pluginPath := filepath.Join(pm.dir, "temp.lua")
+	writePlugin(t, pm.dir, "temp.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry) return entry end
+`)
+
+	if err := pm.LoadPlugins(); err != nil {
+		t.Fatalf("LoadPlugins: %v", err)
+	}
+	if got := len(pm.hooks["OnFilter"]); got != 1 {
+		t.Fatalf("expected 1 plugin attached before removal, got %d", got)
+	}
+
+	if err := os.Remove(pluginPath); err != nil {
+		t.Fatalf("removing fixture plugin: %v", err)
+	}
+
+	if err := pm.ReloadPlugins(); err != nil {
+		t.Fatalf("ReloadPlugins: %v", err)
+	}
+	if got := len(pm.hooks["OnFilter"]); got != 0 {
+		t.Fatalf("expected the removed plugin to be gone after reload, got %d still attached", got)
+	}
+}
+
 // TestFilesWriteBlocksTraversal is the property that actually matters:
 // resolveStorePath rejects a "../" escape before any write happens, so
 // unlike the round-trip test above, this never touches a real file.

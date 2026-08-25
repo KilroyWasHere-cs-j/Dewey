@@ -446,3 +446,19 @@ func deleteMachine(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Machine removed", "ip": ip})
 }
+
+// reloadPlugins reloads the plugins from the filesystem.
+//
+// Returns (HTTP JSON):
+//   - 200 OK: plugins reloaded
+//   - 500 Internal Server Error: reload failure
+func reloadPlugins(c *gin.Context) {
+	Debug("reloadPlugins called")
+	pm := c.MustGet("plugins").(*PluginManger)
+	if err := pm.ReloadPlugins(); err != nil {
+		Warn("reloadPlugins failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to reload plugins"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Plugins reloaded"})
+}
