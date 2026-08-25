@@ -5,7 +5,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const res = await fetch(`${backendUrl()}/machines`);
+		const res = await fetch(`${backendUrl()}/core/machines`);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
@@ -16,7 +16,7 @@ export const GET: RequestHandler = async () => {
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body = await request.json();
-		const res = await fetch(`${backendUrl()}/machines`, {
+		const res = await fetch(`${backendUrl()}/core/machines`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(body)

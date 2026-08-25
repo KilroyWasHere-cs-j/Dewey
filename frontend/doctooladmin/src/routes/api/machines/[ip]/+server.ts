@@ -7,7 +7,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	const ip = params.ip;
 
 	try {
-		const res = await fetch(`${backendUrl()}/machines/${encodeURIComponent(ip)}`, {
+		const res = await fetch(`${backendUrl()}/core/machines/${encodeURIComponent(ip)}`, {
 			method: 'DELETE'
 		});
 

@@ -167,29 +167,39 @@ func main() {
 	})
 
 	// Routes with plugin context
-	api := r.Group("/")
-	api.Use(logConnections(dbm))
-	api.Use(func(c *gin.Context) {
+	base := r.Group("/")
+	base.Use(logConnections(dbm))
+	{
+		base.GET("/", index)
+		base.GET("/version", versionInfo)
+		base.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
+	}
+
+	admin := r.Group("/admin")
+	admin.Use(logConnections(dbm))
+	{
+		admin.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
+		admin.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
+	}
+
+	core := r.Group("/core")
+	core.Use(logConnections(dbm))
+	core.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
 		c.Set("db", dbm)
 		c.Next()
 	})
 	{
-		api.GET("/", index)
-		api.GET("/version", versionInfo)
-		api.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
-		api.GET("/admin", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
-		api.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
-		api.POST("/upload", uploadFile)
-		api.GET("/files/:filename/:meta", getFile)
-		api.GET("/files", listFiles)
-		api.DELETE("/files/:filename", deleteFile)
-		api.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
-		api.GET("/admin/dumpCache", triggerCacheDump)
-		api.GET("/admin/reloadPlugins", reloadPlugins)
-		api.GET("/machines", listMachines)
-		api.POST("/machines", addMachine)
-		api.DELETE("/machines/:ip", deleteMachine)
+		core.POST("/upload", uploadFile)
+		core.GET("/files/:filename/:meta", getFile)
+		core.GET("/files", listFiles)
+		core.DELETE("/files/:filename", deleteFile)
+		core.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
+		core.GET("/admin/dumpCache", triggerCacheDump)
+		core.GET("/admin/reloadPlugins", reloadPlugins)
+		core.GET("/machines", listMachines)
+		core.POST("/machines", addMachine)
+		core.DELETE("/machines/:ip", deleteMachine)
 	}
 
 	// Run BITs in the background so they fire at startup after all init is complete,

@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const filename = params.filename;
 
 	try {
-		const res = await fetch(`${backendUrl()}/files/${encodeURIComponent(filename)}/${meta}`);
+		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}/${meta}`);
 
 		if (!res.ok) {
 			return json({ error: 'File not found' }, { status: res.status });
@@ -41,7 +41,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	const filename = params.filename;
 
 	try {
-		const res = await fetch(`${backendUrl()}/files/${encodeURIComponent(filename)}`, {
+		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}`, {
 			method: 'DELETE'
 		});
 

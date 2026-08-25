@@ -5,7 +5,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const res = await fetch(`${backendUrl()}/files`);
+		const res = await fetch(`${backendUrl()}/core/files`);
 		if (!res.ok) throw new Error(`HTTP ${res.status}`);
 		return json(await res.json());
 	} catch (error) {
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async () => {
 // The Content-Type header (including the multipart boundary) must be passed through unchanged.
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const res = await fetch(`${backendUrl()}/upload`, {
+		const res = await fetch(`${backendUrl()}/core/upload`, {
 			method: 'POST',
 			body: request.body,
 			headers: { 'Content-Type': request.headers.get('Content-Type') ?? '' },
