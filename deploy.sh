@@ -295,6 +295,34 @@ else
   done
 fi
 
+# File and machine management now sit behind their own passwords, layered
+# on top of known_machines (issue #332) — same generate-once-and-persist
+# pattern as MYSQL_ROOT_PASSWORD above, in local gitignored files so a
+# redeploy doesn't hand out a new password and lock out whoever already has
+# the old one. Unlike the MySQL password, there's no data-volume coupling
+# here (the backend just reads the env var fresh on every start), so these
+# always reuse the existing file rather than only regenerating on a reset
+# flag.
+FILES_PASSWORD_FILE=".files-password"
+if [ ! -f "$FILES_PASSWORD_FILE" ]; then
+  log "info" "Generating new files management password..."
+  FILES_PASSWORD="$(openssl rand -hex 24)"
+  printf '%s' "$FILES_PASSWORD" > "$FILES_PASSWORD_FILE"
+  chmod 600 "$FILES_PASSWORD_FILE"
+else
+  FILES_PASSWORD="$(cat "$FILES_PASSWORD_FILE")"
+fi
+
+MACHINES_PASSWORD_FILE=".machines-password"
+if [ ! -f "$MACHINES_PASSWORD_FILE" ]; then
+  log "info" "Generating new machine management password..."
+  MACHINES_PASSWORD="$(openssl rand -hex 24)"
+  printf '%s' "$MACHINES_PASSWORD" > "$MACHINES_PASSWORD_FILE"
+  chmod 600 "$MACHINES_PASSWORD_FILE"
+else
+  MACHINES_PASSWORD="$(cat "$MACHINES_PASSWORD_FILE")"
+fi
+
 log "info" "Building backend image ${DIM}(cross-doc-tool-dev)${NC}..."
 # Stamp the binary with the branch it's being deployed from (issue #66) so
 # it's visible via GET /version without needing to shell into the container.
@@ -316,12 +344,18 @@ log "info" "Starting backend container..."
 # DB_DSN is now required (issue #200) — db.go no longer has a hardcoded
 # fallback, so it must be passed the same generated root password MySQL
 # was started with above.
+# FILES_PASSWORD/MACHINES_PASSWORD (issue #332) gate /core/files* and
+# /core/machines* respectively — requirePassword (backend/auth.go) fails
+# closed if either is unset, so these must be passed for those routes to
+# work at all.
 # Largest share of the four per-container limits (issue #211): this is the
 # burst source (uploads/barcode processing) they exist to contain.
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
   --read-only --tmpfs /tmp \
   --cpus 2 --memory 2g \
   -e DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/deweyRecords" \
+  -e FILES_PASSWORD="$FILES_PASSWORD" \
+  -e MACHINES_PASSWORD="$MACHINES_PASSWORD" \
   -v dewey-store:/app/store:Z \
   -v dewey-cache:/app/cache:Z \
   -v dewey-backup:/app/backup:Z \

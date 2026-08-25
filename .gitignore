@@ -30,6 +30,10 @@ go.work.sum
 # Generated MySQL root password (deploy.sh, issue #200)
 .mysql-root-password
 
+# Generated file/machine management passwords (deploy.sh, issue #332)
+.files-password
+.machines-password
+
 # App directories
 backend/store
 backend/logs
