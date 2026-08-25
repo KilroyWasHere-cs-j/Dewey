@@ -18,6 +18,7 @@
 		{ href: '#stack', label: 'Tech Stack' },
 		{ href: '#api', label: 'API Reference' },
 		{ href: '#cli', label: 'CLI Tool' },
+		{ href: '#mcp', label: 'MCP Server' },
 		{ href: '#testing', label: 'Testing Tools' },
 		{ href: '#access', label: 'Access Control' },
 		{ href: '#plugins', label: 'Plugin System' },
@@ -312,6 +313,91 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
   claim_number=CL-1024 \
   claimant_name="Jane Doe" \
   acts_id=A-88</code></pre>
+			</section>
+
+			<!-- ── MCP Server ── -->
+			<section id="mcp" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">MCP Server</h2>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-mcp/</code> is a standalone Go
+					module implementing an MCP (<a href="https://modelcontextprotocol.io" class="underline" target="_blank" rel="noopener noreferrer">Model Context Protocol</a>)
+					server, exposing Dewey and its Podman pod to AI model clients (Claude Desktop, Claude Code, etc.)
+					as a set of callable tools. Unlike the REST API above, it communicates over stdio rather than
+					HTTP — a client spawns the built binary as a subprocess per connection rather than dialing a port.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Build & run</h3>
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">cd dewey-mcp
+go build -o dewey-mcp .
+
+# Talks to the backend at http://localhost:8080 by default — override with DEWEY_HOST
+DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-mcp</code></pre>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Point an MCP client's stdio transport at the built binary to connect — there's no port to
+					publish or firewall rule to open.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Tools</h3>
+				<div class="mb-4 overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="border-b border-gray-200 text-left dark:border-gray-700">
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Tool</th>
+								<th class="pb-2 pr-4 font-semibold text-gray-700 dark:text-gray-200">Kind</th>
+								<th class="pb-2 font-semibold text-gray-700 dark:text-gray-200">Description</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-gray-100 text-xs dark:divide-gray-700">
+							{#each [
+								{ tool: 'is_up',                     kind: 'read-only',   desc: 'Checks whether the Dewey backend is reachable, via GET /.' },
+								{ tool: 'version',                   kind: 'read-only',   desc: "Returns the backend's release version and the git branch it was built from." },
+								{ tool: 'get_podman_health',         kind: 'read-only',   desc: 'Status of the dewey-pod Podman pod (podman pod ps).' },
+								{ tool: 'get_podman_containers',     kind: 'read-only',   desc: 'Lists every running Podman container (podman ps).' },
+								{ tool: 'get_podman_container_logs', kind: 'read-only',   desc: 'Recent log output of a single container, by name or ID.' },
+								{ tool: 'restart_podman_container',  kind: 'destructive', desc: 'Restarts a single container by name or ID — interrupts whatever it was serving. The only non-idempotent tool here.' },
+								{ tool: 'create_file',               kind: 'destructive', desc: 'Writes contents to a file at path, creating or truncating it.' },
+								{ tool: 'read_file',                 kind: 'read-only',   desc: "Returns a file's contents." },
+								{ tool: 'move_file',                 kind: 'destructive', desc: 'Moves/renames a file from src to dst. Skips rather than overwrites if dst already exists.' },
+								{ tool: 'delete_file',               kind: 'destructive', desc: 'Removes a file.' },
+							] as row}
+								<tr>
+									<td class="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.tool}</td>
+									<td class="py-2 pr-4">
+										<span class="rounded px-1.5 py-0.5 font-mono text-xs font-bold
+											{row.kind === 'read-only' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+											 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'}">
+											{row.kind}
+										</span>
+									</td>
+									<td class="py-2 text-gray-600 dark:text-gray-400">{row.desc}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Path-traversal protection</h3>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">read_file</code>,
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">move_file</code>, and
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">delete_file</code> resolve every path
+					argument through <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">resolveSafePath</code>,
+					which rejects anything that resolves outside the server's working directory — an absolute path
+					or a <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">../</code> escape — mirroring the
+					backend's own <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">resolveStorePath</code>
+					guard used for uploaded file paths. Without it, any connected MCP client would have
+					unrestricted read/move/delete access to whatever the server process itself can reach on the
+					host.
+				</p>
+
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Packaging</h3>
+				<p class="text-sm text-gray-600 dark:text-gray-300">
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">package.sh</code> (repo root)
+					cross-compiles <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-mcp</code> for
+					linux/amd64 and bundles the binary alongside
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-cli</code> in the shipped
+					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">.tar.gz</code>.
+				</p>
 			</section>
 
 			<!-- ── Testing Tools ── -->
