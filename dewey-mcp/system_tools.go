@@ -15,14 +15,13 @@ func CreateFile(contents string, path string) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.Create(safePath)
 
+	file, err := os.Create(safePath)
 	if err != nil {
 		return err
 	}
 
 	_, err = file.WriteString(contents)
-
 	if err != nil {
 		return err
 	}

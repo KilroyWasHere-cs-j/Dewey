@@ -71,6 +71,9 @@ func GetPodmanHealthHandler(ctx context.Context, request mcp.CallToolRequest) (*
 
 func CreateFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	contents, err := request.RequireString("contents")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	path, err := request.RequireString("path")
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
