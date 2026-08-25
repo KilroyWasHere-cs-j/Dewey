@@ -35,15 +35,15 @@ const usage = `usage: dewey-cli <command> [args]
 commands:
   health                              GET  /
   version                             GET  /version
-  dump_cache                          GET  /admin/dumpCache
-  list_machines                       GET  /machines
-  add_machine <ip> <label>            POST /machines
-  delete_machine <ip>                 DELETE /machines/:ip
-  list_files                          GET  /files
-  get_file <filename>                 GET  /files/:filename/false
-  get_file_meta <filename>            GET  /files/:filename/true
-  delete_file <filename>              DELETE /files/:filename
-  upload <path> [field=value ...]     POST /upload (optional metadata fields, see below)
+  dump_cache                          GET  /core/admin/dumpCache
+  list_machines                       GET  /core/machines
+  add_machine <ip> <label>            POST /core/machines
+  delete_machine <ip>                 DELETE /core/machines/:ip
+  list_files                          GET  /core/files
+  get_file <filename>                 GET  /core/files/:filename/false
+  get_file_meta <filename>            GET  /core/files/:filename/true
+  delete_file <filename>              DELETE /core/files/:filename
+  upload <path> [field=value ...]     POST /core/upload (optional metadata fields, see below)
   self_ip                             locally-determined outbound IP toward the host
   soak_test [sim_days] [users] [seconds_per_sim_day]
                                        runs backend/testing_tooling/soak_test.sh (issue #311) inside
@@ -87,30 +87,30 @@ func main() {
 	case "version":
 		get(host+"/version", nil)
 	case "dump_cache":
-		get(host+"/admin/dumpCache", nil)
+		get(host+"/core/admin/dumpCache", nil)
 	case "list_machines":
-		get(host+"/machines", printMachinesTable)
+		get(host+"/core/machines", printMachinesTable)
 	case "add_machine":
 		requireArgs(4, "add_machine <ip> <label>")
-		postJSON(host+"/machines", map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
+		postJSON(host+"/core/machines", map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
 	case "delete_machine":
 		requireArgs(3, "delete_machine <ip>")
-		del(host+"/machines/"+os.Args[2], nil)
+		del(host+"/core/machines/"+os.Args[2], nil)
 	case "list_files":
-		get(host+"/files", printFilesTable)
+		get(host+"/core/files", printFilesTable)
 	case "get_file":
 		requireArgs(3, "get_file <filename>")
-		get(host+"/files/"+os.Args[2]+"/false", nil)
+		get(host+"/core/files/"+os.Args[2]+"/false", nil)
 	case "get_file_meta":
 		requireArgs(3, "get_file_meta <filename>")
-		get(host+"/files/"+os.Args[2]+"/true", nil)
+		get(host+"/core/files/"+os.Args[2]+"/true", nil)
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
-		del(host+"/files/"+os.Args[2], nil)
+		del(host+"/core/files/"+os.Args[2], nil)
 	case "upload":
 		requireArgs(3, "upload <path> [field=value ...]")
 		meta := parseMetadata(os.Args[3:])
-		upload(host+"/upload", os.Args[2], meta)
+		upload(host+"/core/upload", os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
 	case "soak_test":
