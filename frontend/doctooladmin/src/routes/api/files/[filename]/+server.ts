@@ -1,16 +1,18 @@
 import { json } from '@sveltejs/kit';
-import { backendUrl } from '$lib/server/backend';
+import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
 import { proxyError } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 // GET ?meta=true  → returns MetaData JSON from the backend
 // GET ?meta=false → streams the raw file back as an attachment download
-export const GET: RequestHandler = async ({ params, url }) => {
+export const GET: RequestHandler = async ({ params, url, request }) => {
 	const meta = url.searchParams.get('meta') === 'true' ? 'true' : 'false';
 	const filename = params.filename;
 
 	try {
-		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}/${meta}`);
+		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}/${meta}`, {
+			headers: forwardAuthHeader(request)
+		});
 
 		if (!res.ok) {
 			return json({ error: 'File not found' }, { status: res.status });
@@ -37,12 +39,13 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, request }) => {
 	const filename = params.filename;
 
 	try {
 		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}`, {
-			method: 'DELETE'
+			method: 'DELETE',
+			headers: forwardAuthHeader(request)
 		});
 
 		if (!res.ok) {

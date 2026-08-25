@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
+	import { credentials } from '$lib/stores/credentials.svelte';
 
 	interface MetaData {
 		claim_number: string;
@@ -36,7 +37,9 @@
 		listLoading = true;
 		listError = null;
 		try {
-			const res = await fetch('/api/files');
+			const res = await fetch('/api/files', {
+				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			files = data.files ?? [];
@@ -65,11 +68,40 @@
 
 		metaState = { ...metaState, [filename]: 'loading' };
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=true`);
+			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=true`, {
+				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			metaState = { ...metaState, [filename]: await res.json() };
 		} catch {
 			metaState = { ...metaState, [filename]: 'error' };
+		}
+	}
+
+	// ── Download ──────────────────────────────────────────────────────────────
+
+	let downloadError = $state<string | null>(null);
+
+	// A plain <a href download> can't carry a custom header, and downloads
+	// now require the files password (issue #332) — so this fetches the
+	// file with the header attached and triggers the save via a temporary
+	// object URL instead of letting the browser navigate directly.
+	async function downloadFile(filename: string) {
+		downloadError = null;
+		try {
+			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
+				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+			});
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch (e) {
+			downloadError = String(e);
 		}
 	}
 
@@ -85,7 +117,10 @@
 		deleteError = null;
 		const target = pendingDelete;
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(target)}`, { method: 'DELETE' });
+			const res = await fetch(`/api/files/${encodeURIComponent(target)}`, {
+				method: 'DELETE',
+				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			files = files.filter((f) => f !== target);
 			// Clean up any cached metadata for the deleted file
@@ -165,7 +200,11 @@
 		}
 
 		try {
-			const res = await fetch('/api/files', { method: 'POST', body: form });
+			const res = await fetch('/api/files', {
+				method: 'POST',
+				body: form,
+				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+			});
 			// Body-size-limit rejections (and similar) return a non-JSON response,
 			// so .json() must be guarded rather than called unconditionally.
 			let body: any = null;
@@ -330,6 +369,12 @@
 				{/if}
 			</div>
 
+			{#if downloadError}
+				<p role="alert" class="px-6 pt-4 text-sm text-red-600 dark:text-red-400">
+					Download failed: {downloadError}
+				</p>
+			{/if}
+
 			{#if listLoading}
 				<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">Loading…</p>
 			{:else if listError}
@@ -368,14 +413,13 @@
 									</td>
 									<td class="px-6 py-3">
 										<div class="flex items-center justify-end gap-2">
-											<!-- Download: browser follows the link, Content-Disposition triggers save dialog -->
-											<a
-												href="/api/files/{encodeURIComponent(filename)}?meta=false"
-												download={filename}
+											<!-- Download: fetched with the password header, then saved via a temporary object URL -->
+											<button
 												class="rounded-md px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+												onclick={() => downloadFile(filename)}
 											>
 												Download
-											</a>
+											</button>
 
 											<!-- Metadata toggle -->
 											<button

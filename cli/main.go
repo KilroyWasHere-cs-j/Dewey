@@ -52,6 +52,8 @@ commands:
 
 env:
   DEWEY_HOST                          backend base URL, default http://localhost:8080
+  DEWEY_FILES_PASSWORD                password for file management routes (upload/list/get/delete)
+  DEWEY_MACHINES_PASSWORD             password for machine management routes (list/add/delete)
 
 upload metadata fields (all optional, order doesn't matter):
   claim_number claimant_name date_of_injury employer adjuster
@@ -80,37 +82,39 @@ func main() {
 	if host == "" {
 		host = defaultHost
 	}
+	filesPassword := os.Getenv("DEWEY_FILES_PASSWORD")
+	machinesPassword := os.Getenv("DEWEY_MACHINES_PASSWORD")
 
 	switch os.Args[1] {
 	case "health":
-		get(host+"/", nil)
+		get(host+"/", "", nil)
 	case "version":
-		get(host+"/version", nil)
+		get(host+"/version", "", nil)
 	case "dump_cache":
-		get(host+"/core/admin/dumpCache", nil)
+		get(host+"/core/admin/dumpCache", filesPassword, nil)
 	case "list_machines":
-		get(host+"/core/machines", printMachinesTable)
+		get(host+"/core/machines", machinesPassword, printMachinesTable)
 	case "add_machine":
 		requireArgs(4, "add_machine <ip> <label>")
-		postJSON(host+"/core/machines", map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
+		postJSON(host+"/core/machines", machinesPassword, map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
 	case "delete_machine":
 		requireArgs(3, "delete_machine <ip>")
-		del(host+"/core/machines/"+os.Args[2], nil)
+		del(host+"/core/machines/"+os.Args[2], machinesPassword, nil)
 	case "list_files":
-		get(host+"/core/files", printFilesTable)
+		get(host+"/core/files", filesPassword, printFilesTable)
 	case "get_file":
 		requireArgs(3, "get_file <filename>")
-		get(host+"/core/files/"+os.Args[2]+"/false", nil)
+		get(host+"/core/files/"+os.Args[2]+"/false", filesPassword, nil)
 	case "get_file_meta":
 		requireArgs(3, "get_file_meta <filename>")
-		get(host+"/core/files/"+os.Args[2]+"/true", nil)
+		get(host+"/core/files/"+os.Args[2]+"/true", filesPassword, nil)
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
-		del(host+"/core/files/"+os.Args[2], nil)
+		del(host+"/core/files/"+os.Args[2], filesPassword, nil)
 	case "upload":
 		requireArgs(3, "upload <path> [field=value ...]")
 		meta := parseMetadata(os.Args[3:])
-		upload(host+"/core/upload", os.Args[2], meta)
+		upload(host+"/core/upload", filesPassword, os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
 	case "soak_test":
@@ -296,25 +300,36 @@ func doRequest(req *http.Request, formatter func([]byte) string) {
 	fmt.Println(colorGreen + prettyJSON(body) + colorReset)
 }
 
-func get(url string, formatter func([]byte) string) {
+// setAuthHeader attaches the X-Dewey-Password header when a password was
+// configured (issue #332) — commands against the base group (health,
+// version) pass "" and skip it, since those routes aren't gated.
+func setAuthHeader(req *http.Request, password string) {
+	if password != "" {
+		req.Header.Set("X-Dewey-Password", password)
+	}
+}
+
+func get(url string, password string, formatter func([]byte) string) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
 		os.Exit(1)
 	}
+	setAuthHeader(req, password)
 	doRequest(req, formatter)
 }
 
-func del(url string, formatter func([]byte) string) {
+func del(url string, password string, formatter func([]byte) string) {
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
 		os.Exit(1)
 	}
+	setAuthHeader(req, password)
 	doRequest(req, formatter)
 }
 
-func postJSON(url string, payload any, formatter func([]byte) string) {
+func postJSON(url string, password string, payload any, formatter func([]byte) string) {
 	buf, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"failed to encode request body:"+colorReset, err)
@@ -326,6 +341,7 @@ func postJSON(url string, payload any, formatter func([]byte) string) {
 		os.Exit(1)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	setAuthHeader(req, password)
 	doRequest(req, formatter)
 }
 
@@ -334,7 +350,7 @@ func postJSON(url string, payload any, formatter func([]byte) string) {
 // meta entries are attached as additional form fields (claim_number, etc.) —
 // omitted entries are simply absent from the request, same as leaving a form
 // field blank in the admin portal's upload dialog.
-func upload(url, filePath string, meta map[string]string) {
+func upload(url, password, filePath string, meta map[string]string) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"could not open file:"+colorReset, err)
@@ -374,6 +390,7 @@ func upload(url, filePath string, meta map[string]string) {
 		os.Exit(1)
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
+	setAuthHeader(req, password)
 	doRequest(req, nil)
 }
 

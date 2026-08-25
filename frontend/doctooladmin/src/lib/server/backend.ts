@@ -5,3 +5,11 @@ import { env } from '$env/dynamic/private';
 export function backendUrl(): string {
 	return env.BACKEND_URL ?? 'http://localhost:8080';
 }
+
+// Files/machines management routes require a password (issue #332). The
+// browser sends it as a header on its request to this SvelteKit route;
+// this just passes it through unchanged to the backend request, so the
+// actual secret never has to live in this server's own env.
+export function forwardAuthHeader(request: Request): HeadersInit {
+	return { 'X-Dewey-Password': request.headers.get('X-Dewey-Password') ?? '' };
+}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
+	import { credentials } from '$lib/stores/credentials.svelte';
 
 	interface Machine {
 		ip: string;
@@ -19,7 +20,9 @@
 		listLoading = true;
 		listError = null;
 		try {
-			const res = await fetch('/api/machines');
+			const res = await fetch('/api/machines', {
+				headers: { 'X-Dewey-Password': credentials.getMachinesPassword() }
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			machines = data.machines ?? [];
@@ -51,7 +54,10 @@
 		try {
 			const res = await fetch('/api/machines', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'X-Dewey-Password': credentials.getMachinesPassword()
+				},
 				body: JSON.stringify(addFields)
 			});
 			const body = await res.json();
@@ -81,7 +87,10 @@
 		removeError = null;
 		const target = pendingRemove;
 		try {
-			const res = await fetch(`/api/machines/${encodeURIComponent(target)}`, { method: 'DELETE' });
+			const res = await fetch(`/api/machines/${encodeURIComponent(target)}`, {
+				method: 'DELETE',
+				headers: { 'X-Dewey-Password': credentials.getMachinesPassword() }
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			machines = machines.filter((m) => m.ip !== target);
 			pendingRemove = null;
