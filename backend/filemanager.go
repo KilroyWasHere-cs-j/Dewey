@@ -377,3 +377,16 @@ func OpenFile(fileHeader *multipart.FileHeader) (error, multipart.File) {
 	}
 	return nil, file
 }
+
+func MoveFile(currentPath string, newPath string, dbm *DatabaseManager) error {
+	if err := os.Rename(currentPath, newPath); err != nil {
+		return err
+	}
+
+	filename := filepath.Base(currentPath)
+	if err := dbm.updateFilePath(filename, newPath); err != nil {
+		return err
+	}
+
+	return nil
+}

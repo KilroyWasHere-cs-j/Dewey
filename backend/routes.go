@@ -486,3 +486,15 @@ func reloadPlugins(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Plugins reloaded"})
 }
+
+func moveFile(c *gin.Context) {
+	dbm := c.MustGet("db").(*DatabaseManager)
+	filepathname := c.Param("currentfilepathandname")
+	newfilepathname := c.Param("newfilepathandname")
+	if err := MoveFile(filepathname, newfilepathname, dbm); err != nil {
+		Warn("moveFile failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to move file"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "File moved"})
+}

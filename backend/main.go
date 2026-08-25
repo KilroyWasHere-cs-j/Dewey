@@ -184,6 +184,7 @@ func main() {
 		api.GET("/files/:filename/:meta", getFile)
 		api.GET("/files", listFiles)
 		api.DELETE("/files/:filename", deleteFile)
+		api.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
 		api.GET("/admin/dumpCache", triggerCacheDump)
 		api.GET("/admin/reloadPlugins", reloadPlugins)
 		api.GET("/machines", listMachines)

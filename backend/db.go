@@ -233,6 +233,30 @@ func (dm *DatabaseManager) deleteFileRecord(filename string) error {
 	return nil
 }
 
+// updateFilePath changes a file's stored filepath (its location under
+// fileSystemBaseDir) — e.g. for a manual move/reorganize (issue #333).
+// Excludes soft-deleted records, matching pullRecordByFilename/
+// pullMetaByFilename's read-side convention: a deleted file's path
+// shouldn't be silently updated.
+func (dm *DatabaseManager) updateFilePath(filename, newPath string) error {
+	query := "UPDATE files SET filepath = ? WHERE filename = ? AND is_deleted = 0"
+	result, err := dm.db.Exec(query, newPath, filename)
+	if err != nil {
+		return fmt.Errorf("failed to update file path: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no record found to update with filename: %s", filename)
+	}
+
+	return nil
+}
+
 func (dm *DatabaseManager) DebugPrintAllRecords() {
 	query := `SELECT id, filename, acts_id, sha256_hash, created_at, filepath, is_deleted, barcode FROM files`
 
@@ -399,6 +423,14 @@ func (dm *DatabaseManager) Migrate() error {
 		return fmt.Errorf("failed to create files table: %w", err)
 	}
 
+	// barcode was originally NOT NULL, back when the "no barcode" sentinel
+	// was the literal string "Nil" rather than a real SQL NULL (issue #336).
+	// filesQuery's CREATE TABLE IF NOT EXISTS above is a no-op against a
+	// table that already exists from before that change, so a deployment
+	// whose mysql-data volume predates it stays stuck rejecting every
+	// non-barcode upload's genuine NULL until this runs.
+	dm.modifyColumnSafe("files", "barcode", "VARCHAR(100) NULL")
+
 	// --- 2. CREATE META TABLE ---
 	metaQuery := `
 	CREATE TABLE IF NOT EXISTS meta (
@@ -507,6 +539,17 @@ func isDuplicateColumnError(err error) bool {
 	// MySQL error code 1060: Duplicate column name
 	msg := err.Error()
 	return strings.Contains(msg, "1060") || strings.Contains(msg, "Duplicate column")
+}
+
+// modifyColumnSafe changes an existing column's type/nullability. Unlike
+// createIndexSafe/addColumnSafe, MODIFY COLUMN is naturally idempotent —
+// there's no "already applied" error to swallow, since MySQL accepts
+// re-running the same MODIFY against a column already in that state.
+func (dm *DatabaseManager) modifyColumnSafe(table, column, definition string) {
+	query := fmt.Sprintf("ALTER TABLE %s MODIFY COLUMN %s %s", table, column, definition)
+	if _, err := dm.db.Exec(query); err != nil {
+		fmt.Printf("[MIGRATION WARNING] Could not modify column %s.%s: %v\n", table, column, err)
+	}
 }
 
 // addForeignKeySafe adds a named foreign key constraint and gracefully
