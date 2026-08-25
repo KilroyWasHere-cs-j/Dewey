@@ -46,7 +46,7 @@ type cacheKiller struct {
 }
 
 // daemonTicker is written once at startup and read from a Prometheus scrape
-// goroutine (TimeUntilNextTick), so the pointer itself needs its own
+// goroutine (timeUntilNextTick), so the pointer itself needs its own
 // synchronization on top of the mutex already guarding observableTicker's
 // internal fields.
 var daemonTicker atomic.Pointer[observableTicker]
@@ -59,28 +59,32 @@ func newObservableTicker(d time.Duration) *observableTicker {
 	}
 }
 
-func (o *observableTicker) Chan() <-chan time.Time { return o.ticker.C }
-func (o *observableTicker) Stop()                  { o.ticker.Stop() }
+// channel exposes the underlying ticker's channel so callers can select on it.
+func (o *observableTicker) channel() <-chan time.Time { return o.ticker.C }
+
+// stop stops the underlying ticker; the observableTicker itself is not
+// otherwise reusable afterward.
+func (o *observableTicker) stop() { o.ticker.Stop() }
 func (o *observableTicker) markTick(t time.Time) {
 	o.mu.Lock()
 	o.last = t
 	o.mu.Unlock()
 }
 
-// Reset changes the ticker's period to d, effective immediately — the next
+// reset changes the ticker's period to d, effective immediately — the next
 // tick fires d after this call, discarding whatever was left of the old
-// period. Safe to call while another goroutine is receiving from Chan().
-func (o *observableTicker) Reset(d time.Duration) {
+// period. Safe to call while another goroutine is receiving from channel().
+func (o *observableTicker) reset(d time.Duration) {
 	o.mu.Lock()
 	o.interval = d
 	o.mu.Unlock()
 	o.ticker.Reset(d)
 }
 
-// Remaining returns the duration until the next tick. If the ticker hasn't
+// remaining returns the duration until the next tick. If the ticker hasn't
 // fired yet it computes remaining time from the start time. Never returns a
 // negative duration; returns 0 if the next tick is due now.
-func (o *observableTicker) Remaining() time.Duration {
+func (o *observableTicker) remaining() time.Duration {
 	o.mu.RLock()
 	last := o.last
 	start := o.start
@@ -111,29 +115,29 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 	daemonTicker.Store(dt)
 
 	go func() {
-		defer dt.Stop()
+		defer dt.stop()
 
 		// Lives for the goroutine's lifetime so the smoothed rate persists
 		// across ticks — a fresh EMA each cycle would reset the smoothing
 		// every time and defeat the point of it.
-		rateEMA := NewEMA(0.3)
+		rateEMA := newEMA(0.3)
 
 		for {
 			select {
-			case t := <-dt.Chan():
-				// record tick time so Remaining() can be observed
+			case t := <-dt.channel():
+				// record tick time so remaining() can be observed
 				dt.markTick(t)
 
 				// Uploads + retrievals over the trailing 30s, smoothed so a
 				// single noisy second doesn't yank the estimate around.
-				instantRate := uploadCounter.Rate() + retrievalCounter.Rate()
-				smoothedRate := rateEMA.Update(instantRate)
+				instantRate := uploadCounter.rate() + retrievalCounter.rate()
+				smoothedRate := rateEMA.update(instantRate)
 				SetUploadRateEstimate(smoothedRate)
 
 				// Both active users and upload/retrieval traffic push the
 				// interval up (slower ticks) — maintenance work backs off
 				// rather than competing with live activity.
-				dt.Reset(computeTickInterval(ActiveUserCount(), smoothedRate))
+				dt.reset(computeTickInterval(ActiveUserCount(), smoothedRate))
 
 				// run task safely so panic won't kill goroutine
 				func() {
@@ -158,15 +162,15 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 					// an unconditional reload would still needlessly rerun
 					// static validation and rebuild the Lua sandbox state
 					// for every plugin even when nothing changed.
-					if err, changed := pm.HavePluginsChanged(); err != nil {
+					if changed, err := pm.havePluginsChanged(); err != nil {
 						Warn("Unable to check for plugin changes: " + err.Error())
 					} else if changed {
-						if err := pm.ReloadPlugins(); err != nil {
+						if err := pm.reloadPlugins(); err != nil {
 							Warn("Plugin reload failed: " + err.Error())
 						}
 					}
 
-					if _, err := pm.RunByHook("OnTick", DBEntry{}); err != nil {
+					if _, err := pm.runByHook("OnTick", DBEntry{}); err != nil {
 						Warn("Failed to run OnTick: " + err.Error())
 					}
 				}()
@@ -179,14 +183,14 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 	}()
 }
 
-// TimeUntilNextTick returns the duration until the daemon's next scheduled
+// timeUntilNextTick returns the duration until the daemon's next scheduled
 // run. If the daemon hasn't been started it returns -1.
-func TimeUntilNextTick() time.Duration {
+func timeUntilNextTick() time.Duration {
 	dt := daemonTicker.Load()
 	if dt == nil {
 		return time.Duration(-1)
 	}
-	return dt.Remaining()
+	return dt.remaining()
 }
 
 // dumpCache clears all files from the upload cache directory. Best-effort:
@@ -289,7 +293,7 @@ func (w *stderrCollector) Write(p []byte) (int, error) {
 }
 
 // dbConnParamsFromDSN reads DB_DSN — the same required env var
-// NewDatabaseManager (db.go) uses to open the connection pool — and splits
+// newDatabaseManager (db.go) uses to open the connection pool — and splits
 // it into the separate host/port/user/password/database pieces mysqldump
 // and mysql need as individual CLI flags.
 func dbConnParamsFromDSN() (host, port, user, password, database string, err error) {
@@ -545,10 +549,10 @@ type EMA struct {
 	hasValue bool    // false until the first sample seeds the average
 }
 
-// NewEMA returns an EMA with the given smoothing factor.
+// newEMA returns an EMA with the given smoothing factor.
 // alpha is clamped to (0, 1] since values outside that range make the
 // formula diverge or degenerate into a no-op.
-func NewEMA(alpha float64) *EMA {
+func newEMA(alpha float64) *EMA {
 	if alpha <= 0 {
 		alpha = 0.01
 	}
@@ -558,10 +562,10 @@ func NewEMA(alpha float64) *EMA {
 	return &EMA{alpha: alpha}
 }
 
-// Update feeds a new sample in and returns the updated smoothed value.
+// update feeds a new sample in and returns the updated smoothed value.
 // The first call just seeds the average with the raw sample — there's
 // nothing to blend against yet.
-func (e *EMA) Update(sample float64) float64 {
+func (e *EMA) update(sample float64) float64 {
 	if !e.hasValue {
 		e.value = sample
 		e.hasValue = true
@@ -572,8 +576,10 @@ func (e *EMA) Update(sample float64) float64 {
 	return e.value
 }
 
-// Value returns the current smoothed value without feeding in a new sample.
-func (e *EMA) Value() float64 {
+// current returns the current smoothed value without feeding in a new
+// sample. Named current rather than value to avoid colliding with EMA's own
+// value field — Go doesn't allow a method and field to share a name.
+func (e *EMA) current() float64 {
 	return e.value
 }
 
@@ -588,8 +594,8 @@ type SlidingWindowCounter struct {
 	windowSecs int64
 }
 
-// NewSlidingWindowCounter creates a counter covering the trailing windowSeconds.
-func NewSlidingWindowCounter(windowSeconds int) *SlidingWindowCounter {
+// newSlidingWindowCounter creates a counter covering the trailing windowSeconds.
+func newSlidingWindowCounter(windowSeconds int) *SlidingWindowCounter {
 	return &SlidingWindowCounter{
 		buckets:    make([]int64, windowSeconds),
 		bucketTime: make([]int64, windowSeconds),
@@ -597,9 +603,9 @@ func NewSlidingWindowCounter(windowSeconds int) *SlidingWindowCounter {
 	}
 }
 
-// Record logs one event (an upload, a retrieval — call sites decide which
+// record logs one event (an upload, a retrieval — call sites decide which
 // counter to bump) at the current time.
-func (c *SlidingWindowCounter) Record() {
+func (c *SlidingWindowCounter) record() {
 	now := time.Now().Unix()
 	idx := now % c.windowSecs
 
@@ -615,10 +621,10 @@ func (c *SlidingWindowCounter) Record() {
 	c.buckets[idx]++
 }
 
-// Count returns the number of events recorded within the trailing window,
+// count returns the number of events recorded within the trailing window,
 // as of now. Buckets whose timestamp has aged out of the window are treated
 // as zero without needing to be cleared up front.
-func (c *SlidingWindowCounter) Count() int64 {
+func (c *SlidingWindowCounter) count() int64 {
 	now := time.Now().Unix()
 
 	c.mu.Lock()
@@ -633,15 +639,15 @@ func (c *SlidingWindowCounter) Count() int64 {
 	return total
 }
 
-// Rate returns events per second, averaged over the trailing window.
-func (c *SlidingWindowCounter) Rate() float64 {
-	return float64(c.Count()) / float64(c.windowSecs)
+// rate returns events per second, averaged over the trailing window.
+func (c *SlidingWindowCounter) rate() float64 {
+	return float64(c.count()) / float64(c.windowSecs)
 }
 
 // uploadCounter and retrievalCounter track upload/retrieval throughput over
 // a trailing 30s window, read from startDaemon's tick loop to feed the
 // upload-rate EMA (app_upload_rate).
 var (
-	uploadCounter    = NewSlidingWindowCounter(30)
-	retrievalCounter = NewSlidingWindowCounter(30)
+	uploadCounter    = newSlidingWindowCounter(30)
+	retrievalCounter = newSlidingWindowCounter(30)
 )

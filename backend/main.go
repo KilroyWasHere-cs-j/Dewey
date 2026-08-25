@@ -94,20 +94,20 @@ func main() {
 	Ok("config loaded from " + configFile)
 
 	Section("Plugins")
-	pm := NewPluginManger()
-	defer pm.Close()
-	// Hooks must be registered before LoadPlugins runs — LoadPlugins only
+	pm := newPluginManger()
+	defer pm.close()
+	// Hooks must be registered before loadPlugins runs — loadPlugins only
 	// checks plugin files against already-registered hook names.
-	pm.RegisterHook("OnInit")
-	pm.RegisterHook("OnFilter")
-	pm.RegisterHook("OnTick")
-	pm.RegisterHook("OnUpload")
-	pm.RegisterHook("OnDelete")
-	if err := pm.LoadPlugins(); err != nil {
+	pm.registerHook("OnInit")
+	pm.registerHook("OnFilter")
+	pm.registerHook("OnTick")
+	pm.registerHook("OnUpload")
+	pm.registerHook("OnDelete")
+	if err := pm.loadPlugins(); err != nil {
 		Warn("Failed to load plugins: " + err.Error())
 	}
-	pm.ListPlugins()
-	if _, err := pm.RunByHook("OnInit", DBEntry{}); err != nil {
+	pm.listPlugins()
+	if _, err := pm.runByHook("OnInit", DBEntry{}); err != nil {
 		Warn("Failed to run OnInit: " + err.Error())
 	}
 
@@ -119,11 +119,11 @@ func main() {
 	Ok("daemons summoned")
 
 	Section("Database")
-	dbm, err := NewDatabaseManager()
+	dbm, err := newDatabaseManager()
 	if err != nil {
 		Fatal("Failed to initialize database: " + err.Error())
 	}
-	if err := dbm.Migrate(); err != nil {
+	if err := dbm.migrate(); err != nil {
 		Fatal("Failed to run migrations: " + err.Error())
 	}
 	Ok("database ready")

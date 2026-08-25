@@ -75,7 +75,7 @@ func (v *pluginValidator) checkRead(id *ast.IdentExpr) {
 }
 
 // validatePluginSource parses src and walks it, without executing anything.
-// Called from LoadPlugins before DoFile — a malicious plugin's top-level
+// Called from loadPlugins before DoFile — a malicious plugin's top-level
 // code runs immediately on DoFile, before any hook function is ever
 // called, so this is the only thing that catches it pre-execution.
 func validatePluginSource(src []byte, name string) error {
