@@ -189,17 +189,28 @@ func main() {
 		c.Set("db", dbm)
 		c.Next()
 	})
+
+	// Separate passwords per capability (issue #332) — deleting stored
+	// documents and altering who can reach the server at all are different
+	// enough risks that one shared secret for both didn't make sense.
+	files := core.Group("")
+	files.Use(requirePassword("files"))
 	{
-		core.POST("/upload", uploadFile)
-		core.GET("/files/:filename/:meta", getFile)
-		core.GET("/files", listFiles)
-		core.DELETE("/files/:filename", deleteFile)
-		core.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
-		core.GET("/admin/dumpCache", triggerCacheDump)
-		core.GET("/admin/reloadPlugins", reloadPlugins)
-		core.GET("/machines", listMachines)
-		core.POST("/machines", addMachine)
-		core.DELETE("/machines/:ip", deleteMachine)
+		files.POST("/upload", uploadFile)
+		files.GET("/files/:filename/:meta", getFile)
+		files.GET("/files", listFiles)
+		files.DELETE("/files/:filename", deleteFile)
+		files.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
+		files.GET("/admin/dumpCache", triggerCacheDump)
+		files.GET("/admin/reloadPlugins", reloadPlugins)
+	}
+
+	machines := core.Group("")
+	machines.Use(requirePassword("machines"))
+	{
+		machines.GET("/machines", listMachines)
+		machines.POST("/machines", addMachine)
+		machines.DELETE("/machines/:ip", deleteMachine)
 	}
 
 	// Run BITs in the background so they fire at startup after all init is complete,
