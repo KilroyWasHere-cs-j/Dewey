@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { settings, CHART_THEMES, type Settings } from '$lib/stores/settings.svelte';
 
@@ -65,7 +66,7 @@
 			<div class="flex items-center gap-3">
 				<!-- aria-live keeps this region in the DOM so screen readers catch the transition -->
 				<span aria-live="polite" class="text-sm font-medium text-green-600 dark:text-green-400">
-					{#if saved}Saved ✓{/if}
+					{#if saved}<span transition:fade={{ duration: 200 }}>Saved ✓</span>{/if}
 				</span>
 				<button
 					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
@@ -77,7 +78,7 @@
 		</div>
 
 		<!-- ── Behavior ── -->
-		<section class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+		<section transition:fade={{ duration: 300 }} class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 			<h2 class="text-xs font-semibold tracking-wider uppercase {headingClass}">Behavior</h2>
 
 			<div class="flex items-start justify-between gap-4">
@@ -215,7 +216,7 @@
 		</section>
 
 		<!-- ── Alerts ── -->
-		<section class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+		<section transition:fade={{ duration: 300 }} class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 			<h2 class="text-xs font-semibold tracking-wider uppercase {headingClass}">Alerts</h2>
 
 			<div class="flex items-center justify-between gap-4">
@@ -264,7 +265,7 @@
 		</section>
 
 		<!-- ── Customization ── -->
-		<section class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+		<section transition:fade={{ duration: 300 }} class="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 			<h2 class="text-xs font-semibold tracking-wider uppercase {headingClass}">Customization</h2>
 
 			<div class="flex items-center justify-between">

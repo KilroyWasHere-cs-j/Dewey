@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly, fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import MetricGraph from '$lib/components/MetricGraph.svelte';
 	import MetricBarChart from '$lib/components/MetricBarChart.svelte';
@@ -81,6 +82,7 @@
 	{#if prometheusDown && settings.value.showPrometheusAlert}
 		<div
 			role="alert"
+			transition:fly={{ y: -16, duration: 200 }}
 			class="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 		>
 			<svg
@@ -105,6 +107,7 @@
 	{#if ramAlert}
 		<div
 			role="alert"
+			transition:fly={{ y: -16, duration: 200 }}
 			class="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-950/90 px-5 py-3 text-sm text-amber-300 shadow-lg backdrop-blur"
 		>
 			<span
@@ -118,6 +121,7 @@
 	{#if retrievalAlert}
 		<div
 			role="alert"
+			transition:fly={{ y: -16, duration: 200 }}
 			class="flex items-center gap-3 rounded-lg border border-red-500/40 bg-red-950/90 px-5 py-3 text-sm text-red-300 shadow-lg backdrop-blur"
 		>
 			<span
@@ -139,7 +143,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				System Resources
 			</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-2 gap-4 lg:grid-cols-4">
 				<MetricGraph
 					label="RAM Usage"
 					value={metrics.app_ram_usage ?? 0}
@@ -174,7 +178,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				Application
 			</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5">
 				<MetricGraph
 					label="Files in Store"
 					value={metrics.app_files_in_store ?? 0}
@@ -212,7 +216,7 @@
 		<!-- File I/O -->
 		<section>
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">File I/O</h2>
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<!-- file_io_bytes_total has a single "op" label, so keys are just "read" / "write" -->
 				<MetricBarChart
 					label="I/O Bytes by Operation"
@@ -232,7 +236,7 @@
 		<!-- Activity Counters — includes new deletions and filter loads from #104 -->
 		<section>
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">Activity</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
 				<MetricGraph
 					label="File Copies"
 					value={metrics.app_file_copys ?? 0}
@@ -277,7 +281,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				Upload Activity
 			</h2>
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<MetricBarChart
 					label="Rejections by Reason"
 					data={(metrics.app_upload_rejections_total as Record<string, number>) ?? {}}
@@ -296,7 +300,7 @@
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">
 				Processing Pipeline
 			</h2>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-5 xl:grid-cols-6">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-2 gap-4 lg:grid-cols-5 xl:grid-cols-6">
 				<MetricGraph
 					label="Barcode Successes"
 					value={metrics.app_barcode_successes ?? 0}
@@ -339,7 +343,7 @@
 		<!-- Network -->
 		<section>
 			<h2 class="mb-3 text-xs font-semibold tracking-wider uppercase {headingClass}">Network</h2>
-			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			<div transition:fade={{ duration: 300 }} class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<MetricGraph
 					label="Network Receive"
 					value={round2((metrics.process_network_receive_bytes_total ?? 0) / 1024 / 1024)}
