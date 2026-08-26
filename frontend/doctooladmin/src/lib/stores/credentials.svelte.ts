@@ -15,11 +15,21 @@ export function createCredentialsStore() {
 			return filesPassword;
 		},
 
+		// Clears the cached value so the next getFilesPassword() call prompts
+		// again instead of reusing a wrong or cancelled ('') attempt forever.
+		resetFilesPassword() {
+			filesPassword = null;
+		},
+
 		getMachinesPassword(): string {
 			if (machinesPassword === null) {
 				machinesPassword = window.prompt('Machine management password:') ?? '';
 			}
 			return machinesPassword;
+		},
+
+		resetMachinesPassword() {
+			machinesPassword = null;
 		}
 	};
 }

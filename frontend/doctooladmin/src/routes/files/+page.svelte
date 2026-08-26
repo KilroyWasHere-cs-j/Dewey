@@ -22,6 +22,13 @@
 	let listLoading = $state(true);
 	let listError = $state<string | null>(null);
 
+	// Gates the whole page's content, not just the file list — set true only
+	// once loadFiles() actually succeeds against the backend, so a cancelled
+	// or wrong password (issue #345) never renders anything but the prompt
+	// screen below (previously the full page rendered regardless of whether
+	// the fetch behind it succeeded).
+	let authorized = $state(false);
+
 	// ── Search ────────────────────────────────────────────────────────────────
 
 	let searchQuery = $state('');
@@ -43,6 +50,7 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			files = data.files ?? [];
+			authorized = true;
 		} catch (e) {
 			listError = String(e);
 		} finally {
@@ -51,6 +59,13 @@
 	}
 
 	onMount(loadFiles);
+
+	// Clears the cached (wrong/cancelled) password so the prompt reappears,
+	// then retries — used by the "Enter Password" button on the blocked screen.
+	function retryAuth() {
+		credentials.resetFilesPassword();
+		loadFiles();
+	}
 
 	// ── Metadata expansion ────────────────────────────────────────────────────
 
@@ -237,6 +252,28 @@
 
 <AppShell>
 	{#snippet children({ headingClass })}
+	{#if !authorized}
+		<!-- Nothing below renders until loadFiles() succeeds with the correct
+		     password — a wrong or cancelled attempt lands here instead (#345). -->
+		<div
+			class="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-12 text-center shadow-sm dark:bg-gray-800"
+		>
+			<h1 class="text-lg font-semibold text-gray-800 dark:text-white">Password Required</h1>
+			<p class="text-sm text-gray-500 dark:text-gray-400">
+				{listError
+					? 'Incorrect password.'
+					: listLoading
+						? 'Checking…'
+						: 'Enter the files management password to continue.'}
+			</p>
+			<button
+				class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+				onclick={retryAuth}
+			>
+				Enter Password
+			</button>
+		</div>
+	{:else}
 		<!-- ── Header ─────────────────────────────────────────────────────── -->
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold text-gray-800 dark:text-white">File Management</h1>
@@ -506,5 +543,6 @@
 				</div>
 			{/if}
 		</section>
+	{/if}
 	{/snippet}
 </AppShell>

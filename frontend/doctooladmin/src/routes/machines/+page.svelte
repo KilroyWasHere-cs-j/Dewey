@@ -16,6 +16,12 @@
 	let listLoading = $state(true);
 	let listError = $state<string | null>(null);
 
+	// Gates the whole page's content, not just the machine list — set true
+	// only once loadMachines() actually succeeds against the backend, so a
+	// cancelled or wrong password (issue #345) never renders anything but
+	// the prompt screen below.
+	let authorized = $state(false);
+
 	async function loadMachines() {
 		listLoading = true;
 		listError = null;
@@ -26,6 +32,7 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			machines = data.machines ?? [];
+			authorized = true;
 		} catch (e) {
 			listError = String(e);
 		} finally {
@@ -34,6 +41,13 @@
 	}
 
 	onMount(loadMachines);
+
+	// Clears the cached (wrong/cancelled) password so the prompt reappears,
+	// then retries — used by the "Enter Password" button on the blocked screen.
+	function retryAuth() {
+		credentials.resetMachinesPassword();
+		loadMachines();
+	}
 
 	// ── Add ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +125,28 @@
 
 <AppShell>
 	{#snippet children({ headingClass })}
+	{#if !authorized}
+		<!-- Nothing below renders until loadMachines() succeeds with the correct
+		     password — a wrong or cancelled attempt lands here instead (#345). -->
+		<div
+			class="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-12 text-center shadow-sm dark:bg-gray-800"
+		>
+			<h1 class="text-lg font-semibold text-gray-800 dark:text-white">Password Required</h1>
+			<p class="text-sm text-gray-500 dark:text-gray-400">
+				{listError
+					? 'Incorrect password.'
+					: listLoading
+						? 'Checking…'
+						: 'Enter the machine management password to continue.'}
+			</p>
+			<button
+				class="rounded-lg bg-gray-900 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+				onclick={retryAuth}
+			>
+				Enter Password
+			</button>
+		</div>
+	{:else}
 		<!-- ── Header ─────────────────────────────────────────────────────── -->
 		<div class="flex items-center justify-between">
 			<h1 class="text-2xl font-bold text-gray-800 dark:text-white">Known Machines</h1>
@@ -298,5 +334,6 @@
 				</div>
 			{/if}
 		</section>
+	{/if}
 	{/snippet}
 </AppShell>
