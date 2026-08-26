@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Added for convenience — sweeps repo build artifacts, local test/dev
+# leftovers, and unused podman resources in one pass instead of doing each
+# by hand.
+
 # Exit immediately if a command exits with a non-zero status
 set -e
 
