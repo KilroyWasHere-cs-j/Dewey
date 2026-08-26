@@ -201,9 +201,9 @@
 				     ever-increasing uptime counter don't have a meaningful trend
 				     to plot (issue #279). -->
 				<StatTile
-					label="Next Tick"
-					value={round2((metrics.app_time_til_next_tick ?? 0) / 60)}
-					unit="min"
+					label="Dumping the cache in"
+					value={metrics.app_time_til_next_tick ?? 0}
+					countdown
 				/>
 				<StatTile
 					label="Uptime"
