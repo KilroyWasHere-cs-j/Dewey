@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
 
@@ -49,6 +50,22 @@
 		loadMachines();
 	}
 
+	// ── Filter ────────────────────────────────────────────────────────────────
+
+	type RecencyFilter = 'all' | '24h' | '7d' | 'never';
+	let recencyFilter = $state<RecencyFilter>('all');
+
+	// No "online" concept exists anywhere in this app (checked backend + frontend) —
+	// these are rolling windows off last_seen_at, not a real presence signal.
+	let filteredMachines = $derived.by(() => {
+		if (recencyFilter === 'all') return machines;
+		if (recencyFilter === 'never') return machines.filter((m) => !m.last_seen_at);
+
+		const windowMs = (recencyFilter === '24h' ? 24 : 7 * 24) * 60 * 60 * 1000;
+		const cutoff = Date.now() - windowMs;
+		return machines.filter((m) => m.last_seen_at && new Date(m.last_seen_at).getTime() >= cutoff);
+	});
+
 	// ── Add ───────────────────────────────────────────────────────────────────
 
 	let addOpen = $state(false);
@@ -94,6 +111,20 @@
 	let pendingRemove = $state<string | null>(null);
 	let removing = $state(false);
 	let removeError = $state<string | null>(null);
+
+	// IP of the row whose actions menu is currently open, or null if none are
+	let openActionsFor = $state<string | null>(null);
+
+	// Closes the open actions menu on any click outside it, since the trigger
+	// button stops propagation to avoid immediately re-closing its own menu
+	$effect(() => {
+		if (openActionsFor === null) return;
+		function handleWindowClick() {
+			openActionsFor = null;
+		}
+		window.addEventListener('click', handleWindowClick);
+		return () => window.removeEventListener('click', handleWindowClick);
+	});
 
 	async function confirmRemove() {
 		if (!pendingRemove) return;
@@ -244,10 +275,25 @@
 					Registered Machines
 				</h2>
 
+				<select
+					aria-label="Filter by last seen"
+					bind:value={recencyFilter}
+					class="ml-auto rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+				>
+					<option value="all">All machines</option>
+					<option value="24h">Seen in last 24h</option>
+					<option value="7d">Seen in last 7 days</option>
+					<option value="never">Never seen</option>
+				</select>
+
 				{#if !listLoading}
 					<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
-						{machines.length}
-						{machines.length === 1 ? 'machine' : 'machines'}
+						{#if recencyFilter !== 'all'}
+							{filteredMachines.length} of {machines.length}
+						{:else}
+							{machines.length}
+							{machines.length === 1 ? 'machine' : 'machines'}
+						{/if}
 					</span>
 				{/if}
 			</div>
@@ -260,6 +306,10 @@
 				</p>
 			{:else if machines.length === 0}
 				<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">No machines registered.</p>
+			{:else if filteredMachines.length === 0}
+				<p class="px-6 py-8 text-sm text-gray-500 dark:text-gray-400">
+					No machines match this filter.
+				</p>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
@@ -277,7 +327,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each machines as machine (machine.ip)}
+							{#each filteredMachines as machine (machine.ip)}
 								<tr
 									class="border-b border-gray-50 hover:bg-gray-50/50 dark:border-gray-700/50 dark:hover:bg-gray-700/20"
 								>
@@ -292,38 +342,75 @@
 									<td class="px-6 py-3">
 										<div class="flex items-center justify-end gap-2">
 											{#if pendingRemove === machine.ip}
-												<span class="text-xs text-gray-500 dark:text-gray-400">Are you sure?</span>
-												<button
-													disabled={removing}
-													class="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-													onclick={confirmRemove}
-												>
-													{removing ? 'Removing…' : 'Confirm'}
-												</button>
-												<button
-													class="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-													onclick={() => {
-														pendingRemove = null;
-														removeError = null;
-													}}
-												>
-													Cancel
-												</button>
-												{#if removeError}
-													<span role="alert" class="text-xs text-red-600 dark:text-red-400"
-														>{removeError}</span
+												<span class="flex items-center gap-2" transition:fade={{ duration: 150 }}>
+													<span class="text-xs text-gray-500 dark:text-gray-400"
+														>Are you sure?</span
 													>
-												{/if}
+													<button
+														disabled={removing}
+														class="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
+														onclick={confirmRemove}
+													>
+														{removing ? 'Removing…' : 'Confirm'}
+													</button>
+													<button
+														class="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+														onclick={() => {
+															pendingRemove = null;
+															removeError = null;
+															openActionsFor = null;
+														}}
+													>
+														Cancel
+													</button>
+													{#if removeError}
+														<span role="alert" class="text-xs text-red-600 dark:text-red-400"
+															>{removeError}</span
+														>
+													{/if}
+												</span>
 											{:else}
-												<button
-													class="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-													onclick={() => {
-														pendingRemove = machine.ip;
-														removeError = null;
-													}}
-												>
-													Remove
-												</button>
+												<div class="relative">
+													<button
+														aria-label="Actions for {machine.label}"
+														aria-haspopup="menu"
+														aria-expanded={openActionsFor === machine.ip}
+														class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-700"
+														onclick={(e) => {
+															e.stopPropagation();
+															openActionsFor = openActionsFor === machine.ip ? null : machine.ip;
+														}}
+													>
+														<svg
+															aria-hidden="true"
+															class="h-4 w-4"
+															viewBox="0 0 24 24"
+															fill="currentColor"
+														>
+															<path
+																d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+															/>
+														</svg>
+													</button>
+													{#if openActionsFor === machine.ip}
+														<div
+															role="menu"
+															transition:fade={{ duration: 100 }}
+															class="absolute top-full right-0 z-10 mt-1 w-32 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+														>
+															<button
+																role="menuitem"
+																class="block w-full px-3 py-1.5 text-left text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+																onclick={() => {
+																	pendingRemove = machine.ip;
+																	removeError = null;
+																}}
+															>
+																Remove
+															</button>
+														</div>
+													{/if}
+												</div>
 											{/if}
 										</div>
 									</td>
