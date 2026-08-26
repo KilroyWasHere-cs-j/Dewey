@@ -53,11 +53,21 @@ export function createCredentialsStore() {
 			return filesPassword;
 		},
 
+		// Clears the cached value so the next getFilesPassword() call prompts
+		// again instead of reusing a wrong or cancelled ('') attempt forever.
+		resetFilesPassword() {
+			filesPassword = null;
+		},
+
 		async getMachinesPassword(): Promise<string> {
 			if (machinesPassword === null) {
 				machinesPassword = await promptForPassword('Machine management password');
 			}
 			return machinesPassword;
+		},
+
+		resetMachinesPassword() {
+			machinesPassword = null;
 		}
 	};
 }
