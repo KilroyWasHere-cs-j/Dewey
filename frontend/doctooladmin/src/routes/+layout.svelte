@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { settings } from '$lib/stores/settings.svelte';
+	import PasswordModal from '$lib/components/PasswordModal.svelte';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 
@@ -28,3 +29,5 @@
 </a>
 
 {@render children()}
+
+<PasswordModal />
