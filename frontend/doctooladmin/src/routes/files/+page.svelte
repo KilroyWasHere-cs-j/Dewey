@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { slide, fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
 
@@ -264,7 +265,10 @@
 
 		<!-- ── Upload Panel ───────────────────────────────────────────────── -->
 		{#if uploadOpen}
-			<section class="rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section
+				transition:slide={{ duration: 200 }}
+				class="rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800"
+			>
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">
 					Upload New File
 				</h2>
@@ -435,28 +439,34 @@
 
 											<!-- Delete: request confirmation first -->
 											{#if pendingDelete === filename}
-												<span class="text-xs text-gray-500 dark:text-gray-400">Are you sure?</span>
-												<button
-													disabled={deleting}
-													class="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
-													onclick={confirmDelete}
+												<span
+													class="flex items-center gap-2"
+													transition:fade={{ duration: 150 }}
 												>
-													{deleting ? 'Deleting…' : 'Confirm'}
-												</button>
-												<button
-													class="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-													onclick={() => {
-														pendingDelete = null;
-														deleteError = null;
-													}}
-												>
-													Cancel
-												</button>
-												{#if deleteError}
-													<span role="alert" class="text-xs text-red-600 dark:text-red-400"
-														>{deleteError}</span
+													<span class="text-xs text-gray-500 dark:text-gray-400">Are you sure?</span
 													>
-												{/if}
+													<button
+														disabled={deleting}
+														class="rounded-md px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-900/20"
+														onclick={confirmDelete}
+													>
+														{deleting ? 'Deleting…' : 'Confirm'}
+													</button>
+													<button
+														class="rounded-md px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+														onclick={() => {
+															pendingDelete = null;
+															deleteError = null;
+														}}
+													>
+														Cancel
+													</button>
+													{#if deleteError}
+														<span role="alert" class="text-xs text-red-600 dark:text-red-400"
+															>{deleteError}</span
+														>
+													{/if}
+												</span>
 											{:else}
 												<button
 													class="rounded-md px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"

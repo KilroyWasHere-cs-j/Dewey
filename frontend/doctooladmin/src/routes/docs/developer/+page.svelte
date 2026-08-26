@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Topbar from '$lib/components/Topbar.svelte';
 	import { settings, ACCENT } from '$lib/stores/settings.svelte';
@@ -66,7 +67,7 @@
 			</div>
 
 			<!-- ── Overview ── -->
-			<section id="overview" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="overview" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Overview</h2>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					Dewey is a backend document management and file sorting service. It exposes a REST API for
@@ -81,7 +82,7 @@
 			</section>
 
 			<!-- ── Architecture ── -->
-			<section id="architecture" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="architecture" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Architecture</h2>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">File Ingest Pipeline</h3>
@@ -109,7 +110,7 @@
 			</section>
 
 			<!-- ── Tech Stack ── -->
-			<section id="stack" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="stack" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Tech Stack</h2>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<div>
@@ -141,7 +142,7 @@
 			</section>
 
 			<!-- ── API Reference ── -->
-			<section id="api" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="api" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">API Reference</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					All endpoints are served on port <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">8080</code>.
@@ -249,7 +250,7 @@
 			</section>
 
 			<!-- ── CLI Tool ── -->
-			<section id="cli" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="cli" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">CLI Tool</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">cli/</code> is a small standalone Go
@@ -318,7 +319,7 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
 			</section>
 
 			<!-- ── MCP Server ── -->
-			<section id="mcp" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="mcp" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">MCP Server</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-mcp/</code> is a standalone Go
@@ -403,7 +404,7 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-mcp</code></pre>
 			</section>
 
 			<!-- ── Testing Tools ── -->
-			<section id="testing" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="testing" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Testing Tools</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/testing_tooling/</code> holds the
@@ -528,7 +529,7 @@ podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh</code></pre>
 			</section>
 
 			<!-- ── Access Control ── -->
-			<section id="access" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="access" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Access Control</h2>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					Dewey runs on a closed network of machines talking to each other — no route is reachable
@@ -583,7 +584,7 @@ podman exec cross-doc-tool-dev ./testing_tooling/soak_test.sh</code></pre>
 			</section>
 
 			<!-- ── Plugin System ── -->
-			<section id="plugins" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="plugins" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Plugin System</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Plugins are Lua scripts dropped into <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./plugins/</code>.
@@ -658,7 +659,7 @@ end</code></pre>
 			</section>
 
 			<!-- ── Database ── -->
-			<section id="database" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="database" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Database</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					MySQL. Connection string is read from the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">DB_DSN</code> environment variable.
@@ -770,7 +771,7 @@ end</code></pre>
 			</section>
 
 			<!-- ── Daemon ── -->
-			<section id="daemon" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="daemon" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Daemon</h2>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					A background goroutine (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">startDaemon</code>) fires every
@@ -803,7 +804,7 @@ end</code></pre>
 			</section>
 
 			<!-- ── Logging ── -->
-			<section id="logging" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="logging" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Logging</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					A custom logger in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">log.go</code> writes to both the terminal and a
@@ -839,7 +840,7 @@ end</code></pre>
 			</section>
 
 			<!-- ── Configuration ── -->
-			<section id="config" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="config" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Configuration</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Compile-time defaults live in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">consts.go</code>.
@@ -898,7 +899,7 @@ end</code></pre>
 			</section>
 
 			<!-- ── Deployment ── -->
-			<section id="deployment" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="deployment" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Deployment</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					All services run in a single Podman Pod. The <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code>

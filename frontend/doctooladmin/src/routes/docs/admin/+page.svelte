@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Topbar from '$lib/components/Topbar.svelte';
 	import { settings, ACCENT } from '$lib/stores/settings.svelte';
@@ -60,7 +61,7 @@
 			</div>
 
 			<!-- ── Overview ── -->
-			<section id="overview" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="overview" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Overview</h2>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					Dewey is a document management and file sorting system. When a file is submitted, Dewey
@@ -89,7 +90,7 @@
 			</section>
 
 			<!-- ── Uploading Files ── -->
-			<section id="uploading" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="uploading" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Uploading Files</h2>
 
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
@@ -138,7 +139,7 @@
 			</section>
 
 			<!-- ── Retrieving Files ── -->
-			<section id="retrieving" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="retrieving" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Retrieving Files</h2>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">List all files</h3>
@@ -166,7 +167,7 @@
 			</section>
 
 			<!-- ── Known Machines ── -->
-			<section id="network" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="network" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Known Machines</h2>
 				<p class="mb-3 text-sm text-gray-600 dark:text-gray-300">
 					Dewey only accepts requests from machines whose IP address has been registered ahead of
@@ -187,7 +188,7 @@
 			</section>
 
 			<!-- ── Analytics ── -->
-			<section id="analytics" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="analytics" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Analytics</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					The Analytics page shows live metrics pulled from the backend. They refresh at the interval
@@ -221,7 +222,7 @@
 			</section>
 
 			<!-- ── Settings ── -->
-			<section id="settings" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="settings" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Settings</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Settings are accessed via the sidebar. They are saved immediately to your browser's local
@@ -274,7 +275,7 @@
 			</section>
 
 			<!-- ── System Config ── -->
-			<section id="system" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="system" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">System Configuration</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					The System section of Settings controls backend behaviour. Changes here are sent to the
@@ -303,7 +304,7 @@
 			</section>
 
 			<!-- ── Troubleshooting ── -->
-			<section id="troubleshooting" class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+			<section id="troubleshooting" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Troubleshooting</h2>
 
 				<div class="space-y-5">
