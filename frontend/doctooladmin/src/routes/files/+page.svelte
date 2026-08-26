@@ -46,7 +46,7 @@
 		listError = null;
 		try {
 			const res = await fetch('/api/files', {
-				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
@@ -85,7 +85,7 @@
 		metaState = { ...metaState, [filename]: 'loading' };
 		try {
 			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=true`, {
-				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			metaState = { ...metaState, [filename]: await res.json() };
@@ -106,7 +106,7 @@
 		downloadError = null;
 		try {
 			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
-				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const blob = await res.blob();
@@ -135,7 +135,7 @@
 		try {
 			const res = await fetch(`/api/files/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
-				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			files = files.filter((f) => f !== target);
@@ -219,7 +219,7 @@
 			const res = await fetch('/api/files', {
 				method: 'POST',
 				body: form,
-				headers: { 'X-Dewey-Password': credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			// Body-size-limit rejections (and similar) return a non-JSON response,
 			// so .json() must be guarded rather than called unconditionally.

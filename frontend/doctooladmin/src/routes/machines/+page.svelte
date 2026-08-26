@@ -28,7 +28,7 @@
 		listError = null;
 		try {
 			const res = await fetch('/api/machines', {
-				headers: { 'X-Dewey-Password': credentials.getMachinesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
@@ -87,7 +87,7 @@
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-Dewey-Password': credentials.getMachinesPassword()
+					'X-Dewey-Password': await credentials.getMachinesPassword()
 				},
 				body: JSON.stringify(addFields)
 			});
@@ -134,7 +134,7 @@
 		try {
 			const res = await fetch(`/api/machines/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
-				headers: { 'X-Dewey-Password': credentials.getMachinesPassword() }
+				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			machines = machines.filter((m) => m.ip !== target);
