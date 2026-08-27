@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -130,22 +129,13 @@ func getFile(c *gin.Context) {
 func listFiles(c *gin.Context) {
 	Debug("listFiles")
 
-	entries, err := os.ReadDir(uploadDir)
+	_, filenames, err := listFilesInDir(fileSystemBaseDir)
 	if err != nil {
-		Warn("failed to read upload dir: " + err.Error())
+		Warn("failed to list files: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to read upload directory",
+			"error": "Unable to list files",
 		})
 		return
-	}
-
-	filenames := make([]string, 0, len(entries))
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		filenames = append(filenames, entry.Name())
 	}
 
 	Debug("files found: " + fmt.Sprintf("%d", len(filenames)))
