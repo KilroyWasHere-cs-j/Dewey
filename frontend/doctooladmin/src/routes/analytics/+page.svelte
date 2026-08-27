@@ -6,22 +6,50 @@
 	import MetricBarChart from '$lib/components/MetricBarChart.svelte';
 	import StatTile from '$lib/components/StatTile.svelte';
 	import { settings, CHART_THEMES } from '$lib/stores/settings.svelte';
+	import { toasts } from '$lib/stores/toasts.svelte';
 	import type { AppMetrics } from '$lib/types';
 
 	let metrics = $state<Partial<AppMetrics>>({});
-	let prometheusDown = $state(false);
+	// 'rateLimited' (backend's own rate limiter returned 429) is kept distinct
+	// from 'unreachable' (network failure or any other non-ok status) so the
+	// banner/toast wording doesn't claim a real outage when it's just being
+	// throttled (issue #362).
+	let metricsStatus = $state<'ok' | 'rateLimited' | 'unreachable'>('ok');
 
 	async function refreshMetrics() {
+		const previousStatus = metricsStatus;
+
 		try {
 			const res = await fetch('/api/metrics');
 			if (res.ok) {
 				metrics = await res.json();
-				prometheusDown = false;
+				metricsStatus = 'ok';
+			} else if (res.status === 429) {
+				metricsStatus = 'rateLimited';
 			} else {
-				prometheusDown = true;
+				metricsStatus = 'unreachable';
 			}
 		} catch {
-			prometheusDown = true;
+			metricsStatus = 'unreachable';
+		}
+
+		// Only toast on a state change, not every poll tick — this fires every
+		// pollIntervalMs (default 5s), so toasting unconditionally would spam
+		// the same message over and over for as long as the condition holds.
+		if (metricsStatus !== previousStatus && metricsStatus !== 'ok') {
+			toasts.push(
+				metricsStatus === 'rateLimited'
+					? {
+							kind: 'warning',
+							title: 'Metrics polling rate-limited',
+							detail: 'The backend is throttling requests — metrics will resume shortly.'
+						}
+					: {
+							kind: 'error',
+							title: 'Prometheus unreachable',
+							detail: 'Metrics may be stale or unavailable until the connection recovers.'
+						}
+			);
 		}
 	}
 
@@ -78,8 +106,8 @@
 <!-- Alert banners — stacked via flex column + gap so the browser handles spacing
      instead of hand-computed margin offsets (issue #242). -->
 <div class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
-	<!-- Prometheus unreachable banner (toggled in settings) -->
-	{#if prometheusDown && settings.value.showPrometheusAlert}
+	<!-- Prometheus unreachable / rate-limited banner (toggled in settings) -->
+	{#if metricsStatus !== 'ok' && settings.value.showPrometheusAlert}
 		<div
 			role="alert"
 			transition:fly={{ y: -16, duration: 200 }}
@@ -99,7 +127,11 @@
 					d="M12 9v3m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
 				/>
 			</svg>
-			<span>Prometheus is unreachable — metrics may be stale or unavailable</span>
+			<span>
+				{metricsStatus === 'rateLimited'
+					? 'Metrics polling is being rate-limited — retrying shortly'
+					: 'Prometheus is unreachable — metrics may be stale or unavailable'}
+			</span>
 		</div>
 	{/if}
 

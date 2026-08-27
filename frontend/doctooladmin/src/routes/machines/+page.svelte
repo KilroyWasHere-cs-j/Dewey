@@ -3,6 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
+	import { toasts } from '$lib/stores/toasts.svelte';
 
 	interface Machine {
 		ip: string;
@@ -43,6 +44,7 @@
 			backendVerified = true;
 		} catch (e) {
 			listError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to load machines', detail: listError });
 		} finally {
 			listLoading = false;
 		}
@@ -101,6 +103,7 @@
 			const body = await res.json();
 			if (!res.ok) {
 				addError = body.error ?? `HTTP ${res.status}`;
+				toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
 				return;
 			}
 			addFields = { ip: '', label: '' };
@@ -108,6 +111,7 @@
 			await loadMachines();
 		} catch (e) {
 			addError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
 		} finally {
 			adding = false;
 		}
@@ -151,6 +155,7 @@
 			// matching addError/listError elsewhere on this page instead of a
 			// blocking native alert().
 			removeError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to remove machine', detail: removeError });
 		} finally {
 			removing = false;
 		}
