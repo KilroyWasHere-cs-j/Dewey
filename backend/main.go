@@ -37,7 +37,13 @@ func resolveClientIP(remoteAddr string) (netip.Addr, error) {
 // logConnections gates every route behind the known_machines allowlist and
 // records each authorized request — this is both the access control and the
 // "who and when" audit trail for the closed network this server runs on.
-func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
+//
+// trackActivity controls whether the request also counts toward
+// ActiveUserCount() (issue #309). /metrics itself sits behind this same
+// middleware, so without this flag every scrape of /metrics counts its own
+// in-flight connection — guaranteeing ActiveUserCount() never reads below 1
+// and masking whether any other request is actually concurrent with it.
+func logConnections(dbm *DatabaseManager, trackActivity bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip, err := resolveClientIP(c.Request.RemoteAddr)
 		if err != nil {
@@ -58,8 +64,10 @@ func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
 		// known_machines the way 127.0.0.1/::1 are wouldn't generalize.
 		if ip.IsLinkLocalUnicast() {
 			Debug(fmt.Sprintf("localhost (link-local %s) -> %s %s", ipStr, c.Request.Method, c.FullPath()))
-			stop := trackUser(ipStr)
-			defer stop()
+			if trackActivity {
+				stop := trackUser(ipStr)
+				defer stop()
+			}
 			c.Next()
 			return
 		}
@@ -76,8 +84,10 @@ func logConnections(dbm *DatabaseManager) gin.HandlerFunc {
 			Warn("failed to update last_seen_at for " + ipStr + ": " + err.Error())
 		}
 
-		stop := trackUser(ipStr)
-		defer stop()
+		if trackActivity {
+			stop := trackUser(ipStr)
+			defer stop()
+		}
 
 		c.Next()
 	}
@@ -168,22 +178,30 @@ func main() {
 
 	// Routes with plugin context
 	base := r.Group("/")
-	base.Use(logConnections(dbm))
+	base.Use(logConnections(dbm, true))
 	{
 		base.GET("/", index)
 		base.GET("/version", versionInfo)
-		base.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
+	}
+
+	// Separate group so /metrics stays behind the same known_machines
+	// allowlist as everything else, without its own scrape counting toward
+	// ActiveUserCount() (issue #309) the way it would under the group above.
+	metrics := r.Group("/")
+	metrics.Use(logConnections(dbm, false))
+	{
+		metrics.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
 	}
 
 	admin := r.Group("/admin")
-	admin.Use(logConnections(dbm))
+	admin.Use(logConnections(dbm, true))
 	{
 		admin.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
 		admin.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
 	}
 
 	core := r.Group("/core")
-	core.Use(logConnections(dbm))
+	core.Use(logConnections(dbm, true))
 	core.Use(func(c *gin.Context) {
 		c.Set("plugins", pm)
 		c.Set("db", dbm)
