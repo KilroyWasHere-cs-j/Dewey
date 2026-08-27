@@ -10,9 +10,13 @@ export const GET: RequestHandler = async ({ params, url, request }) => {
 	const filename = params.filename;
 
 	try {
-		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}/${meta}`, {
-			headers: forwardAuthHeader(request)
-		});
+		// meta is a query param on the backend now, not a path segment — a path
+		// segment there would collide with filenames that contain their own "/"
+		// (category-nested paths from listFiles, e.g. "Swedish/image/foo.png").
+		const res = await fetch(
+			`${backendUrl()}/core/files/${encodeURIComponent(filename)}?meta=${meta}`,
+			{ headers: forwardAuthHeader(request) }
+		);
 
 		if (!res.ok) {
 			return json({ error: 'File not found' }, { status: res.status });

@@ -197,9 +197,9 @@ func main() {
 	files.Use(requirePassword("files"))
 	{
 		files.POST("/upload", uploadFile)
-		files.GET("/files/:filename/:meta", getFile)
+		files.GET("/files/*filename", getFile)
 		files.GET("/files", listFiles)
-		files.DELETE("/files/:filename", deleteFile)
+		files.DELETE("/files/*filename", deleteFile)
 		files.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
 		files.GET("/admin/dumpCache", triggerCacheDump)
 		files.GET("/admin/reloadPlugins", reloadPlugins)
