@@ -17,11 +17,18 @@
 	let listLoading = $state(true);
 	let listError = $state<string | null>(null);
 
-	// Gates the whole page's content, not just the machine list — set true
-	// only once loadMachines() actually succeeds against the backend, so a
-	// cancelled or wrong password (issue #345) never renders anything but
-	// the prompt screen below.
-	let authorized = $state(false);
+	// Set true only once loadMachines() actually succeeds against the
+	// backend, so a cancelled or wrong password (issue #345) never renders
+	// anything but the prompt screen below. Doesn't by itself mean the page
+	// should stay unlocked forever, though — see `authorized` below.
+	let backendVerified = $state(false);
+
+	// Gates the whole page's content, not just the machine list. Re-derives
+	// off the credentials store rather than staying a one-way latch, so an
+	// idle timeout (issue #351) that clears the cached password immediately
+	// re-locks this page behind the prompt screen, instead of leaving stale
+	// content visible until the next manual action happens to notice.
+	let authorized = $derived(backendVerified && credentials.hasMachinesPassword);
 
 	async function loadMachines() {
 		listLoading = true;
@@ -33,7 +40,7 @@
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = await res.json();
 			machines = data.machines ?? [];
-			authorized = true;
+			backendVerified = true;
 		} catch (e) {
 			listError = String(e);
 		} finally {
