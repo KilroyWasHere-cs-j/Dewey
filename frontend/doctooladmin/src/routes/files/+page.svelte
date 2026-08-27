@@ -3,6 +3,7 @@
 	import { slide, fade } from 'svelte/transition';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
+	import { toasts } from '$lib/stores/toasts.svelte';
 
 	interface MetaData {
 		claim_number: string;
@@ -68,6 +69,7 @@
 			backendVerified = true;
 		} catch (e) {
 			listError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to load files', detail: listError });
 		} finally {
 			listLoading = false;
 		}
@@ -140,6 +142,7 @@
 			URL.revokeObjectURL(url);
 		} catch (e) {
 			downloadError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to download file', detail: downloadError });
 		}
 	}
 
@@ -179,6 +182,7 @@
 			// matching uploadError/listError elsewhere on this page instead of a
 			// blocking native alert().
 			deleteError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to delete file', detail: deleteError });
 		} finally {
 			deleting = false;
 		}
@@ -258,10 +262,12 @@
 				body = await res.json();
 			} catch {
 				uploadError = `HTTP ${res.status}: server returned a non-JSON response`;
+				toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 				return;
 			}
 			if (!res.ok) {
 				uploadError = body.error ?? `HTTP ${res.status}`;
+				toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 				return;
 			}
 			const uploadedFilename = body.filename ?? 'File uploaded successfully.';
@@ -271,6 +277,7 @@
 			await loadFiles();
 		} catch (e) {
 			uploadError = String(e);
+			toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 		} finally {
 			uploading = false;
 		}
