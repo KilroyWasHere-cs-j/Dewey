@@ -23,12 +23,18 @@
 	let listLoading = $state(true);
 	let listError = $state<string | null>(null);
 
-	// Gates the whole page's content, not just the file list — set true only
-	// once loadFiles() actually succeeds against the backend, so a cancelled
-	// or wrong password (issue #345) never renders anything but the prompt
-	// screen below (previously the full page rendered regardless of whether
-	// the fetch behind it succeeded).
-	let authorized = $state(false);
+	// Set true only once loadFiles() actually succeeds against the backend,
+	// so a cancelled or wrong password (issue #345) never renders anything
+	// but the prompt screen below. Doesn't by itself mean the page should
+	// stay unlocked forever, though — see `authorized` below.
+	let backendVerified = $state(false);
+
+	// Gates the whole page's content, not just the file list. Re-derives off
+	// the credentials store rather than staying a one-way latch, so an idle
+	// timeout (issue #351) that clears the cached password immediately
+	// re-locks this page behind the prompt screen, instead of leaving stale
+	// content visible until the next manual action happens to notice.
+	let authorized = $derived(backendVerified && credentials.hasFilesPassword);
 
 	// ── Search ────────────────────────────────────────────────────────────────
 
@@ -59,7 +65,7 @@
 			}
 			const data = await res.json();
 			files = data.files ?? [];
-			authorized = true;
+			backendVerified = true;
 		} catch (e) {
 			listError = String(e);
 		} finally {

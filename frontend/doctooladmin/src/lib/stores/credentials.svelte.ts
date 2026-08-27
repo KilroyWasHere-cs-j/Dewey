@@ -15,9 +15,39 @@ export interface PasswordRequest {
 	cancel: () => void;
 }
 
+// Issue #351: an authenticated password shouldn't live forever just because
+// the tab stays open. One shared timer covers both passwords rather than a
+// timer per password — activity anywhere in the app (not just the page
+// currently gated by a given password) counts as "still here," so working
+// on Files doesn't let a Machines password quietly expire in the background.
+const IDLE_TIMEOUT_MS = 90_000;
+
 export function createCredentialsStore() {
 	let filesPassword = $state<string | null>(null);
 	let machinesPassword = $state<string | null>(null);
+
+	let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+	// Re-locks both pages by clearing their cached passwords — clearing an
+	// already-null value is a harmless no-op, so this doesn't need to know
+	// which password(s) are actually set.
+	function expirePasswords() {
+		filesPassword = null;
+		machinesPassword = null;
+	}
+
+	function resetIdleTimer() {
+		clearTimeout(idleTimer);
+		idleTimer = setTimeout(expirePasswords, IDLE_TIMEOUT_MS);
+	}
+
+	// Guard for SSR — this module is imported during server rendering too,
+	// where `document` doesn't exist.
+	if (typeof document !== 'undefined') {
+		document.addEventListener('mousemove', resetIdleTimer);
+		document.addEventListener('keydown', resetIdleTimer);
+		resetIdleTimer();
+	}
 
 	// The modal (mounted once, in +layout.svelte) reads this to know what to
 	// show; null means no prompt is currently pending.
@@ -44,6 +74,18 @@ export function createCredentialsStore() {
 	return {
 		get request() {
 			return request;
+		},
+
+		// Reactive presence checks — pages derive their "authorized" state from
+		// these (rather than latching a one-time success flag) so an idle-timer
+		// expiry re-locks an already-authorized page immediately, not just on
+		// the next manual retry.
+		get hasFilesPassword() {
+			return filesPassword !== null;
+		},
+
+		get hasMachinesPassword() {
+			return machinesPassword !== null;
 		},
 
 		async getFilesPassword(): Promise<string> {
