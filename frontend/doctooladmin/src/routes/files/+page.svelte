@@ -48,7 +48,15 @@
 			const res = await fetch('/api/files', {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Prefer the backend's own error message over a bare status code
+				let message = `HTTP ${res.status}`;
+				try {
+					const body = await res.json();
+					message = body.error ?? message;
+				} catch {}
+				throw new Error(message);
+			}
 			const data = await res.json();
 			files = data.files ?? [];
 			authorized = true;
@@ -108,7 +116,15 @@
 			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Prefer the backend's own error message over a bare status code
+				let message = `HTTP ${res.status}`;
+				try {
+					const body = await res.json();
+					message = body.error ?? message;
+				} catch {}
+				throw new Error(message);
+			}
 			const blob = await res.blob();
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
@@ -137,7 +153,15 @@
 				method: 'DELETE',
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Prefer the backend's own error message over a bare status code
+				let message = `HTTP ${res.status}`;
+				try {
+					const body = await res.json();
+					message = body.error ?? message;
+				} catch {}
+				throw new Error(message);
+			}
 			files = files.filter((f) => f !== target);
 			// Clean up any cached metadata for the deleted file
 			const next = { ...metaState };
