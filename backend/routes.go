@@ -99,6 +99,7 @@ func getFile(c *gin.Context) {
 		retrievalCounter.record()
 
 	case "true":
+		filename = filepath.Base(filename)
 		// Return the metadata record linked to this file as JSON
 		meta, err := dbm.pullMetaByFilename(filename)
 		if err != nil {
@@ -369,6 +370,7 @@ func deleteFile(c *gin.Context) {
 	dbm := c.MustGet("db").(*DatabaseManager)
 
 	filename := strings.TrimPrefix(c.Param("filename"), "/") // prevent path traversal
+	filename = filepath.Base(filename)
 	err := deleteStoredFile(filename, pm, dbm)
 
 	if err != nil {
