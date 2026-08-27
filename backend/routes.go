@@ -79,8 +79,8 @@ func getFile(c *gin.Context) {
 	Debug("getFile")
 	dbm := c.MustGet("db").(*DatabaseManager)
 
-	filename := c.Param("filename")
-	metaFlag := c.Param("meta")
+	filename := strings.TrimPrefix(c.Param("filename"), "/")
+	metaFlag := c.Query("meta")
 
 	switch metaFlag {
 	case "false":
@@ -368,7 +368,7 @@ func deleteFile(c *gin.Context) {
 	pm := c.MustGet("plugins").(*PluginManger)
 	dbm := c.MustGet("db").(*DatabaseManager)
 
-	filename := filepath.Base(c.Param("filename")) // prevent path traversal
+	filename := strings.TrimPrefix(c.Param("filename"), "/") // prevent path traversal
 	err := deleteStoredFile(filename, pm, dbm)
 
 	if err != nil {
