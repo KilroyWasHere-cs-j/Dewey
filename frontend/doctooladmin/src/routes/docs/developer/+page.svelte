@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import Topbar from '$lib/components/Topbar.svelte';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import { settings, ACCENT } from '$lib/stores/settings.svelte';
 
 	let mainClass = $derived(
@@ -987,5 +988,7 @@ podman run -d --pod dewey-pod --name dewey-frontend dewey-frontend</code></pre>
 			</section>
 
 		</main>
+
+		<ScrollToTop />
 	</div>
 </div>
