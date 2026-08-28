@@ -79,7 +79,9 @@ echo "Generating and uploading an 8MB test file (large enough to outrun TCP send
 TEST_FILE="$(mktemp -d)/concurrency_test.txt"
 dd if=/dev/urandom bs=1M count=6 status=none | base64 >"$TEST_FILE"
 
-upload_resp="$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${TEST_FILE}" "$BASE/core/upload")"
+# date_of_injury is required server-side (issue #365); the value doesn't
+# matter for this script's purpose (forcing concurrent in-flight requests).
+upload_resp="$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${TEST_FILE}" -F "date_of_injury=2025-01-01" "$BASE/core/upload")"
 UPLOADED_FILENAME="$(echo "$upload_resp" | grep -o '"filename":"[^"]*"' | head -1 | cut -d'"' -f4)"
 if [ -z "$UPLOADED_FILENAME" ]; then
 	echo "FAIL — upload didn't return a filename: $upload_resp" >&2

@@ -272,6 +272,35 @@ run_upload_error_tests() {
     else
         result_fail "POST /upload [no file]" "expected 4xx, got HTTP $code"
     fi
+
+    info "  Testing blank date_of_injury (issue #365 — used to insert silently) ..."
+    pace
+    local doi_src="$SCRIPT_DIR/lenna.jpg"
+    if [ ! -f "$doi_src" ]; then
+        result_skip "POST /upload [blank date_of_injury]" "source file not found"
+    else
+        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+            -X POST "$BASE/core/upload" \
+            -F "file=@$doi_src" \
+            -F "claim_number=$(rand_claim)" \
+            -F "claimant_name=Blank DOI Test" \
+            -F "date_of_injury=" \
+            -F "employer=$(rnd EMPLOYERS)" \
+            -F "adjuster=$(rnd ADJUSTERS)" \
+            -F "support=$(rnd SUPPORT_LVLS)" \
+            -F "claim_type=$(rnd CLAIM_TYPES)" \
+            -F "jurisdiction=$(rnd JURISDICTIONS)" \
+            -F "policy_number=$(rand_policy)" \
+            -F "acts_id=ACTS_000" 2>/dev/null)
+
+        if [ "$code" -ge 400 ]; then
+            result_pass "POST /upload [blank date_of_injury] -> HTTP $code (rejected)"
+        elif [ "$code" = "000" ]; then
+            result_fail "POST /upload [blank date_of_injury]" "connection failed"
+        else
+            result_fail "POST /upload [blank date_of_injury]" "expected 4xx, got HTTP $code — regression of issue #365"
+        fi
+    fi
 }
 
 # ── Section 5: Disallowed file extension ──────────────────────────────────────

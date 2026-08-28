@@ -120,13 +120,13 @@ func (dm *DatabaseManager) createNewFileRecord(entry DBEntry) (int64, error) {
 // meta.file_id (issue #228) — a real foreign key populated from the files
 // row's own auto-increment id, rather than the client-suppliable acts_id
 // string previously used to join the two tables.
-func (dm *DatabaseManager) createNewMetaDataRecord(metaData MetaData, fileID int64) {
+func (dm *DatabaseManager) createNewMetaDataRecord(metaData MetaData, fileID int64) error {
 	tx, err := dm.db.Begin()
 
 	if err != nil {
 		Warn("Failed to start transaction: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return err
 	}
 	// Deferring Rollback ensures resources are cleaned up if any step fails.
 	// If tx.Commit() succeeds, Rollback() does nothing.
@@ -140,14 +140,15 @@ func (dm *DatabaseManager) createNewMetaDataRecord(metaData MetaData, fileID int
 	if err != nil {
 		Warn("Transaction execution failed: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
 		Warn("Failed to commit transaction: " + err.Error())
 		atomic.AddInt64(&DBErrors, 1)
-		return
+		return err
 	}
+	return nil
 }
 
 // pullRecordByFilename pulls a single filepath.

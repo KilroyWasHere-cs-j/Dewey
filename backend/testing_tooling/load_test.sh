@@ -36,7 +36,10 @@ upload_one() {
 	# ~1KB per file, so even a few thousand of these stays trivial.
 	head -c 512 /dev/urandom | base64 >"$f"
 	local resp
-	resp="$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" "$BASE/core/upload")"
+	# date_of_injury is required server-side (issue #365) — any valid date
+	# works here since this script only exercises upload volume/timing, not
+	# metadata content.
+	resp="$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" -F "date_of_injury=2025-01-01" "$BASE/core/upload")"
 	echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4
 }
 export -f upload_one

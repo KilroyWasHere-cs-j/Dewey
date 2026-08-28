@@ -222,7 +222,10 @@ func uploadFile(c *gin.Context) {
 		ACTsID:       c.PostForm("acts_id"),
 	}
 
-	data := c.PostForm("data")
+	if err := validateMetaData(metadata); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Get file
 	fileHeader, err := c.FormFile("file")
@@ -335,7 +338,6 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "File uploaded successfully",
-		"data":     data,
 		"filename": safeFilename,
 		"original": fileHeader.Filename,
 		"size":     fileHeader.Size,
