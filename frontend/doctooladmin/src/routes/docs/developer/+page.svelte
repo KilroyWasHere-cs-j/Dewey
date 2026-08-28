@@ -843,8 +843,10 @@ end</code></pre>
 			<section id="config" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Configuration</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-					Compile-time defaults live in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">consts.go</code>.
-					Several of these can be overridden at runtime via the <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">/admin/set/*</code> API endpoints.
+					Defaults live in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/config.json</code>,
+					read once into these package-level vars at startup by <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">load()</code>
+					(<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">consts.go</code>). There's no runtime override
+					endpoint — changing a value means editing <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">config.json</code> and redeploying.
 				</p>
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
@@ -860,14 +862,23 @@ end</code></pre>
 								{ name: 'uploadDir',                   default: './cache', desc: 'Temporary landing directory for uploaded files.' },
 								{ name: 'fileSystemBaseDir',           default: './store', desc: 'Permanent storage root. Plugins set paths relative to this.' },
 								{ name: 'backupDir',                   default: './backup', desc: 'Destination for zip backups created on each daemon tick.' },
-								{ name: 'daemonTickTime',              default: '1 (hour)', desc: 'How often the background daemon fires.' },
+								{ name: 'daemonTickTime',              default: '1 (minute)', desc: 'Base interval between daemon ticks (cache clear + backup); computeTickInterval scales this up under active load — see Daemon section.' },
+								{ name: 'alpha',                       default: '1', desc: 'Tick-scaling: extra seconds added per active user.' },
+								{ name: 'beta',                        default: '1', desc: 'Tick-scaling: extra seconds added per unit of smoothed upload/retrieval rate.' },
+								{ name: 'tBase',                       default: '5', desc: 'Tick-scaling: baseline interval in seconds when the system is idle.' },
+								{ name: 'tickMax',                     default: '500', desc: 'Tick-scaling: upper bound (seconds) the computed interval is clamped to.' },
+								{ name: 'tickMin',                     default: '1', desc: 'Tick-scaling: lower bound (seconds) the computed interval is clamped to.' },
 								{ name: 'maxFileSize',                 default: '50 MB', desc: 'Maximum upload size enforced by the HTTP server.' },
 								{ name: 'portNumber',                  default: '8080', desc: 'Port the backend listens on.' },
+								{ name: 'appVersion',                  default: '0.2.0', desc: 'App release version shown in the dashboard topbar; bumped by hand per release.' },
+								{ name: 'rateLimitPerSecond',          default: '80', desc: 'Global (not per-IP) token-bucket refill rate, in requests/second — shared across every client hitting the server.' },
+								{ name: 'rateLimitBurst',              default: '120', desc: 'Burst allowance on top of the refill rate, also shared globally.' },
 								{ name: 'maxOpenDBConnections',        default: '10', desc: 'Max simultaneous open DB connections.' },
 								{ name: 'maxIdleDBConnections',        default: '10', desc: 'Max idle connections kept in the pool.' },
 								{ name: 'dbConnectionTimeoutMultiplier', default: '2 (min)', desc: 'Connection lifetime before it is recycled.' },
-								{ name: 'prometheusServer',            default: ':8081', desc: 'Address the Prometheus metrics endpoint binds to.' },
 								{ name: 'pluginDir',                   default: './plugins', desc: 'Directory scanned for Lua plugin files at startup.' },
+								{ name: 'pluginScratchDir',            default: './plugin-scratch', desc: 'Sandbox directory plugins\' files.read/files.write are confined to — kept separate from store/cache/backup so a plugin can never reach a user\'s actual documents.' },
+								{ name: 'maxConcurrentPostProcessing', default: '4', desc: 'Max concurrent post-processing goroutines (barcode scan + Lua plugins + disk copy) an upload burst can run at once.' },
 							] as row}
 								<tr>
 									<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">{row.name}</td>

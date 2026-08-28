@@ -111,7 +111,7 @@ func (o *observableTicker) remaining() time.Duration {
 func startDaemon(ctx context.Context, pm *PluginManger) {
 	// Debug("starting cache clear daemon")
 
-	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Second)
+	dt := newObservableTicker(time.Duration(daemonTickTime) * time.Minute)
 	daemonTicker.Store(dt)
 
 	go func() {
