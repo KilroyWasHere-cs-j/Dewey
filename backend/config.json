@@ -16,8 +16,8 @@
 		"app_version": "0.2.0"
 	},
 	"rate_limit": {
-		"requests_per_second": 10,
-		"burst": 20
+		"requests_per_second": 80,
+		"burst": 120
 	},
 	"database": {
 		"max_open_connections": 10,
