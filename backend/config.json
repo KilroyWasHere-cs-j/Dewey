@@ -3,7 +3,7 @@
 		"upload_dir": "./cache",
 		"file_system_base_dir": "./store",
 		"backup_dir": "./backup",
-		"daemon_tick_time_hours": 1,
+		"daemon_tick_time_minutes": 1,
 		"alpha": 1,
 		"beta": 1,
 		"t_base": 5,

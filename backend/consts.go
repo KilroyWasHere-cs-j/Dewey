@@ -29,9 +29,9 @@ type FileSystemConfig struct {
 	UploadDir         string  `json:"upload_dir"`             // temp dir for storing files after files post upload and for fast query access
 	FileSystemBaseDir string  `json:"file_system_base_dir"`   // base directory where all stored files start from
 	BackupDir         string  `json:"backup_dir"`             // directory where backup files are stored
-	DaemonTickTime    int     `json:"daemon_tick_time_hours"` // system tick interval in hours
-	Alpha             float64 `json:"alpha"`                  // reserved for issue #305 tick-scaling formula, unused so far
-	Beta              float64 `json:"beta"`                   // reserved for issue #305 tick-scaling formula, unused so far
+	DaemonTickTime    int     `json:"daemon_tick_time_minutes"` // system tick interval in minutes
+	Alpha             float64 `json:"alpha"`                  // extra seconds added per active user in the tick-scaling formula (issue #305)
+	Beta              float64 `json:"beta"`                   // extra seconds added per unit of smoothed upload rate in the tick-scaling formula (issue #305)
 	TBase             float64 `json:"t_base"`                 // tick times base value for the tick-scaling formulua
 	TickMax           int     `json:"tick_max"`               // maximum number of space between each tick
 	TickMin           int     `json:"tick_min"`               // minimum number of space between each tick
