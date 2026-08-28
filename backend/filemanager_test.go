@@ -217,6 +217,42 @@ func TestSaveFile(t *testing.T) {
 	}
 }
 
+// TestValidateMetaData exercises the issue #365 guard — date_of_injury is a
+// NOT NULL column, and previously a blank value reached the DB insert
+// silently since it happens in a post-processing goroutine after the upload
+// response is already sent.
+func TestValidateMetaData(t *testing.T) {
+	tests := []struct {
+		name    string
+		meta    MetaData
+		wantErr bool
+	}{
+		{
+			name:    "valid date_of_injury passes",
+			meta:    MetaData{DateOfInjury: "2025-01-01"},
+			wantErr: false,
+		},
+		{
+			name:    "empty date_of_injury is rejected",
+			meta:    MetaData{DateOfInjury: ""},
+			wantErr: true,
+		},
+		{
+			name:    "whitespace-only date_of_injury is rejected",
+			meta:    MetaData{DateOfInjury: "   "},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateMetaData(tt.meta)
+			if got := err != nil; got != tt.wantErr {
+				t.Fatalf("validateMetaData(%+v) error = %v, wantErr %v", tt.meta, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // TestOpenFile confirms the extracted open step returns a readable handle
 // to the uploaded file's actual content.
 func TestOpenFile(t *testing.T) {

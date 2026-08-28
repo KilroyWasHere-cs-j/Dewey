@@ -53,6 +53,13 @@ TOTAL_REAL_SECONDS=$(awk -v d="$SIM_DAYS" -v s="$SECONDS_PER_SIM_DAY" 'BEGIN { p
 PEAK_REQUESTS_PER_SIM_DAY=200
 NIGHT_FLOOR=0.05
 
+# Mirrors test_suite.sh's rand_date() — date_of_injury is required
+# server-side (issue #365); soak_test.sh simulates real user traffic, so this
+# generates a plausible value rather than a fixed constant.
+rand_date() {
+	date -d "2024-01-01 + $((RANDOM % 730)) days" +%Y-%m-%d 2>/dev/null || echo "2025-06-15"
+}
+
 METRICS_LOG_IP="127.0.0.99"
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 METRICS_LOG="/app/logs/soak_metrics_${RUN_ID}.csv"
@@ -163,7 +170,7 @@ simulate_user() {
 			local f="$user_dir/soak_${user_id}_$(date +%s%N).txt"
 			head -c 512 /dev/urandom | base64 >"$f"
 			local resp name
-			resp="$(curl -s --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" "$BASE/core/upload")"
+			resp="$(curl -s --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" -F "date_of_injury=$(rand_date)" "$BASE/core/upload")"
 			name=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
 			[ -n "$name" ] && uploaded_file="$name"
 			rm -f "$f"

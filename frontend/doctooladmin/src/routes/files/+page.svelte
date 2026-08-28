@@ -238,6 +238,13 @@
 			uploadError = 'Please select a file.';
 			return;
 		}
+		// date_of_injury is a NOT NULL column on the backend (issue #365) — a
+		// blank value here previously reached the DB insert silently, since the
+		// upload response is sent before that insert even runs.
+		if (!uploadFields.date_of_injury.trim()) {
+			uploadError = 'Date of Injury is required.';
+			return;
+		}
 
 		uploadError = null;
 		uploadSuccess = null;
@@ -368,18 +375,20 @@
 
 					<!-- Metadata fields — 2-column grid -->
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						{#each [{ key: 'claim_number', label: 'Claim Number' }, { key: 'claimant_name', label: 'Claimant Name' }, { key: 'date_of_injury', label: 'Date of Injury', type: 'date' }, { key: 'employer', label: 'Employer' }, { key: 'adjuster', label: 'Adjuster' }, { key: 'support', label: 'Support Level' }, { key: 'claim_type', label: 'Claim Type' }, { key: 'jurisdiction', label: 'Jurisdiction' }, { key: 'policy_number', label: 'Policy Number' }, { key: 'acts_id', label: 'ACTs ID' }, { key: 'data', label: 'Data / Tag' }] as field}
+						{#each [{ key: 'claim_number', label: 'Claim Number' }, { key: 'claimant_name', label: 'Claimant Name' }, { key: 'date_of_injury', label: 'Date of Injury', type: 'date', required: true }, { key: 'employer', label: 'Employer' }, { key: 'adjuster', label: 'Adjuster' }, { key: 'support', label: 'Support Level' }, { key: 'claim_type', label: 'Claim Type' }, { key: 'jurisdiction', label: 'Jurisdiction' }, { key: 'policy_number', label: 'Policy Number' }, { key: 'acts_id', label: 'ACTs ID' }, { key: 'data', label: 'Data / Tag' }] as field}
 							<div>
 								<label
 									for="upload-{field.key}"
 									class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
 								>
 									{field.label}
+									{#if field.required}<span class="text-red-500">*</span>{/if}
 								</label>
 								<input
 									id="upload-{field.key}"
 									type={field.type ?? 'text'}
 									autocomplete="off"
+									required={field.required ?? false}
 									class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
 									bind:value={uploadFields[field.key as keyof typeof uploadFields]}
 								/>

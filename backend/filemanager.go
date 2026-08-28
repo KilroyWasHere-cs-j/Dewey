@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -114,19 +115,23 @@ func queueIdAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash st
 				Warn("Recovered from panic in post-processing goroutine: " + fmt.Sprintf("%v", r))
 			}
 		}()
-		idAndSort(pm, dbm, path, hash, filename, metaData)
+		err := idAndSort(pm, dbm, path, hash, filename, metaData)
+		if err != nil {
+			Warn("Post-processing failed: " + err.Error())
+		}
 	}()
 }
 
-func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
+func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) error {
 	entry := DBEntry{
 		Filename: filename,
 		Act:      metaData.ACTsID,
 		Hash:     hash,
 		Path:     path,
-		Meta:     "0000000000000000000000000000000", // Placeholder, should be determined by filter rules
-		Barcode:  sql.NullString{},                  // Placeholder, should be determined by barcode scanning
+		Meta:     "0000000000000000000000000000000",
+		Barcode:  sql.NullString{},
 	}
+
 	if barcodeCandidateExt.MatchString(filename) {
 		if barcodeText, err := scanBarCode(filepath.Join(uploadDir, entry.Path)); err != nil {
 			Warn("Unable to process barcodes: " + err.Error())
@@ -167,7 +172,7 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 	if err != nil {
 		Warn("Rejected plugin-supplied path escaping store directory: " + err.Error())
 		atomic.AddInt64(&PluginErrors, 1)
-		return
+		return err
 	}
 	err = copyFile(
 		filepath.Join(uploadDir, path),
@@ -175,7 +180,7 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 	)
 	if err != nil {
 		Warn("Failed to copy file to store: " + err.Error())
-		return
+		return err
 	}
 
 	// createNewFileRecord's returned id links the metadata row to this exact
@@ -185,12 +190,16 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 	// createNewFileRecord has already logged and counted the failure.
 	fileID, err := dbm.createNewFileRecord(entry)
 	if err != nil {
-		return
+		return err
 	}
-	dbm.createNewMetaDataRecord(metaData, fileID)
+	err = dbm.createNewMetaDataRecord(metaData, fileID)
+	if err != nil {
+		return err
+	}
 
 	atomic.AddInt64(&FilesInStore, 1)
 	atomic.AddInt64(&FileSorts, 1)
+	return nil
 }
 
 // resolveStorePath joins rel onto base and confirms the result still lives
@@ -429,4 +438,12 @@ func listFilesInDir(baseDir string) (int64, []string, error) {
 		return 0, nil, err
 	}
 	return count, files, nil
+}
+
+func validateMetaData(m MetaData) error {
+	if strings.TrimSpace(m.DateOfInjury) == "" {
+		return errors.New("date_of_injury is required")
+	}
+	// same for any other NOT NULL column fed from PostForm
+	return nil
 }
