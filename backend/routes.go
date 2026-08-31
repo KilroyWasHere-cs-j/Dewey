@@ -300,7 +300,11 @@ func uploadFile(c *gin.Context) {
 	// -------------------------
 	// Generate filename
 	// -------------------------
-	safeFilename := createTimestamp(fileHeader.Filename)
+	safeFilename, err := createTimestamp(fileHeader.Filename)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
 
 	// -------------------------
 	// Hash file

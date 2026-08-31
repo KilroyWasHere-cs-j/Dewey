@@ -132,6 +132,7 @@ simulate_user() {
 	local user_id="$1" ip="$2"
 	local uploaded_file=""
 	local user_dir="$TMP_DIR/user_${user_id}"
+	local req_id=0
 	mkdir -p "$user_dir"
 
 	while true; do
@@ -167,7 +168,14 @@ simulate_user() {
 		# 70/30 upload-vs-retrieve mix; always upload until this user has
 		# something of its own to retrieve.
 		if [ -z "$uploaded_file" ] || ((RANDOM % 10 < 7)); then
-			local f="$user_dir/soak_${user_id}_$(date +%s%N).txt"
+			# date +%s%N is meant to give nanosecond uniqueness, but the
+			# backend container's BusyBox date silently drops %N and
+			# returns plain whole seconds (issue #367) — two requests from
+			# this same user landing in the same wall-clock second would
+			# reuse the identical original filename. A per-user counter is
+			# unique regardless of clock resolution.
+			req_id=$((req_id + 1))
+			local f="$user_dir/soak_${user_id}_${req_id}.txt"
 			head -c 512 /dev/urandom | base64 >"$f"
 			local resp name
 			resp="$(curl -s --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" -F "date_of_injury=$(rand_date)" "$BASE/core/upload")"

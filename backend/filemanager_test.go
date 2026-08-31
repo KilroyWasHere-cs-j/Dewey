@@ -10,8 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
+	"regexp"
 	"testing"
 )
 
@@ -149,18 +148,37 @@ func TestCheckFileSize(t *testing.T) {
 	}
 }
 
-// TestCreateTimestamp checks the "<unix-seconds>_<filename>" format
-// uploadFile relies on to generate a collision-resistant stored filename.
+// TestCreateTimestamp checks the "<unix-seconds>_<filename>_<random-suffix>"
+// format uploadFile relies on to generate a collision-resistant stored
+// filename (issue #367 — a bare unix-second timestamp let concurrent
+// uploads generate identical filenames and silently overwrite each other).
 func TestCreateTimestamp(t *testing.T) {
-	got := createTimestamp("report.pdf")
-
-	if !strings.HasSuffix(got, "_report.pdf") {
-		t.Fatalf("createTimestamp(%q) = %q, want suffix %q", "report.pdf", got, "_report.pdf")
+	got, err := createTimestamp("report.pdf")
+	if err != nil {
+		t.Fatalf("createTimestamp(%q) unexpected error: %v", "report.pdf", err)
 	}
 
-	prefix := strings.TrimSuffix(got, "_report.pdf")
-	if _, err := strconv.ParseInt(prefix, 10, 64); err != nil {
-		t.Fatalf("createTimestamp(%q) = %q, timestamp prefix not numeric: %v", "report.pdf", got, err)
+	want := regexp.MustCompile(`^\d+_report\.pdf_[0-9a-f]{20}$`)
+	if !want.MatchString(got) {
+		t.Fatalf("createTimestamp(%q) = %q, want format <unix>_report.pdf_<20 hex chars>", "report.pdf", got)
+	}
+}
+
+// TestCreateTimestampUnique confirms two calls for the same filename don't
+// collide — the random suffix, not the timestamp, is what makes the
+// generated filename collision-resistant when two uploads land in the same
+// wall-clock second (issue #367).
+func TestCreateTimestampUnique(t *testing.T) {
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		got, err := createTimestamp("report.pdf")
+		if err != nil {
+			t.Fatalf("createTimestamp(%q) unexpected error: %v", "report.pdf", err)
+		}
+		if seen[got] {
+			t.Fatalf("createTimestamp(%q) produced a duplicate: %q", "report.pdf", got)
+		}
+		seen[got] = true
 	}
 }
 
@@ -214,6 +232,95 @@ func TestSaveFile(t *testing.T) {
 	}
 	if string(got) != string(content) {
 		t.Fatalf("saved content = %q, want %q", got, content)
+	}
+}
+
+// TestSaveFileRejectsExistingDestination confirms saveFile refuses to
+// overwrite an existing file under uploadDir instead of silently
+// truncating it (issue #367 — saveFile is the request's actual first
+// write, before the async copyFile move into the permanent store).
+func TestSaveFileRejectsExistingDestination(t *testing.T) {
+	origUploadDir := uploadDir
+	uploadDir = t.TempDir()
+	t.Cleanup(func() { uploadDir = origUploadDir })
+
+	dst := filepath.Join(uploadDir, "saved.txt")
+	if err := os.WriteFile(dst, []byte("original content"), 0600); err != nil {
+		t.Fatalf("writing pre-existing fixture: %v", err)
+	}
+
+	fh := newUploadedFile(t, "note.txt", []byte("new content"))
+	file, err := fh.Open()
+	if err != nil {
+		t.Fatalf("opening fixture file: %v", err)
+	}
+	defer file.Close()
+
+	if err := saveFile("saved.txt", file); err == nil {
+		t.Fatalf("saveFile() with existing destination = nil error, want an error")
+	}
+
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading dst after saveFile: %v", err)
+	}
+	if string(got) != "original content" {
+		t.Fatalf("dst content = %q after rejected saveFile, want original content preserved", got)
+	}
+}
+
+// TestCopyFileRejectsExistingDestination confirms copyFile refuses to
+// overwrite an existing destination instead of silently truncating it
+// (issue #367 — the other half of the collision: even with a unique
+// filename, an unconditional os.Create(dst) would still clobber a file that
+// legitimately already sits at that path with no error).
+func TestCopyFileRejectsExistingDestination(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src.txt")
+	dst := filepath.Join(dir, "dst.txt")
+
+	if err := os.WriteFile(src, []byte("new content"), 0600); err != nil {
+		t.Fatalf("writing src fixture: %v", err)
+	}
+	if err := os.WriteFile(dst, []byte("original content"), 0600); err != nil {
+		t.Fatalf("writing dst fixture: %v", err)
+	}
+
+	if err := copyFile(src, dst); err == nil {
+		t.Fatalf("copyFile() with existing destination = nil error, want an error")
+	}
+
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading dst after copyFile: %v", err)
+	}
+	if string(got) != "original content" {
+		t.Fatalf("dst content = %q after rejected copyFile, want original content preserved", got)
+	}
+}
+
+// TestCopyFileSucceedsForNewDestination confirms the exists check doesn't
+// block the ordinary case of copying to a path that doesn't exist yet.
+func TestCopyFileSucceedsForNewDestination(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src.txt")
+	dst := filepath.Join(dir, "sub", "dst.txt")
+
+	content := []byte("hello")
+	if err := os.WriteFile(src, content, 0600); err != nil {
+		t.Fatalf("writing src fixture: %v", err)
+	}
+
+	if err := copyFile(src, dst); err != nil {
+		t.Fatalf("copyFile() unexpected error: %v", err)
+	}
+
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("reading dst: %v", err)
+	}
+	if string(got) != string(content) {
+		t.Fatalf("dst content = %q, want %q", got, content)
 	}
 }
 
