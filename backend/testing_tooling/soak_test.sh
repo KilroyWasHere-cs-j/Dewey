@@ -66,6 +66,12 @@ METRICS_LOG="/app/logs/soak_metrics_${RUN_ID}.csv"
 METRICS_SAMPLE_REAL_SECONDS=10 # fixed cadence, independent of TIME_SCALE
 
 TMP_DIR="$(mktemp -d)"
+# Each simulate_user runs as its own backgrounded subshell, so a plain bash
+# array won't accumulate across them — every upload appends its filename
+# here instead. Single small `echo >>` writes are append-atomic (POSIX
+# O_APPEND, well under PIPE_BUF), so concurrent users writing to the same
+# file is safe without extra locking.
+UPLOADED_FILES_LOG="$TMP_DIR/uploaded_files.txt"
 START_REAL=$(date +%s)
 
 echo "Soak test: $SIM_DAYS simulated days, $USERS users, ${SECONDS_PER_SIM_DAY}s/simday (${TIME_SCALE}x compression) against $BASE"
@@ -89,6 +95,20 @@ cleanup() {
 	for ip in "${REGISTERED_IPS[@]:-}"; do
 		[ -n "$ip" ] && curl -s -o /dev/null -X DELETE -H "X-Dewey-Password: $MACHINES_PASSWORD" "$BASE/core/machines/${ip}"
 	done
+	# Best-effort: delete every file this run uploaded into the live store —
+	# same reasoning as test_suite.sh's cleanup (issue #347): a soak run can
+	# upload thousands of files over a long simulated window, and nothing
+	# else removes them afterward. deleteStoredFile (backend/filemanager.go)
+	# removes the store file, cache copy, and DB row together, so one DELETE
+	# per name is enough. Runs after the `wait` above, so no simulate_user is
+	# still appending to the log while this reads it.
+	if [ -s "$UPLOADED_FILES_LOG" ]; then
+		echo "Cleaning up: deleting uploaded test files from the live store..."
+		while IFS= read -r name; do
+			[ -n "$name" ] && curl -s -o /dev/null -H "X-Dewey-Password: $FILES_PASSWORD" \
+				-X DELETE "$BASE/core/files/$name" --max-time 10 2>/dev/null
+		done <"$UPLOADED_FILES_LOG"
+	fi
 	rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT INT TERM
@@ -180,7 +200,10 @@ simulate_user() {
 			local resp name
 			resp="$(curl -s --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" -F "file=@${f}" -F "date_of_injury=$(rand_date)" "$BASE/core/upload")"
 			name=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
-			[ -n "$name" ] && uploaded_file="$name"
+			if [ -n "$name" ]; then
+				uploaded_file="$name"
+				echo "$name" >>"$UPLOADED_FILES_LOG"
+			fi
 			rm -f "$f"
 		else
 			curl -s -o /dev/null --interface "$ip" -H "X-Dewey-Password: $FILES_PASSWORD" "$BASE/core/files/${uploaded_file}/false"

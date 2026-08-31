@@ -41,7 +41,24 @@ FAIL=0
 SKIP=0
 TOTAL=0
 
-cleanup() { rm -rf "$DOWNLOAD_DIR"; }
+# Every filename the suite gets back from a successful upload is appended
+# here as it happens, so cleanup can remove it regardless of which section
+# created it. Declared up front (rather than where the first upload section
+# used to declare it) since cleanup() reads it and trap fires on early exit
+# too, before later sections would otherwise have defined it.
+UPLOADED_FILES=()
+
+cleanup() {
+    # Best-effort: delete every file this run uploaded into the live store,
+    # so BITs stops leaving permanent residue in prod on every boot (issue
+    # #347). Errors are ignored — a file run_delete_tests already removed
+    # will just 404 here, which is fine, and this must never fail the trap.
+    for f in "${UPLOADED_FILES[@]:-}"; do
+        [ -n "$f" ] && curl -s -o /dev/null -H "X-Dewey-Password: ${FILES_PASSWORD:-}" \
+            -X DELETE "$BASE/core/files/$f" --max-time 10 2>/dev/null
+    done
+    rm -rf "$DOWNLOAD_DIR"
+}
 trap cleanup EXIT
 
 # --- COLORS ---
@@ -201,8 +218,6 @@ run_json_upload_test() {
 }
 
 # ── Section 3: Multipart upload with random metadata ─────────────────────────
-
-UPLOADED_FILES=()
 
 run_upload_tests() {
     section "MULTIPART UPLOAD TESTS (randomized metadata)"
@@ -479,8 +494,10 @@ run_sha256_upload_test() {
         return
     fi
 
-    local server_hash
+    local server_hash server_file
     server_hash=$(echo "$resp" | grep -o '"sha256":"[^"]*"' | cut -d'"' -f4)
+    server_file=$(echo "$resp" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+    [ -n "$server_file" ] && UPLOADED_FILES+=("$server_file")
 
     if [ -z "$server_hash" ]; then
         result_fail "SHA256 upload verify [$f]" "no sha256 in response: $resp"
@@ -515,6 +532,9 @@ run_duplicate_upload_test() {
 
     resp2=$(upload_file "$src")
     file2=$(echo "$resp2" | grep -o '"filename":"[^"]*"' | cut -d'"' -f4)
+
+    [ -n "$file1" ] && UPLOADED_FILES+=("$file1")
+    [ -n "$file2" ] && UPLOADED_FILES+=("$file2")
 
     if [ -z "$file1" ] || [ -z "$file2" ]; then
         result_fail "DUPLICATE upload [$f]" "one or both uploads failed: file1=$file1 file2=$file2"
@@ -568,6 +588,8 @@ run_roundtrip_tests() {
             result_fail "ROUNDTRIP [$f] upload" "no filename in response: $resp"
             continue
         fi
+
+        UPLOADED_FILES+=("$server_file")
 
         info "  Downloading $server_file ..."
         pace
@@ -633,6 +655,8 @@ run_store_path_verification_test() {
         result_fail "STORE PATH verify [$f]" "no filename in response: $resp"
         return
     fi
+
+    UPLOADED_FILES+=("$server_file")
 
     # idAndSort's disk copy runs asynchronously in a background goroutine
     # queued behind postProcessingSem (issue #217) — poll for a few seconds
@@ -708,6 +732,7 @@ run_metadata_tests() {
         result_fail "METADATA upload" "no filename in response: $resp"
         return
     fi
+    UPLOADED_FILES+=("$server_file")
     result_pass "METADATA upload -> $server_file"
 
     # Fetch metadata and assert HTTP 200 + expected JSON fields

@@ -23,7 +23,25 @@ COUNT="${2:-500}"
 CONCURRENCY="${3:-10}"
 
 TMP_DIR="$(mktemp -d)"
-cleanup() { rm -rf "$TMP_DIR"; }
+# Declared up front (rather than where it's first written below) since
+# cleanup() reads it, and the trap can fire before that point is reached.
+FILENAMES="$TMP_DIR/filenames.txt"
+
+cleanup() {
+	# Best-effort: delete every file this run uploaded into the live store —
+	# same reasoning as test_suite.sh's cleanup (issue #347): this hits the
+	# real backend, and nothing else removes these afterward. deleteStoredFile
+	# (backend/filemanager.go) removes the store file, cache copy, and DB row
+	# together, so one DELETE per name is enough.
+	if [ -s "$FILENAMES" ]; then
+		echo "Cleaning up: deleting uploaded test files from the live store..."
+		while IFS= read -r name; do
+			[ -n "$name" ] && curl -s -o /dev/null -H "X-Dewey-Password: $FILES_PASSWORD" \
+				-X DELETE "$BASE/core/files/$name" --max-time 10 2>/dev/null
+		done <"$FILENAMES"
+	fi
+	rm -rf "$TMP_DIR"
+}
 trap cleanup EXIT
 
 echo "Uploading $COUNT files to $BASE (concurrency: $CONCURRENCY)..."
@@ -45,7 +63,6 @@ upload_one() {
 export -f upload_one
 export TMP_DIR BASE FILES_PASSWORD
 
-FILENAMES="$TMP_DIR/filenames.txt"
 seq 1 "$COUNT" | xargs -P "$CONCURRENCY" -I{} bash -c 'upload_one "$@"' _ {} >"$FILENAMES"
 
 UPLOADED=$(wc -l <"$FILENAMES")
