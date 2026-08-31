@@ -412,14 +412,15 @@ func (dm *DatabaseManager) migrate() error {
 	filesQuery := `
 	CREATE TABLE IF NOT EXISTS files (
 		id INT AUTO_INCREMENT PRIMARY KEY,
-		filename VARCHAR(255) NOT NULL,
+		filename VARCHAR(255) NOT NULL UNIQUE,
 		acts_id VARCHAR(100) NOT NULL,
 		sha256_hash CHAR(64) NOT NULL,
 		created_at VARCHAR(35) NOT NULL,
 		filepath TEXT NOT NULL,
 		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
 		barcode VARCHAR(100),
-		INDEX idx_acts_id (acts_id) -- Needed for foreign key reference in meta
+		INDEX idx_acts_id (acts_id), -- Needed for foreign key reference in meta
+		UNIQUE INDEX idx_filepath_unique (filepath(255))
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
 
 	if _, err := dm.db.Exec(filesQuery); err != nil {
@@ -433,6 +434,15 @@ func (dm *DatabaseManager) migrate() error {
 	// whose mysql-data volume predates it stays stuck rejecting every
 	// non-barcode upload's genuine NULL until this runs.
 	dm.modifyColumnSafe("files", "barcode", "VARCHAR(100) NULL")
+
+	// filepath previously had no uniqueness guarantee at the DB layer, so a
+	// generated-filename collision (issue #367) could insert two rows
+	// pointing at the same on-disk path with no error. Added via the same
+	// safe-ALTER pattern as the rest of this function since filesQuery's
+	// CREATE TABLE IF NOT EXISTS is a no-op against a deployment that
+	// already has the files table. filepath is TEXT, so MySQL requires a
+	// prefix length for the index rather than the full column.
+	dm.createUniqueIndexSafe("idx_filepath_unique", "files(filepath(255))")
 
 	// --- 2. CREATE META TABLE ---
 	metaQuery := `
@@ -508,6 +518,23 @@ func (dm *DatabaseManager) createIndexSafe(indexName, tableAndColumns string) {
 		// If it's not a duplicate key error, we log it (or you can return it)
 		if !isDuplicateKeyError(err) {
 			fmt.Printf("[MIGRATION WARNING] Could not create index %s: %v\n", indexName, err)
+		}
+	}
+}
+
+// createUniqueIndexSafe mirrors createIndexSafe but for a UNIQUE index.
+// Gracefully ignores MySQL's "Duplicate key name" error (1061) if it
+// already exists. If the target column already has duplicate values (a
+// deployment carrying pre-fix data), MySQL rejects the whole ALTER with a
+// "Duplicate entry" error (1062) rather than creating a partial index —
+// that case falls through to the warning below instead of being swallowed,
+// since it needs a human to actually deduplicate the data first.
+func (dm *DatabaseManager) createUniqueIndexSafe(indexName, tableAndColumns string) {
+	query := fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s", indexName, tableAndColumns)
+	_, err := dm.db.Exec(query)
+	if err != nil {
+		if !isDuplicateKeyError(err) {
+			fmt.Printf("[MIGRATION WARNING] Could not create unique index %s: %v\n", indexName, err)
 		}
 	}
 }

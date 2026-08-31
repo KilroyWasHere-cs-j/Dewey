@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -240,6 +241,14 @@ func copyFile(src, dst string) error {
 		return err
 	}
 
+	exists, err := exists(dst)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("destination file already exists")
+	}
+
 	// create destination file
 	dstFile, err := os.Create(dst)
 	if err != nil {
@@ -258,6 +267,17 @@ func copyFile(src, dst string) error {
 
 	// flush to disk
 	return dstFile.Sync()
+}
+
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
 
 // locateFile checks the cache first, then falls back to the DB record.
@@ -304,11 +324,23 @@ func checkFileSize(fileHeader *multipart.FileHeader) error {
 	return nil
 }
 
+func randomSuffix(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil // n=4 -> 8 hex chars
+}
+
 // createTimestamp prefixes filename with the current Unix timestamp so
 // concurrent uploads of the same name can't collide in the store.
-func createTimestamp(filename string) string {
+func createTimestamp(filename string) (string, error) {
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("%d_%s", timestamp, filename)
+	suff, err := randomSuffix(10)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%d_%s_%s", timestamp, filename, suff), nil
 }
 
 // createFileHash reads file to EOF computing its SHA-256, so callers must
@@ -332,6 +364,15 @@ func saveFile(filename string, file multipart.File) error {
 	}
 
 	dst := filepath.Join(uploadDir, filename)
+
+	exists, err := exists(dst)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("destination file already exists")
+	}
+
 	dstFile, err := os.Create(dst)
 	if err != nil {
 		Warn("Failed to create destination file: " + err.Error())
