@@ -16,6 +16,11 @@ export interface Settings {
 	accentColor: 'yellow' | 'blue' | 'green' | 'purple' | 'slate';
 	chartColorTheme: 'default' | 'cool' | 'warm' | 'mono';
 	layoutDensity: 'comfortable' | 'compact';
+	// Per-section tile drag order (issue #343) — keyed by section id, each
+	// value is that section's tile ids in the user's chosen order. Reordering
+	// stays within a section, so this doesn't need a single flat list across
+	// the whole page. Missing/empty means "use the built-in default order".
+	tileOrder: Record<string, string[]>;
 }
 
 export const DEFAULTS: Settings = {
@@ -28,7 +33,8 @@ export const DEFAULTS: Settings = {
 	darkMode: false,
 	accentColor: 'yellow',
 	chartColorTheme: 'default',
-	layoutDensity: 'comfortable'
+	layoutDensity: 'comfortable',
+	tileOrder: {}
 };
 
 // Full class strings must be spelled out so Tailwind's scanner doesn't purge them.
@@ -36,35 +42,112 @@ export const DEFAULTS: Settings = {
 // text uses a darker shade in light mode and a lighter shade in dark mode so
 // small uppercase headings clear WCAG AA (4.5:1) on both white cards and dark cards.
 export const ACCENT = {
-	yellow: { bg: 'bg-yellow-400', text: 'text-yellow-700 dark:text-yellow-400', ring: 'ring-yellow-400', hex: '#facc15' },
-	blue:   { bg: 'bg-blue-400',   text: 'text-blue-700 dark:text-blue-400',     ring: 'ring-blue-400',   hex: '#60a5fa' },
-	green:  { bg: 'bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-400', ring: 'ring-emerald-400', hex: '#34d399' },
-	purple: { bg: 'bg-purple-400', text: 'text-purple-700 dark:text-purple-400', ring: 'ring-purple-400', hex: '#c084fc' },
-	slate:  { bg: 'bg-slate-500',  text: 'text-slate-700 dark:text-slate-400',   ring: 'ring-slate-400',  hex: '#64748b' }
+	yellow: {
+		bg: 'bg-yellow-400',
+		text: 'text-yellow-700 dark:text-yellow-400',
+		ring: 'ring-yellow-400',
+		hex: '#facc15'
+	},
+	blue: {
+		bg: 'bg-blue-400',
+		text: 'text-blue-700 dark:text-blue-400',
+		ring: 'ring-blue-400',
+		hex: '#60a5fa'
+	},
+	green: {
+		bg: 'bg-emerald-400',
+		text: 'text-emerald-700 dark:text-emerald-400',
+		ring: 'ring-emerald-400',
+		hex: '#34d399'
+	},
+	purple: {
+		bg: 'bg-purple-400',
+		text: 'text-purple-700 dark:text-purple-400',
+		ring: 'ring-purple-400',
+		hex: '#c084fc'
+	},
+	slate: {
+		bg: 'bg-slate-500',
+		text: 'text-slate-700 dark:text-slate-400',
+		ring: 'ring-slate-400',
+		hex: '#64748b'
+	}
 } as const;
 
 export const CHART_THEMES: Record<Settings['chartColorTheme'], string[]> = {
 	default: [
-		'#3b82f6', '#8b5cf6', '#6366f1', '#0ea5e9', '#10b981',
-		'#059669', '#34d399', '#6ee7b7', '#f59e0b', '#ef4444',
-		'#a78bfa', '#14b8a6', '#0d9488'
+		'#3b82f6',
+		'#8b5cf6',
+		'#6366f1',
+		'#0ea5e9',
+		'#10b981',
+		'#059669',
+		'#34d399',
+		'#6ee7b7',
+		'#f59e0b',
+		'#ef4444',
+		'#a78bfa',
+		'#14b8a6',
+		'#0d9488'
 	],
 	cool: [
-		'#0ea5e9', '#06b6d4', '#14b8a6', '#0d9488', '#3b82f6',
-		'#6366f1', '#8b5cf6', '#a78bfa', '#67e8f9', '#7dd3fc',
-		'#93c5fd', '#c4b5fd', '#22d3ee'
+		'#0ea5e9',
+		'#06b6d4',
+		'#14b8a6',
+		'#0d9488',
+		'#3b82f6',
+		'#6366f1',
+		'#8b5cf6',
+		'#a78bfa',
+		'#67e8f9',
+		'#7dd3fc',
+		'#93c5fd',
+		'#c4b5fd',
+		'#22d3ee'
 	],
 	warm: [
-		'#f59e0b', '#f97316', '#ef4444', '#ec4899', '#fbbf24',
-		'#fb923c', '#f87171', '#f472b6', '#fde68a', '#fca5a5',
-		'#fdba74', '#f9a8d4', '#fcd34d'
+		'#f59e0b',
+		'#f97316',
+		'#ef4444',
+		'#ec4899',
+		'#fbbf24',
+		'#fb923c',
+		'#f87171',
+		'#f472b6',
+		'#fde68a',
+		'#fca5a5',
+		'#fdba74',
+		'#f9a8d4',
+		'#fcd34d'
 	],
 	mono: [
-		'#1f2937', '#374151', '#4b5563', '#6b7280', '#9ca3af',
-		'#d1d5db', '#111827', '#1f2937', '#374151', '#4b5563',
-		'#6b7280', '#9ca3af', '#d1d5db'
+		'#1f2937',
+		'#374151',
+		'#4b5563',
+		'#6b7280',
+		'#9ca3af',
+		'#d1d5db',
+		'#111827',
+		'#1f2937',
+		'#374151',
+		'#4b5563',
+		'#6b7280',
+		'#9ca3af',
+		'#d1d5db'
 	]
 };
+
+// Applies a user's saved tile order over a section's built-in default order
+// (issue #343). A saved id no longer present in the defaults (a tile that
+// was removed) is dropped; a default id missing from the saved list (a tile
+// added later) is appended at the end, so it still shows up instead of
+// silently vanishing behind a stale saved order.
+export function resolveTileOrder(defaultOrder: string[], saved: string[] | undefined): string[] {
+	if (!saved || saved.length === 0) return defaultOrder;
+	const kept = saved.filter((id) => defaultOrder.includes(id));
+	const appended = defaultOrder.filter((id) => !kept.includes(id));
+	return [...kept, ...appended];
+}
 
 function load(): Settings {
 	if (!browser) return { ...DEFAULTS };
