@@ -33,7 +33,7 @@ class MemoryStorage implements Storage {
 }
 vi.stubGlobal('localStorage', new MemoryStorage());
 
-import { createSettingsStore, DEFAULTS } from './settings.svelte';
+import { createSettingsStore, DEFAULTS, resolveTileOrder } from './settings.svelte';
 
 const STORAGE_KEY = 'dewey-settings';
 
@@ -76,5 +76,42 @@ describe('settings store', () => {
 
 		expect(store.value).toEqual(DEFAULTS);
 		expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+	});
+});
+
+describe('resolveTileOrder', () => {
+	it('returns the default order when nothing is saved', () => {
+		expect(resolveTileOrder(['a', 'b', 'c'], undefined)).toEqual(['a', 'b', 'c']);
+		expect(resolveTileOrder(['a', 'b', 'c'], [])).toEqual(['a', 'b', 'c']);
+	});
+
+	it('uses the saved order when it matches the default set', () => {
+		expect(resolveTileOrder(['a', 'b', 'c'], ['c', 'a', 'b'])).toEqual(['c', 'a', 'b']);
+	});
+
+	it('drops saved ids no longer present in the defaults', () => {
+		expect(resolveTileOrder(['a', 'b'], ['a', 'removed', 'b'])).toEqual(['a', 'b']);
+	});
+
+	it('appends default ids missing from a stale saved order', () => {
+		expect(resolveTileOrder(['a', 'b', 'c'], ['b', 'a'])).toEqual(['b', 'a', 'c']);
+	});
+
+	it('survives a save (settings.update) and reload (new store instance), same as the page uses it', () => {
+		localStorage.clear();
+		const store = createSettingsStore();
+
+		// Mirrors persistTileOrder() in analytics/+page.svelte
+		store.update({ tileOrder: { ...store.value.tileOrder, 'system-resources': ['open-fds', 'ram-usage'] } });
+
+		// A fresh store instance simulates a page reload, reading back from localStorage
+		const reloaded = createSettingsStore();
+		expect(reloaded.value.tileOrder['system-resources']).toEqual(['open-fds', 'ram-usage']);
+		expect(
+			resolveTileOrder(
+				['ram-usage', 'heap-usage', 'goroutines', 'open-fds'],
+				reloaded.value.tileOrder['system-resources']
+			)
+		).toEqual(['open-fds', 'ram-usage', 'heap-usage', 'goroutines']);
 	});
 });
