@@ -1,12 +1,15 @@
 import { json } from '@sveltejs/kit';
 import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
-import { proxyError } from '$lib/server/apiError';
+import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ request }) => {
 	try {
 		const res = await fetch(`${backendUrl()}/core/files`, { headers: forwardAuthHeader(request) });
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
+		if (!res.ok) {
+			const message = await backendErrorMessage(res, 'Failed to list files');
+			return json({ error: message }, { status: res.status });
+		}
 		return json(await res.json());
 	} catch (error) {
 		return proxyError('Failed to list files', error);
