@@ -114,7 +114,9 @@
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">File Size Limit</h3>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					The default maximum file size is <strong class="text-gray-700 dark:text-gray-200">50 MB</strong>.
-					This can be changed by an administrator in Settings → System → Max Upload File Size.
+					This is a backend default (<a href="#system" class="underline">System Configuration</a>,
+					below) — changing it means editing <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/config.json</code>
+					and redeploying, not a Settings-page toggle.
 				</p>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Security Checks</h3>
@@ -279,8 +281,9 @@
 			<section id="system" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
 				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">System Configuration</h2>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-					The System section of Settings controls backend behaviour. Changes here are sent to the
-					server via the admin API and take effect immediately without a restart.
+					These values aren't editable from the portal — they're backend defaults, read once
+					from <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">backend/config.json</code>
+					at server startup.
 				</p>
 				<div class="space-y-2">
 					{#each [
@@ -298,9 +301,9 @@
 				</div>
 
 				<div class="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-					<strong>Note:</strong> System settings are applied to the running server immediately but are
-					not persisted to disk. If the server restarts, it will revert to the compiled-in defaults.
-					To make changes permanent, update <code>consts.go</code> and redeploy.
+					<strong>Note:</strong> To change a value, edit
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">backend/config.json</code>
+					and redeploy — there's no live API or Settings-page control for these.
 				</div>
 			</section>
 
