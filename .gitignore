@@ -53,6 +53,9 @@ dewey-mcp/dewey-mcp
 # source docs, not source themselves
 cli/embedded_docs/
 
+# Release bundles produced by package.sh
+build-images/
+
 # Mac file
 .DS_Store
 
