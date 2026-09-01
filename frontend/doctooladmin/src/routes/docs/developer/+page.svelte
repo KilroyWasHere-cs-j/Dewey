@@ -164,6 +164,7 @@
 						<tbody class="divide-y divide-gray-100 dark:divide-gray-700">
 							{#each [
 								{ method: 'GET',    path: '/',                                        handler: 'index',                  desc: 'Health check. Returns server status and Unix timestamp.' },
+								{ method: 'GET',    path: '/version',                                 handler: 'versionInfo',            desc: "Returns the backend's release version and the git branch it was built from." },
 								{ method: 'POST',   path: '/upload',                                  handler: 'uploadFile',             desc: 'Upload a file with metadata fields. Accepts multipart/form-data.' },
 								{ method: 'GET',    path: '/files',                                   handler: 'listFiles',              desc: 'List all filenames currently in the upload cache.' },
 								{ method: 'GET',    path: '/files/:filename/:meta',                   handler: 'getFile',                desc: 'Retrieve a file by name. Set :meta to false for file stream; true is not yet implemented.' },
@@ -173,11 +174,6 @@
 								{ method: 'GET',    path: '/settings',                                handler: '—',                      desc: 'Serves the settings HTML page.' },
 								{ method: 'GET',    path: '/admin/dumpCache',                         handler: 'triggerCacheDump',       desc: 'Immediately clear all files from the cache directory.' },
 								{ method: 'GET',    path: '/admin/reloadPlugins',                     handler: 'reloadPlugins',          desc: 'Reload plugins from disk unconditionally, without restarting the server.' },
-								{ method: 'GET',    path: '/admin/set/daemonTickInterval/:val',       handler: 'setDaemonTickInterval',  desc: 'Update how often the background daemon fires (hours).' },
-								{ method: 'GET',    path: '/admin/set/maxUpSize/:val',                handler: 'setMaxUploadSize',       desc: 'Update the maximum permitted upload file size (MB).' },
-								{ method: 'GET',    path: '/admin/set/maxDBOpenConn/:val',            handler: 'setMaxDBOpenConn',       desc: 'Update the DB connection pool open connection limit.' },
-								{ method: 'GET',    path: '/admin/set/maxDBIdleConn/:val',            handler: 'setMaxDBIdleConn',       desc: 'Update the DB connection pool idle connection limit.' },
-								{ method: 'GET',    path: '/admin/set/dbTimeout/:val',                handler: 'setDBTimeout',           desc: 'Update the DB connection lifetime multiplier (minutes).' },
 								{ method: 'GET',    path: '/machines',                                handler: 'listMachines',           desc: 'List every machine registered in the known_machines allowlist.' },
 								{ method: 'POST',   path: '/machines',                                handler: 'addMachine',             desc: 'Register a new machine. Body: {"ip": "...", "label": "..."}.' },
 								{ method: 'DELETE', path: '/machines/:ip',                            handler: 'deleteMachine',          desc: 'Remove a machine from the allowlist by IP.' },
@@ -292,6 +288,8 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
 								{ cmd: 'delete_file <filename>',          route: 'DELETE /files/:filename',     notes: '' },
 								{ cmd: 'upload <path> [field=value ...]', route: 'POST /upload',                notes: 'See metadata fields below.' },
 								{ cmd: 'self_ip',                         route: '—',                           notes: 'Locally-determined outbound IP toward DEWEY_HOST — a starting guess for what to register in Known Machines, not a guarantee (NAT can rewrite the source address in transit).' },
+								{ cmd: 'metrics',                         route: 'GET  /metrics',               notes: 'Live terminal metrics dashboard (issue #348). Polls every 5s; q to quit, arrows/jk/wheel to scroll.' },
+								{ cmd: 'docs <readme|admin>',             route: '—',                           notes: 'Terminal markdown viewer (issue #379) for README.md or frontend/doctooladmin/README.md, baked into the binary at build time. q to quit, arrows/jk/wheel to scroll.' },
 								{ cmd: 'soak_test [sim_days] [users] [seconds_per_sim_day]', route: '—',       notes: 'Runs soak_test.sh inside the backend container via podman exec. See Testing Tools below.' },
 							] as row}
 								<tr>
@@ -871,7 +869,7 @@ end</code></pre>
 								{ name: 'tickMin',                     default: '1', desc: 'Tick-scaling: lower bound (seconds) the computed interval is clamped to.' },
 								{ name: 'maxFileSize',                 default: '50 MB', desc: 'Maximum upload size enforced by the HTTP server.' },
 								{ name: 'portNumber',                  default: '8080', desc: 'Port the backend listens on.' },
-								{ name: 'appVersion',                  default: '0.2.0', desc: 'App release version shown in the dashboard topbar; bumped by hand per release.' },
+								{ name: 'appVersion',                  default: '0.3.0', desc: 'App release version shown in the dashboard topbar; bumped by hand per release.' },
 								{ name: 'rateLimitPerSecond',          default: '80', desc: 'Global (not per-IP) token-bucket refill rate, in requests/second — shared across every client hitting the server.' },
 								{ name: 'rateLimitBurst',              default: '120', desc: 'Burst allowance on top of the refill rate, also shared globally.' },
 								{ name: 'maxOpenDBConnections',        default: '10', desc: 'Max simultaneous open DB connections.' },
