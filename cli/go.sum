@@ -1,0 +1,4 @@
+github.com/grindlemire/go-tui v0.19.0 h1:4k4MRoYUFChUCfO5Lr4Z05SI3jlTSuH3W1H5/HKVH8s=
+github.com/grindlemire/go-tui v0.19.0/go.mod h1:95oaPy6Iu6MZpiByUqxYz2Wcbckzvaw3K0jgQeI4dD0=
+golang.org/x/sys v0.40.0 h1:DBZZqJ2Rkml6QMQsZywtnjnnGvHza6BTfYFWY9kjEWQ=
+golang.org/x/sys v0.40.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
