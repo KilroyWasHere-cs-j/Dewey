@@ -175,10 +175,31 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		atomic.AddInt64(&PluginErrors, 1)
 		return err
 	}
+
+	key, err := createKey()
+	if err != nil {
+		return err
+	}
+
+	content, err := os.ReadFile(new_path)
+	if err != nil {
+		return err
+	}
+	
+	chipertext, err := encrypt(key, content)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(new_path, chipertext, 0644); err != nil {
+		return err
+	}
+
 	err = copyFile(
 		filepath.Join(uploadDir, path),
 		new_path,
 	)
+
 	if err != nil {
 		Warn("Failed to copy file to store: " + err.Error())
 		return err

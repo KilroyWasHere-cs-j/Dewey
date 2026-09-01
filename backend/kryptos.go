@@ -8,15 +8,17 @@ import (
 	"io"
 )
 
-type Kryptos struct {}
-
-func newKryptos() *Kryptos {
-	return &Kryptos {}
+func createKey() ([]byte, error) {
+	key := make([]byte, 32) // 32 bytes = AES-256
+	if _, err := rand.Read(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // encrypt returns nonce+ciphertext, all authenticated via AES-256-GCM.
 // key must be exactly 32 bytes (AES-256).
-func (kryp *Kryptos) encrypt(key, plaintext []byte) ([]byte, error) {
+func encrypt(key, plaintext []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -39,7 +41,7 @@ func (kryp *Kryptos) encrypt(key, plaintext []byte) ([]byte, error) {
 }
 
 // decrypt expects the format produced by encrypt: nonce+ciphertext.
-func (kryp *Kryptos) decrypt(key, data []byte) ([]byte, error) {
+func decrypt(key, data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
