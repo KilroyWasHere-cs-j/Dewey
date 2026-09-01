@@ -49,6 +49,8 @@ commands:
   self_ip                             locally-determined outbound IP toward the host
   metrics                              live terminal metrics view (issue #348), polls GET /metrics
                                        every 5s, q to quit, arrows/jk/wheel to scroll
+  docs <readme|admin>                  terminal markdown viewer (issue #379) for README.md or
+                                       frontend/doctooladmin/README.md, q to quit, arrows/jk/wheel to scroll
   soak_test [sim_days] [users] [seconds_per_sim_day]
                                        runs backend/testing_tooling/soak_test.sh (issue #311) inside
                                        the backend container via podman exec — long-running
@@ -156,6 +158,9 @@ func main() {
 		} else {
 			fmt.Println("Grovy, not cleaning.")
 		}
+	case "docs":
+		requireArgs(3, "docs <readme|admin>")
+		showDoc(os.Args[2])
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
@@ -413,6 +418,21 @@ func runMetricsDashboard(host string) {
 	defer app.Close()
 	if err := app.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"metrics view error:"+colorReset, err)
+		os.Exit(1)
+	}
+}
+
+// showDoc launches the terminal doc viewer for the named doc ("readme" or
+// "admin", per docPaths in docs_viewer.go).
+func showDoc(name string) {
+	app, err := tui.NewApp(tui.WithRootComponent(DocsDashboard(name)), tui.WithMouse())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, colorRed+"failed to start docs view:"+colorReset, err)
+		os.Exit(1)
+	}
+	defer app.Close()
+	if err := app.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, colorRed+"docs view error:"+colorReset, err)
 		os.Exit(1)
 	}
 }

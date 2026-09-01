@@ -73,6 +73,15 @@ log "info" "Building frontend image ${DIM}(admin-portal)${NC}..."
 podman build -t admin-portal ./frontend/doctooladmin
 log "success" "Frontend image built"
 
+log "info" "Staging docs for dewey-cli's docs command (issue #379)..."
+# go:embed (cli/docs_viewer.go) can only reach files inside the cli/ module,
+# so the real source docs get staged here as plain copies right before the
+# build picks them up.
+mkdir -p cli/embedded_docs
+cp README.md cli/embedded_docs/readme.md
+cp frontend/doctooladmin/README.md cli/embedded_docs/admin_readme.md
+log "success" "Docs staged"
+
 log "info" "Building dewey-cli..."
 # The deployment target is always a Linux server (podman pods, bash run.sh
 # below) regardless of what OS/arch this script itself runs on, so the

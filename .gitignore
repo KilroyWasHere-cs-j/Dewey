@@ -49,6 +49,10 @@ backend/Dewey
 cli/dewey-cli
 dewey-mcp/dewey-mcp
 
+# Docs staged for go:embed by package.sh (issue #379) — copies of the real
+# source docs, not source themselves
+cli/embedded_docs/
+
 # Mac file
 .DS_Store
 
