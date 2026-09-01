@@ -595,7 +595,7 @@ run_roundtrip_tests() {
         pace
         local dst="$DOWNLOAD_DIR/$server_file"
         local code
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/core/files/$server_file/false" 2>/dev/null)
+        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/core/files/$server_file?meta=false" 2>/dev/null)
 
         if [ "$code" != "200" ]; then
             result_fail "ROUNDTRIP [$f] download" "HTTP $code"
@@ -694,7 +694,7 @@ run_store_path_verification_test() {
     fi
 }
 
-# ── Section 12: Metadata retrieval (GET /files/:filename/true) ───────────────
+# ── Section 12: Metadata retrieval (GET /files/:filename?meta=true) ──────────
 
 run_metadata_tests() {
     section "METADATA RETRIEVAL (meta=true)"
@@ -739,20 +739,20 @@ run_metadata_tests() {
     info "  Fetching metadata for $server_file ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 10 "$BASE/core/files/$server_file/true" 2>/dev/null)
+    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 10 "$BASE/core/files/$server_file?meta=true" 2>/dev/null)
     code=$(echo "$body" | tail -1)
     body=$(echo "$body" | sed '$d')
 
     if [ "$code" = "000" ]; then
-        result_fail "GET /files/$server_file/true" "connection failed"
+        result_fail "GET /files/$server_file?meta=true" "connection failed"
         return
     fi
 
     if [ "$code" != "200" ]; then
-        result_fail "GET /files/$server_file/true" "expected 200, got HTTP $code"
+        result_fail "GET /files/$server_file?meta=true" "expected 200, got HTTP $code"
         return
     fi
-    result_pass "GET /files/$server_file/true -> HTTP 200"
+    result_pass "GET /files/$server_file?meta=true -> HTTP 200"
 
     # Check that each known field is present in the JSON response
     local -A expected_fields=(
@@ -774,13 +774,13 @@ run_metadata_tests() {
     info "  Testing unknown meta flag ..."
     pace
     code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
-        "$BASE/core/files/$server_file/maybe" 2>/dev/null)
+        "$BASE/core/files/$server_file?meta=maybe" 2>/dev/null)
     if [ "$code" = "400" ]; then
-        result_pass "GET /files/$server_file/maybe -> HTTP 400 (bad flag rejected)"
+        result_pass "GET /files/$server_file?meta=maybe -> HTTP 400 (bad flag rejected)"
     elif [ "$code" = "000" ]; then
-        result_fail "GET /files/$server_file/maybe" "connection failed"
+        result_fail "GET /files/$server_file?meta=maybe" "connection failed"
     else
-        result_fail "GET /files/$server_file/maybe" "expected 400, got HTTP $code"
+        result_fail "GET /files/$server_file?meta=maybe" "expected 400, got HTTP $code"
     fi
 
     # meta=true for a non-existent file should return 404
@@ -788,13 +788,13 @@ run_metadata_tests() {
     pace
     local ghost="ghost_$(printf '%08x' $RANDOM$RANDOM).jpg"
     code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
-        "$BASE/core/files/$ghost/true" 2>/dev/null)
+        "$BASE/core/files/$ghost?meta=true" 2>/dev/null)
     if [ "$code" = "404" ]; then
-        result_pass "GET /files/$ghost/true -> HTTP 404"
+        result_pass "GET /files/$ghost?meta=true -> HTTP 404"
     elif [ "$code" = "000" ]; then
-        result_fail "GET /files/$ghost/true" "connection failed"
+        result_fail "GET /files/$ghost?meta=true" "connection failed"
     else
-        result_fail "GET /files/$ghost/true" "expected 404, got HTTP $code"
+        result_fail "GET /files/$ghost?meta=true" "expected 404, got HTTP $code"
     fi
 }
 
@@ -850,7 +850,7 @@ run_delete_tests() {
             pace
             local verify_code
             verify_code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
-                "$BASE/core/files/$target/false" 2>/dev/null)
+                "$BASE/core/files/$target?meta=false" 2>/dev/null)
             if [ "$verify_code" -ge 400 ]; then
                 result_pass "DELETE verify $target gone -> HTTP $verify_code"
             elif [ "$verify_code" = "000" ]; then

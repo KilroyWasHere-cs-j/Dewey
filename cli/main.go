@@ -42,8 +42,8 @@ commands:
   add_machine <ip> <label>            POST /core/machines
   delete_machine <ip>                 DELETE /core/machines/:ip
   list_files                          GET  /core/files
-  get_file <filename>                 GET  /core/files/:filename/false
-  get_file_meta <filename>            GET  /core/files/:filename/true
+  get_file <filename>                 GET  /core/files/:filename?meta=false
+  get_file_meta <filename>            GET  /core/files/:filename?meta=true
   delete_file <filename>              DELETE /core/files/:filename
   upload <path> [field=value ...]     POST /core/upload (optional metadata fields, see below)
   self_ip                             locally-determined outbound IP toward the host
@@ -110,10 +110,10 @@ func main() {
 		get(host+"/core/files", filesPassword, printFilesTable)
 	case "get_file":
 		requireArgs(3, "get_file <filename>")
-		get(host+"/core/files/"+os.Args[2]+"/false", filesPassword, nil)
+		get(host+"/core/files/"+os.Args[2]+"?meta=false", filesPassword, nil)
 	case "get_file_meta":
 		requireArgs(3, "get_file_meta <filename>")
-		get(host+"/core/files/"+os.Args[2]+"/true", filesPassword, nil)
+		get(host+"/core/files/"+os.Args[2]+"?meta=true", filesPassword, nil)
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
 		del(host+"/core/files/"+os.Args[2], filesPassword, nil)
