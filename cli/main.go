@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	tui "github.com/grindlemire/go-tui"
 )
 
 const defaultHost = "http://localhost:8080"
@@ -45,6 +47,8 @@ commands:
   delete_file <filename>              DELETE /core/files/:filename
   upload <path> [field=value ...]     POST /core/upload (optional metadata fields, see below)
   self_ip                             locally-determined outbound IP toward the host
+  metrics                              live terminal metrics view (issue #348), polls GET /metrics
+                                       every 5s, q to quit, arrows/jk/wheel to scroll
   soak_test [sim_days] [users] [seconds_per_sim_day]
                                        runs backend/testing_tooling/soak_test.sh (issue #311) inside
                                        the backend container via podman exec — long-running
@@ -117,6 +121,8 @@ func main() {
 		upload(host+"/core/upload", filesPassword, os.Args[2], meta)
 	case "self_ip":
 		selfIP(host)
+	case "metrics":
+		runMetricsDashboard(host)
 	case "soak_test":
 		soakTest(os.Args[2:])
 	case "create_docx":
@@ -392,6 +398,23 @@ func upload(url, password, filePath string, meta map[string]string) {
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	setAuthHeader(req, password)
 	doRequest(req, nil)
+}
+
+// runMetricsDashboard launches the live terminal metrics view from
+// metrics_dashboard.gsx (issue #348) — polls host's /metrics every
+// pollInterval and renders it. WithMouse is needed for the dashboard's
+// scroll-wheel support.
+func runMetricsDashboard(host string) {
+	app, err := tui.NewApp(tui.WithRootComponent(MetricsDashboard(host)), tui.WithMouse())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, colorRed+"failed to start metrics view:"+colorReset, err)
+		os.Exit(1)
+	}
+	defer app.Close()
+	if err := app.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, colorRed+"metrics view error:"+colorReset, err)
+		os.Exit(1)
+	}
 }
 
 // selfIP reports the local address the OS would use to reach host. A UDP
