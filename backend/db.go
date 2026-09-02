@@ -405,6 +405,8 @@ func (dm *DatabaseManager) getKnownMachines() ([]struct {
 	return machines, nil
 }
 
+//func (dm *DatabaseManager) 
+
 // migrate executes the DDL script to ensure all tables ('files' and 'meta')
 // and their performance indexes exist.
 func (dm *DatabaseManager) migrate() error {
@@ -443,6 +445,34 @@ func (dm *DatabaseManager) migrate() error {
 	// already has the files table. filepath is TEXT, so MySQL requires a
 	// prefix length for the index rather than the full column.
 	dm.createUniqueIndexSafe("idx_filepath_unique", "files(filepath(255))")
+
+
+
+	// key_id_active/label_active are generated columns that collapse to NULL
+	// once a key is soft-deleted (is_deleted = 1). MySQL's unique index
+	// permits unlimited NULLs but only one of any real value, so indexing
+	// these instead of the raw columns lets a soft-deleted key_id/label be
+	// reused by a new key, while still enforcing uniqueness among active
+	// (is_deleted = 0) keys.
+	keyQuery := `
+	CREATE TABLE IF NOT EXISTS keys (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		key_id VARCHAR(100) NOT NULL,
+		key_type VARCHAR(100) NOT NULL,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		expires_at DATETIME NULL,
+		label VARCHAR(255) NOT NULL,
+		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
+		key_id_active VARCHAR(100) GENERATED ALWAYS AS (CASE WHEN is_deleted = 0 THEN key_id ELSE NULL END) STORED,
+		label_active VARCHAR(255) GENERATED ALWAYS AS (CASE WHEN is_deleted = 0 THEN label ELSE NULL END) STORED
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+
+	if _, err := dm.db.Exec(keyQuery); err != nil {
+		return fmt.Errorf("failed to create keys table: %w", err)
+	}
+
+	dm.createUniqueIndexSafe("idx_keys_key_id_active", "keys(key_id_active)")
+	dm.createUniqueIndexSafe("idx_keys_label_active", "keys(label_active)")
 
 	// --- 2. CREATE META TABLE ---
 	metaQuery := `
