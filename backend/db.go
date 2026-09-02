@@ -191,7 +191,7 @@ func (dm *DatabaseManager) pullMetaByFilename(filename string) (MetaData, error)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return MetaData{}, fmt.Errorf("no metadata found for filename: %s", filename)
-		}
+	}
 		return MetaData{}, err
 	}
 
@@ -454,14 +454,15 @@ func (dm *DatabaseManager) migrate() error {
 	// these instead of the raw columns lets a soft-deleted key_id/label be
 	// reused by a new key, while still enforcing uniqueness among active
 	// (is_deleted = 0) keys.
+
+	// --- 2. CREATE KEYS TABLE ---
 	keyQuery := `
 	CREATE TABLE IF NOT EXISTS keys (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		key_id VARCHAR(100) NOT NULL,
-		key_type VARCHAR(100) NOT NULL,
+		key VARCHAR(255) NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		expires_at DATETIME NULL,
-		label VARCHAR(255) NOT NULL,
 		is_deleted TINYINT(1) DEFAULT 0 NOT NULL,
 		key_id_active VARCHAR(100) GENERATED ALWAYS AS (CASE WHEN is_deleted = 0 THEN key_id ELSE NULL END) STORED,
 		label_active VARCHAR(255) GENERATED ALWAYS AS (CASE WHEN is_deleted = 0 THEN label ELSE NULL END) STORED
@@ -474,7 +475,18 @@ func (dm *DatabaseManager) migrate() error {
 	dm.createUniqueIndexSafe("idx_keys_key_id_active", "keys(key_id_active)")
 	dm.createUniqueIndexSafe("idx_keys_label_active", "keys(label_active)")
 
-	// --- 2. CREATE META TABLE ---
+	// files previously had no way to record which key encrypted it. Once
+	// encryption is wired in (issue #335) and keys start rotating, decrypting
+	// a file requires knowing exactly which key encrypted it — this links
+	// each file to its keys row the same way meta.file_id links to files
+	// below. Added via ALTER rather than in filesQuery's CREATE TABLE IF NOT
+	// EXISTS above, since that statement is a no-op against a deployment
+	// that already has the files table. Nullable because files written
+	// before encryption existed have no associated key.
+	dm.addColumnSafe("files", "key_id", "INT NULL")
+	dm.addForeignKeySafe("files", "fk_files_key_id", "key_id", "keys", "id")
+
+	// --- 3. CREATE META TABLE ---
 	metaQuery := `
 	CREATE TABLE IF NOT EXISTS meta (
 		id INT AUTO_INCREMENT PRIMARY KEY,
@@ -635,3 +647,53 @@ func isDuplicateConstraintError(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "1826") || strings.Contains(msg, "Duplicate foreign key constraint")
 }
+
+func (dm *DatabaseManager) createNewKeyRecord(keyID, key string, expiresAt *time.Time) (int64, error) {
+	tx, err := dm.db.Begin()
+
+	if err != nil {
+		Warn("Failed to start transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
+		return 0, err
+	}
+	// Deferring Rollback ensures resources are cleaned up if any step fails.
+	// If tx.Commit() succeeds, Rollback() does nothing.
+	defer tx.Rollback()
+
+	query := `INSERT INTO keys (key_id, expires_at, key, created_at, is_deleted) VALUES (?, ?, ?, ?, 0)`
+
+	result, err := tx.Exec(query, keyID, expiresAt, key)
+	if err != nil {
+		Warn("Transaction execution failed: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
+		return 0, err
+	}
+
+	rowID, err := result.LastInsertId()
+	if err != nil {
+		Warn("Failed to read inserted key id: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		Warn("Failed to commit transaction: " + err.Error())
+		atomic.AddInt64(&DBErrors, 1)
+		return 0, err
+	}
+
+	return rowID, nil
+}
+
+func (dm *DatabaseManager) pullKeyRecordByID(keyID string) (string, error) {
+	query := "SELECT key_id FROM keys WHERE key_id = ? LIMIT 1"
+	err := dm.db.QueryRow(query, keyID).Scan(&keyID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("no record found for key_id: %s", keyID)
+		}
+		return "", err
+	}
+	return keyID, nil
+}
+

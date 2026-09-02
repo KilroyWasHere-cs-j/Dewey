@@ -181,31 +181,20 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		return err
 	}
 
-	content, err := os.ReadFile(new_path)
-	if err != nil {
-		return err
-	}
-	
-	chipertext, err := encrypt(key, content)
+	content, err := os.ReadFile(filepath.Join(uploadDir, path))
 	if err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(new_path, chipertext, 0644); err != nil {
-		return err
-	}
-
-	err = copyFile(
-		filepath.Join(uploadDir, path),
-		new_path,
-	)
-
+	ciphertext, err := encrypt(key, content)
 	if err != nil {
-		Warn("Failed to copy file to store: " + err.Error())
 		return err
 	}
 
-	// createNewFileRecord's returned id links the metadata row to this exact
+	if err := os.WriteFile(new_path, ciphertext, 0644); err != nil {
+		Warn("Failed to write encrypted file to store: " + err.Error())
+		return err
+	}	// createNewFileRecord's returned id links the metadata row to this exact
 	// file via meta.file_id (issue #228), instead of the client-suppliable
 	// acts_id string previously used to join files and meta. Without a valid
 	// file id there's nothing correct to link a meta row to, so skip it —

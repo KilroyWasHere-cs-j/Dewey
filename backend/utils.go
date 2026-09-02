@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 )
 
 // startDaemon launches a background worker that periodically runs maintenance tasks.
@@ -651,3 +652,8 @@ var (
 	uploadCounter    = newSlidingWindowCounter(30)
 	retrievalCounter = newSlidingWindowCounter(30)
 )
+
+func createUUID() string{
+		id := uuid.New() // random (v4) UUID
+		return id.String()
+}
