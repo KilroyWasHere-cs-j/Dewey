@@ -380,3 +380,55 @@ func TestOpenFile(t *testing.T) {
 		t.Fatalf("openFile content = %q, want %q", got, content)
 	}
 }
+
+// TestViewFile exercises the helper both getViewFile branches (log, config)
+// call — a plain baseDir+name join and read, with no boundary check of its
+// own (issue #389's fileview routes rely on gin's single-segment :file param
+// to keep a real "/" out of name, not on viewFile).
+func TestViewFile(t *testing.T) {
+	dir := t.TempDir()
+	content := "line one\nline two\n"
+	if err := os.WriteFile(filepath.Join(dir, "app.log"), []byte(content), 0600); err != nil {
+		t.Fatalf("writing fixture file: %v", err)
+	}
+
+	t.Run("existing file returns its content", func(t *testing.T) {
+		got, err := viewFile(dir, "app.log")
+		if err != nil {
+			t.Fatalf("viewFile() unexpected error: %v", err)
+		}
+		if got != content {
+			t.Fatalf("viewFile() = %q, want %q", got, content)
+		}
+	})
+
+	t.Run("missing file returns an error", func(t *testing.T) {
+		if _, err := viewFile(dir, "does-not-exist.log"); err == nil {
+			t.Fatalf("viewFile() with missing file = nil error, want an error")
+		}
+	})
+
+	t.Run("name escaping baseDir via .. is still joined and read", func(t *testing.T) {
+		// Documents current behavior rather than asserting a boundary that
+		// doesn't exist: viewFile itself has no resolveStorePath-style
+		// containment check, so a ".."-bearing name that filepath.Join can
+		// resolve to a real file outside dir is followed, not rejected.
+		outside := t.TempDir()
+		if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("outside"), 0600); err != nil {
+			t.Fatalf("writing outside fixture: %v", err)
+		}
+
+		rel, err := filepath.Rel(dir, filepath.Join(outside, "secret.txt"))
+		if err != nil {
+			t.Fatalf("computing relative path: %v", err)
+		}
+
+		got, err := viewFile(dir, rel)
+		if err != nil {
+			t.Fatalf("viewFile() unexpected error: %v", err)
+		}
+		if got != "outside" {
+			t.Fatalf("viewFile() = %q, want %q — expected the traversal to be followed since viewFile does no containment check", got, "outside")
+		}
+	})
+}

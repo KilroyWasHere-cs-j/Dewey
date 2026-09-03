@@ -488,3 +488,31 @@ func validateMetaData(m MetaData) error {
 	// same for any other NOT NULL column fed from PostForm
 	return nil
 }
+
+func viewFile(baseDir string, logname string) (string, error) {
+	filepath := filepath.Join(baseDir, logname)
+	file, err := os.ReadFile(filepath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(file), nil
+}
+
+func viewLogDir() ([]string, error) {
+	files, err := os.ReadDir("/app/logs")
+	if err != nil {
+		return nil, err
+	}
+
+	var fileList []string
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		fileList = append(fileList, file.Name())
+	}
+
+	return fileList, nil
+}
+

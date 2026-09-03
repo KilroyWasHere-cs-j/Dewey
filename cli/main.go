@@ -166,6 +166,11 @@ func main() {
 		pullFile(os.Args[2], os.Args[3])
 	case "list_files_on_disk":
 		listFilesOnDisk()
+	case "view_log_list":
+		viewLogList(host)
+	case "view_log":
+		requireArgs(2, "view_log <logfile>")
+		viewLog(os.Args[2], host)
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
@@ -549,4 +554,12 @@ func listFilesOnDisk() {
 	}
 
 	fmt.Println(stdout.String())
+}
+
+func viewLogList(host string) {
+	get(host + "/fileview/viewLogDir", "", nil)
+}
+
+func viewLog(logfile string, host string) {
+	get(host+"/fileview/viewFile/log/"+logfile, "", nil)
 }

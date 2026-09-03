@@ -40,8 +40,11 @@ backend/logs
 backend/cache
 backend/backup
 
-# Shell script run logs
-logs/
+# Shell script run logs (deploy.sh/cleanup.sh/package.sh, all repo-root
+# scripts writing to <repo root>/logs) — anchored so it doesn't also match
+# every other directory named "logs" in the tree, e.g.
+# frontend/doctooladmin/src/routes/logs/ (issue #389's fileview page).
+/logs/
 backend/testing_tooling/logs/
 
 # Compiled binary
