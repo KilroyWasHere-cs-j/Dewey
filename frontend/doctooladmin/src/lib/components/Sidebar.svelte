@@ -12,6 +12,7 @@
 			links: [
 				{ href: '/analytics', label: 'Analytics' },
 				{ href: '/files', label: 'File Management' },
+				{ href: '/logs', label: 'Logs & Config' },
 				{ href: '/machines', label: 'Known Machines' },
 				{ href: '/settings', label: 'Settings' }
 			]
@@ -31,7 +32,7 @@
 
 <aside
 	aria-label="Sidebar"
-	class={`bg-gray-900 text-white w-64 p-4 space-y-4
+	class={`w-64 space-y-4 bg-gray-900 p-4 text-white
 		${open ? 'block' : 'hidden'} md:block`}
 >
 	<h2 class="mb-6 text-2xl font-bold">DEWEY</h2>

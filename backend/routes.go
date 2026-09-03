@@ -64,6 +64,33 @@ func versionInfo(c *gin.Context) {
 	})
 }
 
+func getViewFile(c *gin.Context) {
+	Debug("getViewFile")
+	fileType := c.Param("fileType")
+	targetFile := c.Param("file")
+	switch fileType {
+	case "log":
+		baseDir := "/app/logs"
+		file, err := viewFile(baseDir, targetFile)
+		if err != nil {
+			Warn("getViewFile failed: " + err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve log file"})
+			return
+		}
+		c.String(http.StatusOK, file)
+	case "config":
+		file, err := viewFile("/", "app/config.json")
+		if err != nil {
+			Warn("getViewFile failed: " + err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve config file"})
+			return
+		}
+		c.String(http.StatusOK, file)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown file type"})
+	}
+}
+
 // getFile retrieves a file or its metadata depending on the meta flag.
 //
 // URL Params:
@@ -112,6 +139,18 @@ func getFile(c *gin.Context) {
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("unknown meta flag: %s", metaFlag)})
 	}
+}
+
+func getViewLogFile(c *gin.Context) {
+	Debug("getViewLogFile")
+	dirs, err := viewLogDir()
+	if err != nil {
+		Warn("getViewLogFile failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve log files"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"files": dirs})
 }
 
 // listFiles returns all files stored in the upload directory.

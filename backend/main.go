@@ -193,6 +193,13 @@ func main() {
 		metrics.GET(p.MetricsPath, gin.WrapH(promhttp.Handler()))
 	}
 
+	fileview := r.Group("/fileview")
+	fileview.Use(logConnections(dbm, false))
+	{
+		fileview.GET("/viewLogDir", getViewLogFile)
+		fileview.GET("/viewFile/:fileType/:file", getViewFile)
+	}
+
 	admin := r.Group("/admin")
 	admin.Use(logConnections(dbm, true))
 	{

@@ -885,6 +885,108 @@ run_delete_tests() {
     fi
 }
 
+# ── Section 16: Fileview routes (issue #389) ──────────────────────────────────
+# /fileview is only gated by the known_machines IP allowlist (logConnections
+# .. false), not requirePassword — unlike /core/files/*, these requests carry
+# no X-Dewey-Password header, matching how the routes are actually reachable.
+
+run_fileview_tests() {
+    section "FILEVIEW ROUTES"
+
+    info "  Testing GET /fileview/viewLogDir ..."
+    pace
+    local body code
+    body=$(curl -s -w '\n%{http_code}' --max-time 10 "$BASE/fileview/viewLogDir" 2>/dev/null)
+    code=$(echo "$body" | tail -n1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" = "000" ]; then
+        result_fail "GET /fileview/viewLogDir" "connection failed"
+    elif [ "$code" = "200" ] && echo "$body" | grep -q '"files"'; then
+        result_pass "GET /fileview/viewLogDir -> HTTP 200 (files key present)"
+    else
+        result_fail "GET /fileview/viewLogDir" "expected 200 with a files key, got HTTP $code: $body"
+    fi
+
+    # Pull today's rotated log filename out of viewLogDir's own response
+    # rather than assuming the name (issue #387's log.go rotates daily), so
+    # this doesn't need updating every day the suite runs.
+    local today_log
+    today_log=$(echo "$body" | grep -o '"app-[0-9-]*\.log"' | head -n1 | tr -d '"')
+
+    if [ -z "$today_log" ]; then
+        result_skip "GET /fileview/viewFile/log/:file" "no log filename found in viewLogDir response"
+    else
+        info "  Testing GET /fileview/viewFile/log/$today_log ..."
+        pace
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE/fileview/viewFile/log/$today_log" 2>/dev/null)
+        if [ "$code" = "000" ]; then
+            result_fail "GET /fileview/viewFile/log/$today_log" "connection failed"
+        elif [ "$code" = "200" ]; then
+            result_pass "GET /fileview/viewFile/log/$today_log -> HTTP 200"
+        else
+            result_fail "GET /fileview/viewFile/log/$today_log" "expected 200, got HTTP $code"
+        fi
+    fi
+
+    info "  Testing GET /fileview/viewFile/config/config.json ..."
+    pace
+    body=$(curl -s -w '\n%{http_code}' --max-time 10 "$BASE/fileview/viewFile/config/config.json" 2>/dev/null)
+    code=$(echo "$body" | tail -n1)
+    body=$(echo "$body" | sed '$d')
+
+    if [ "$code" = "000" ]; then
+        result_fail "GET /fileview/viewFile/config/config.json" "connection failed"
+    elif [ "$code" = "200" ] && echo "$body" | grep -q "file_system_base_dir"; then
+        result_pass "GET /fileview/viewFile/config/config.json -> HTTP 200 (real config content)"
+    else
+        result_fail "GET /fileview/viewFile/config/config.json" "expected 200 with config content, got HTTP $code"
+    fi
+
+    info "  Testing GET /fileview/viewFile/bogus/whatever (unknown fileType) ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE/fileview/viewFile/bogus/whatever" 2>/dev/null)
+    if [ "$code" = "400" ]; then
+        result_pass "GET /fileview/viewFile/bogus/whatever -> HTTP 400 (unknown fileType rejected)"
+    elif [ "$code" = "000" ]; then
+        result_fail "GET /fileview/viewFile/bogus/whatever" "connection failed"
+    else
+        result_fail "GET /fileview/viewFile/bogus/whatever" "expected 400, got HTTP $code"
+    fi
+
+    local ghost="nonexistent-file-$(printf '%08x' $RANDOM$RANDOM).log"
+    info "  Testing GET /fileview/viewFile/log/$ghost (missing file) ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE/fileview/viewFile/log/$ghost" 2>/dev/null)
+    if [ "$code" = "000" ]; then
+        result_fail "GET /fileview/viewFile/log/$ghost" "connection failed"
+    elif [ "$code" -ge 400 ]; then
+        result_pass "GET /fileview/viewFile/log/$ghost -> HTTP $code (missing file rejected)"
+    else
+        result_fail "GET /fileview/viewFile/log/$ghost" "expected 4xx/5xx, got HTTP $code"
+    fi
+
+    # gin's :file param can't contain a literal "/" (same limitation the
+    # README documents for POST /files/move/...), so a real "../" traversal
+    # never reaches getViewFile at all — this confirms that routing-level
+    # block still holds rather than exercising any boundary check inside
+    # viewFile itself, which has none (see TestViewFile in
+    # filemanager_test.go for what happens when a name with ".." *is*
+    # actually joined).
+    info "  Testing GET /fileview/viewFile/log/..%2F..%2F..%2Fetc%2Fpasswd (traversal) ..."
+    pace
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE/fileview/viewFile/log/..%2F..%2F..%2Fetc%2Fpasswd" 2>/dev/null)
+    if [ "$code" = "000" ]; then
+        result_fail "GET /fileview/viewFile/log traversal" "connection failed"
+    elif [ "$code" -ge 400 ]; then
+        result_pass "GET /fileview/viewFile/log traversal -> HTTP $code (blocked)"
+    elif [ "$code" = "200" ]; then
+        result_fail "GET /fileview/viewFile/log traversal" "HTTP 200 — path traversal may have succeeded"
+    else
+        result_pass "GET /fileview/viewFile/log traversal -> HTTP $code"
+    fi
+}
+
 # ── Section 15: PDF embedded JavaScript rejection ─────────────────────────────
 
 run_pdf_javascript_test() {
@@ -959,6 +1061,7 @@ run_store_path_verification_test
 run_metadata_tests
 run_catalog_test
 run_delete_tests
+run_fileview_tests
 
 section "SUMMARY"
 info "  ${GREEN}${BOLD}Passed:${NC}  $PASS"
