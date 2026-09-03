@@ -484,7 +484,7 @@ func saveBackup() error {
 			return err
 		}
 
-		writer, err := zipWriter.Create(relPath)
+		writer, err := zipWriter.CreateHeader(&zip.FileHeader{Name: relPath, Method: zip.Store})
 		if err != nil {
 			return err
 		}
