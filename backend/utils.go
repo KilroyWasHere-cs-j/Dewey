@@ -152,7 +152,9 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 					atomic.AddInt64(&CacheCleanCycles, 1)
 
 					err := saveBackup()
-					if err == nil {
+					if err != nil {
+						Warn("Backup failed: " + err.Error())
+					} else {
 						atomic.AddInt64(&FilesInBackUp, 1)
 					}
 
@@ -429,7 +431,7 @@ func extractZipFile(f *zip.File, destPath string) error {
 // dbDumpDir is where backupMySQLDatabase writes SQL dumps and where
 // latestBackupDump looks for the most recent one to restore — kept as a
 // single constant so save and load can't drift apart on the path.
-const dbDumpDir = "./backups"
+const dbDumpDir = "./backup"
 
 func saveBackup() error {
 	Debug("Backing up the database")

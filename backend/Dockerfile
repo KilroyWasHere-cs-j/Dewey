@@ -23,8 +23,11 @@ RUN go build -trimpath -ldflags="-s -w -X main.GitBranch=${GIT_BRANCH}" -o app-b
 # ---- Run stage ----
 FROM alpine:3.21
 
-# bash and curl are required by the BITs test suite
-RUN apk add --no-cache bash curl \
+# bash and curl are required by the BITs test suite; mysql-client provides
+# mysqldump, which saveBackup() (utils.go) shells out to on every daemon
+# tick (issue #391 — it was missing, so the backup daemon failed silently
+# before ever reaching the store/ zip step)
+RUN apk add --no-cache bash curl mysql-client \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
