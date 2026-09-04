@@ -215,7 +215,7 @@ podman pod rm -f dewey-pod 2>/dev/null || true
 if [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ] && [ -t 0 ]; then
   read -r -p "  Wipe store/cache/backup/logs volumes before this run? [y/N] " wipe_answer
   case "$wipe_answer" in
-    [nN]*) KEEP_DATA=false ;;
+    [yY]*) KEEP_DATA=false ;;
     *) KEEP_DATA=true ;;
   esac
 elif [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ]; then
