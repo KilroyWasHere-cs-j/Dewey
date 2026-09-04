@@ -213,10 +213,10 @@ podman pod rm -f dewey-pod 2>/dev/null || true
 # this script, that left MySQL's file-metadata pointing at documents no
 # longer on disk (issue #206).
 if [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ] && [ -t 0 ]; then
-  read -r -p "  Wipe store/cache/backup/logs volumes before this run? [Y/n] " wipe_answer
+  read -r -p "  Wipe store/cache/backup/logs volumes before this run? [y/N] " wipe_answer
   case "$wipe_answer" in
-    [nN]*) KEEP_DATA=true ;;
-    *) KEEP_DATA=false ;;
+    [yY]*) KEEP_DATA=false ;;
+    *) KEEP_DATA=true ;;
   esac
 elif [ "$KEEP_DATA_SET" = false ] && [ "$WIPE_DATA_SET" = false ]; then
   log "warn" "No TTY and no --keep-data/--wipe-data flag; defaulting to --keep-data. Pass --wipe-data to wipe non-interactively."
