@@ -193,17 +193,67 @@ podman load -i prometheus.tar
 KEEP_DATA=false
 KEEP_DATA_SET=false
 WIPE_DATA_SET=false
+APP_ONLY=false
 for arg in "$@"; do
   case "$arg" in
     --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
     --wipe-data) WIPE_DATA_SET=true ;;
+    --app-only) APP_ONLY=true ;;
   esac
 done
 
-# Remove any existing pod first so its containers release the volumes
-# before we try to remove them — a volume in use by a running container
-# can't be removed.
-podman pod rm -f dewey-pod 2>/dev/null || true
+# --app-only skips the full pod teardown/recreate below and instead just
+# swaps the two app containers (backend, frontend) in place inside the
+# existing dewey-pod, leaving dewey-mysql/dewey-prometheus and all of their
+# data (mysql-data, prometheus-data, dewey-store, dewey-cache, dewey-backup,
+# dewey-logs) completely untouched — mirrors deploy.sh's --app-only
+# (issue #385). Incompatible with --wipe-data for the same reason it's
+# incompatible with deploy.sh's --reset-db/--clean-slate there.
+#
+# podman play kube (used below for a normal run) applies the whole pod spec
+# in one shot, and its --replace semantics against a manifest listing only
+# some of a pod's containers aren't something to bet mysql/prometheus's data
+# on without testing — so app-only mode bypasses kube-play entirely for the
+# two containers it touches, using individual podman rm/run calls instead
+# (same approach as deploy.sh). podman play kube prefixes container names
+# with the pod name, so the running containers here are
+# dewey-pod-cross-doc-tool-dev / dewey-pod-svelte-container /
+# dewey-pod-dewey-mysql / dewey-pod-dewey-prometheus, not deploy.sh's bare
+# names.
+if [ "$APP_ONLY" = true ]; then
+  if [ "$WIPE_DATA_SET" = true ]; then
+    log "error" "--app-only can't be combined with --wipe-data — that requires touching the volumes --app-only leaves alone. Run a full run.sh (without --app-only) instead."
+    exit 1
+  fi
+  KEEP_DATA=true
+  KEEP_DATA_SET=true
+
+  if ! podman pod exists dewey-pod; then
+    log "error" "--app-only requires dewey-pod to already be running. Run a full run.sh first (without --app-only)."
+    exit 1
+  fi
+  if [ "$(podman inspect -f '{{.State.Running}}' dewey-pod-dewey-mysql 2>/dev/null)" != "true" ] || \
+     [ "$(podman inspect -f '{{.State.Running}}' dewey-pod-dewey-prometheus 2>/dev/null)" != "true" ]; then
+    log "error" "--app-only requires dewey-pod-dewey-mysql and dewey-pod-dewey-prometheus to already be running. Run a full run.sh first (without --app-only)."
+    exit 1
+  fi
+
+  # Read the backend's secrets off its own currently-running container
+  # instead of reconstructing them — they were generated once by whatever
+  # deploy produced this pod and must stay exactly as-is for the DB/file
+  # passwords to keep matching.
+  BACKEND_ENV_ARGS=()
+  while IFS= read -r envline; do
+    BACKEND_ENV_ARGS+=(-e "$envline")
+  done < <(podman inspect dewey-pod-cross-doc-tool-dev --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E '^(DB_DSN|FILES_PASSWORD|MACHINES_PASSWORD)=')
+
+  log "info" "App-only redeploy: leaving dewey-pod-dewey-mysql and dewey-pod-dewey-prometheus untouched"
+else
+  # Remove any existing pod first so its containers release the volumes
+  # before we try to remove them — a volume in use by a running container
+  # can't be removed.
+  podman pod rm -f dewey-pod 2>/dev/null || true
+fi
 
 # Ask interactively unless --keep-data/--wipe-data already answered the
 # question, or there's no TTY to ask on (e.g. running from CI/automation).
@@ -239,18 +289,46 @@ fi
 HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 [ -z "$HOST_IP" ] && HOST_IP="localhost"
 
-# dewey-pod.yaml was captured via `podman generate kube` on whatever machine
-# ran package.sh, so its ORIGIN env value is that machine's IP — wrong here.
-# SvelteKit's CSRF checkOrigin needs ORIGIN to match the address clients
-# actually use to reach this deployment, so patch it in place before playing
-# the pod (podman play kube has no per-env override flag).
-sed -i "/name: ORIGIN/{n;s|value: .*|value: http://${HOST_IP}:3000|}" dewey-pod.yaml
+if [ "$APP_ONLY" = true ]; then
+  # Bypass kube-play entirely for this path — see the note above BACKEND_ENV_ARGS
+  # for why. Same podman run flags as deploy.sh's backend/frontend sections
+  # (BODY_SIZE_LIMIT/resource limits are static, not read off the old
+  # container, since they never vary between deploys).
+  log "info" "Restarting backend container..."
+  podman rm -f dewey-pod-cross-doc-tool-dev 2>/dev/null || true
+  podman run -d --pod dewey-pod --name dewey-pod-cross-doc-tool-dev \
+    --read-only --tmpfs /tmp \
+    --cpus 2 --memory 2g \
+    "${BACKEND_ENV_ARGS[@]}" \
+    -v dewey-store:/app/store:Z \
+    -v dewey-cache:/app/cache:Z \
+    -v dewey-backup:/app/backup:Z \
+    -v dewey-logs:/app/logs:Z \
+    localhost/cross-doc-tool-dev:latest
+  log "success" "Backend running"
 
-# --replace lets this be re-run against an already-deployed pod without
-# manually tearing it down first (the pod removal above already handles
-# that for us, but --replace keeps this safe to re-run either way).
-podman play kube --replace dewey-pod.yaml
-log "success" "Pod deployed"
+  log "info" "Restarting frontend container..."
+  podman rm -f dewey-pod-svelte-container 2>/dev/null || true
+  podman run -d --pod dewey-pod --name dewey-pod-svelte-container \
+    --cpus 0.5 --memory 512m \
+    -e BODY_SIZE_LIMIT=52428800 \
+    -e ORIGIN="http://${HOST_IP}:3000" \
+    localhost/admin-portal:latest
+  log "success" "Frontend running"
+else
+  # dewey-pod.yaml was captured via `podman generate kube` on whatever machine
+  # ran package.sh, so its ORIGIN env value is that machine's IP — wrong here.
+  # SvelteKit's CSRF checkOrigin needs ORIGIN to match the address clients
+  # actually use to reach this deployment, so patch it in place before playing
+  # the pod (podman play kube has no per-env override flag).
+  sed -i "/name: ORIGIN/{n;s|value: .*|value: http://${HOST_IP}:3000|}" dewey-pod.yaml
+
+  # --replace lets this be re-run against an already-deployed pod without
+  # manually tearing it down first (the pod removal above already handles
+  # that for us, but --replace keeps this safe to re-run either way).
+  podman play kube --replace dewey-pod.yaml
+  log "success" "Pod deployed"
+fi
 
 # ---------------- POST-DEPLOYMENT INFO ----------------
 section "Post-Deployment Info"
