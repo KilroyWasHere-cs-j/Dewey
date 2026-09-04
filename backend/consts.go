@@ -26,15 +26,21 @@ type Config struct {
 
 // FileSystem specific config
 type FileSystemConfig struct {
-	UploadDir         string  `json:"upload_dir"`             // temp dir for storing files after files post upload and for fast query access
-	FileSystemBaseDir string  `json:"file_system_base_dir"`   // base directory where all stored files start from
-	BackupDir         string  `json:"backup_dir"`             // directory where backup files are stored
+	UploadDir         string  `json:"upload_dir"`               // temp dir for storing files after files post upload and for fast query access
+	FileSystemBaseDir string  `json:"file_system_base_dir"`     // base directory where all stored files start from
+	BackupDir         string  `json:"backup_dir"`               // directory where backup files are stored
 	DaemonTickTime    int     `json:"daemon_tick_time_minutes"` // system tick interval in minutes
-	Alpha             float64 `json:"alpha"`                  // extra seconds added per active user in the tick-scaling formula (issue #305)
-	Beta              float64 `json:"beta"`                   // extra seconds added per unit of smoothed upload rate in the tick-scaling formula (issue #305)
-	TBase             float64 `json:"t_base"`                 // tick times base value for the tick-scaling formulua
-	TickMax           int     `json:"tick_max"`               // maximum number of space between each tick
-	TickMin           int     `json:"tick_min"`               // minimum number of space between each tick
+	Alpha             float64 `json:"alpha"`                    // extra seconds added per active user in the tick-scaling formula (issue #305)
+	Beta              float64 `json:"beta"`                     // extra seconds added per unit of smoothed upload rate in the tick-scaling formula (issue #305)
+	TBase             float64 `json:"t_base"`                   // tick times base value for the tick-scaling formulua
+	TickMax           int     `json:"tick_max"`                 // maximum number of space between each tick
+	TickMin           int     `json:"tick_min"`                 // minimum number of space between each tick
+	// BackupIntervalMinutes is the fixed period between full backups
+	// (mysqldump + store/ zip), independent of the fast adaptive daemon
+	// ticker above — a full backup is too expensive to ride the same
+	// load-adaptive clock as cheap housekeeping like cache-clearing
+	// (issue #393).
+	BackupIntervalMinutes int `json:"backup_interval_minutes"`
 }
 
 // Server specific config
@@ -83,15 +89,16 @@ type PostProcessingConfig struct {
 // file in this package already references, so this is the only file that
 // needed to know config.json exists.
 var (
-	uploadDir         string
-	fileSystemBaseDir string
-	backupDir         string
-	daemonTickTime    int
-	alpha             float64
-	beta              float64
-	tBase             float64
-	tickMax           int
-	tickMin           int
+	uploadDir             string
+	fileSystemBaseDir     string
+	backupDir             string
+	daemonTickTime        int
+	alpha                 float64
+	beta                  float64
+	tBase                 float64
+	tickMax               int
+	tickMin               int
+	backupIntervalMinutes int
 
 	maxFileSize int64
 	portNumber  string
@@ -137,6 +144,7 @@ func load() {
 	tBase = cfg.FileSystem.TBase
 	tickMax = cfg.FileSystem.TickMax
 	tickMin = cfg.FileSystem.TickMin
+	backupIntervalMinutes = cfg.FileSystem.BackupIntervalMinutes
 
 	maxFileSize = cfg.Server.MaxFileSize
 	portNumber = cfg.Server.PortNumber
