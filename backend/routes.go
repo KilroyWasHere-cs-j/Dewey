@@ -169,6 +169,8 @@ func getViewLogFile(c *gin.Context) {
 func listFiles(c *gin.Context) {
 	Debug("listFiles")
 
+	dbm := c.MustGet("db").(*DatabaseManager)
+
 	_, filenames, err := listFilesInDir(fileSystemBaseDir)
 	if err != nil {
 		Warn("failed to list files: " + err.Error())
@@ -178,11 +180,38 @@ func listFiles(c *gin.Context) {
 		return
 	}
 
-	Debug("files found: " + fmt.Sprintf("%d", len(filenames)))
+	// deleteStoredFile leaves the physical file in place on delete (issue
+	// #324, so undeleteFileRecord has something to restore), so the disk
+	// walk above no longer implies "still active" — cross-reference against
+	// the DB and drop anything marked is_deleted=1.
+	deletedFilenames, err := dbm.getDeletedFilenames()
+	if err != nil {
+		Warn("failed to look up deleted filenames: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to list files",
+		})
+		return
+	}
+	deletedSet := make(map[string]struct{}, len(deletedFilenames))
+	for _, f := range deletedFilenames {
+		deletedSet[f] = struct{}{}
+	}
+
+	var activeFilenames []string
+	for _, f := range filenames {
+		// f is the store-relative path (e.g. "2024/claim.pdf"); the DB's
+		// filename column holds just the base name, same key deleteFileRecord
+		// and pullRecordByFilename use.
+		if _, isDeleted := deletedSet[filepath.Base(f)]; !isDeleted {
+			activeFilenames = append(activeFilenames, f)
+		}
+	}
+
+	Debug("files found: " + fmt.Sprintf("%d", len(activeFilenames)))
 
 	c.JSON(http.StatusOK, gin.H{
-		"files": filenames,
-		"count": len(filenames),
+		"files": activeFilenames,
+		"count": len(activeFilenames),
 	})
 }
 
@@ -430,6 +459,26 @@ func deleteFile(c *gin.Context) {
 	})
 }
 
+// undeleteFile clears a file record's soft-delete flag, restoring it to
+// visibility for the is_deleted = 0 filter every read/update path applies.
+func undeleteFile(c *gin.Context) {
+	dbm := c.MustGet("db").(*DatabaseManager)
+
+	filename := strings.TrimPrefix(c.Param("filename"), "/") // prevent path traversal
+	filename = filepath.Base(filename)
+
+	if err := dbm.undeleteFileRecord(filename); err != nil {
+		Warn("undeleteFile failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to undelete file"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "File undeleted",
+		"filename": filename,
+	})
+}
+
 func triggerCacheDump(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "CacheDump triggered",
@@ -534,4 +583,26 @@ func moveFile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "File moved"})
+}
+
+// refilterFile re-invokes the OnFilter hook against an already-stored file
+// (issue #324) and relocates it if the filter pipeline decides its Path
+// should change.
+func refilterFile(c *gin.Context) {
+	pm := c.MustGet("plugins").(*PluginManger)
+	dbm := c.MustGet("db").(*DatabaseManager)
+
+	filename := strings.TrimPrefix(c.Param("filename"), "/") // prevent path traversal
+	filename = filepath.Base(filename)
+
+	if err := rerunFilters(filename, pm, dbm); err != nil {
+		Warn("refilterFile failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to rerun filters"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Filters rerun",
+		"filename": filename,
+	})
 }

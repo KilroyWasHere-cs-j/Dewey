@@ -225,7 +225,9 @@ func main() {
 		files.GET("/files/*filename", getFile)
 		files.GET("/files", listFiles)
 		files.DELETE("/files/*filename", deleteFile)
+		files.POST("/files/undelete/*filename", undeleteFile)
 		files.POST("/files/move/:currentfilepathandname/:newfilepathandname", moveFile)
+		files.POST("/files/refilter/*filename", refilterFile)
 		files.GET("/admin/dumpCache", triggerCacheDump)
 		files.GET("/admin/reloadPlugins", reloadPlugins)
 	}

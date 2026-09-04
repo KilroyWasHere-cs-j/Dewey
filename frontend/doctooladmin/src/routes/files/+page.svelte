@@ -177,6 +177,15 @@
 			delete next[target];
 			metaState = next;
 			pendingDelete = null;
+
+			// The store copy is kept on the backend (issue #324) specifically so
+			// this Undo can restore the actual file, not just a DB pointer.
+			toasts.push({
+				kind: 'info',
+				title: 'File deleted',
+				detail: target,
+				action: { label: 'Undo', onClick: () => undeleteFile(target) }
+			});
 		} catch (e) {
 			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
 			// matching uploadError/listError elsewhere on this page instead of a
@@ -185,6 +194,30 @@
 			toasts.push({ kind: 'error', title: 'Failed to delete file', detail: deleteError });
 		} finally {
 			deleting = false;
+		}
+	}
+
+	// Reverses a delete within the toast's visible window — POSTs to the same
+	// /api/files/:filename resource the GET/DELETE calls above use, then
+	// refreshes the list so the restored file reappears.
+	async function undeleteFile(filename: string) {
+		try {
+			const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+				method: 'POST',
+				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+			});
+			if (!res.ok) {
+				let message = `HTTP ${res.status}`;
+				try {
+					const body = await res.json();
+					message = body.error ?? message;
+				} catch {}
+				throw new Error(message);
+			}
+			await loadFiles();
+			toasts.push({ kind: 'info', title: 'File restored', detail: filename });
+		} catch (e) {
+			toasts.push({ kind: 'error', title: 'Failed to undo delete', detail: String(e) });
 		}
 	}
 

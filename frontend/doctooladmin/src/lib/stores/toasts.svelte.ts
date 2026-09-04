@@ -3,11 +3,18 @@ export interface Toast {
 	kind: 'error' | 'warning' | 'info';
 	title: string;
 	detail?: string | null;
+	// Optional single action button (e.g. "Undo") rendered next to dismiss.
+	action?: { label: string; onClick: () => void };
 }
 
 // Non-error toasts clear themselves after this long; errors stay until dismissed
 // since they usually need the user to actually read and act on them.
 const AUTO_DISMISS_MS = 6000;
+
+// Toasts with an action button (e.g. "Undo") get longer before clearing —
+// reading the message and physically clicking a button takes more time than
+// just reading it.
+const ACTION_AUTO_DISMISS_MS = 15000;
 
 export function createToastStore() {
 	let items = $state<Toast[]>([]);
@@ -18,7 +25,8 @@ export function createToastStore() {
 		items = [...items, { ...t, id }];
 
 		if (t.kind !== 'error') {
-			setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
+			const delay = t.action ? ACTION_AUTO_DISMISS_MS : AUTO_DISMISS_MS;
+			setTimeout(() => dismiss(id), delay);
 		}
 
 		return id;

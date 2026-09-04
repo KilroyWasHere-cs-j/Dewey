@@ -63,3 +63,25 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 		return proxyError('Request failed', error);
 	}
 };
+
+// POST → undelete: clears the backend record's soft-delete flag (issue #324).
+// Used by the file manager page's post-delete "Undo" toast.
+export const POST: RequestHandler = async ({ params, request }) => {
+	const filename = params.filename;
+
+	try {
+		const res = await fetch(
+			`${backendUrl()}/core/files/undelete/${encodeURIComponent(filename)}`,
+			{ method: 'POST', headers: forwardAuthHeader(request) }
+		);
+
+		if (!res.ok) {
+			const message = await backendErrorMessage(res, 'Undelete failed');
+			return json({ error: message }, { status: res.status });
+		}
+
+		return json({ ok: true });
+	} catch (error) {
+		return proxyError('Request failed', error);
+	}
+};
