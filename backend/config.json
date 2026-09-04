@@ -8,7 +8,8 @@
 		"beta": 1,
 		"t_base": 5,
 		"tick_max": 500,
-		"tick_min": 1
+		"tick_min": 1,
+		"backup_interval_minutes": 60
 	},
 	"server": {
 		"max_file_size_bytes": 52428800,

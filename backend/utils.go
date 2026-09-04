@@ -151,11 +151,6 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 					}
 					atomic.AddInt64(&CacheCleanCycles, 1)
 
-					err := saveBackup()
-					if err == nil {
-						atomic.AddInt64(&FilesInBackUp, 1)
-					}
-
 					// Reload only if the plugin directory actually changed
 					// since the last tick — hashing every plugin file on
 					// every tick is cheap for a handful of .lua files, but
@@ -177,6 +172,38 @@ func startDaemon(ctx context.Context, pm *PluginManger) {
 
 			case <-ctx.Done():
 				// Warn("daemon stopped")
+				return
+			}
+		}
+	}()
+
+	// Backup runs on its own fixed, coarser interval rather than riding the
+	// load-adaptive dt ticker above — a full mysqldump + store/ zip is too
+	// expensive to run on a clock tuned for cheap housekeeping like
+	// cache-clearing, especially once dt backs off toward tickMin under
+	// light load (issue #393).
+	bt := time.NewTicker(time.Duration(backupIntervalMinutes) * time.Minute)
+
+	go func() {
+		defer bt.Stop()
+
+		for {
+			select {
+			case <-bt.C:
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							Warn(fmt.Sprintf("backup daemon panic recovered: %v", r))
+						}
+					}()
+					if err := saveBackup(); err != nil {
+						Warn("Backup incomplete: " + err.Error())
+					} else {
+						atomic.AddInt64(&FilesInBackUp, 1)
+					}
+				}()
+
+			case <-ctx.Done():
 				return
 			}
 		}
