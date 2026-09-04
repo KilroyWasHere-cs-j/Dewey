@@ -130,21 +130,3 @@ func scanBarCode(path string) (string, error) {
 	return "", fmt.Errorf("no barcode found in %s", path)
 }
 
-// Below is some GPTChat code for handling PDFs still need to test
-// doc, _ := fitz.New("file.pdf")
-// defer doc.Close()
-//
-// for n := 0; n < doc.NumPage(); n++ {
-//     img, _ := doc.Image(n)
-//
-//     bmp, _ := gozxing.NewBinaryBitmapFromImage(img)
-//     result, _ := qrReader.Decode(bmp, nil)
-//
-//     if result != nil {
-//         fmt.Println(result.String())
-//     }
-// }
-
-//
-// Threshold value (180) — lower it if you get false positives, raise it if dark bars are getting missed
-// Slice size/step (15% height, 5% increments) — tighten the increments if barcodes are very thin relative to page height
