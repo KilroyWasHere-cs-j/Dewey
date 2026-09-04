@@ -49,6 +49,17 @@
 				{#if toast.detail}
 					<p class="mt-0.5 text-xs opacity-80">{toast.detail}</p>
 				{/if}
+				{#if toast.action}
+					<button
+						onclick={() => {
+							toast.action?.onClick();
+							toasts.dismiss(toast.id);
+						}}
+						class="mt-1.5 text-xs font-semibold underline underline-offset-2 opacity-90 hover:opacity-100"
+					>
+						{toast.action.label}
+					</button>
+				{/if}
 			</div>
 			<button
 				aria-label="Dismiss"

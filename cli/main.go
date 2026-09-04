@@ -45,6 +45,8 @@ commands:
   get_file <filename>                 GET  /core/files/:filename?meta=false
   get_file_meta <filename>            GET  /core/files/:filename?meta=true
   delete_file <filename>              DELETE /core/files/:filename
+  undelete_file <filename>            POST /core/files/undelete/:filename
+  refilter_file <filename>            POST /core/files/refilter/:filename (issue #324)
   upload <path> [field=value ...]     POST /core/upload (optional metadata fields, see below)
   self_ip                             locally-determined outbound IP toward the host
   metrics                              live terminal metrics view (issue #348), polls GET /metrics
@@ -117,6 +119,12 @@ func main() {
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
 		del(host+"/core/files/"+os.Args[2], filesPassword, nil)
+	case "undelete_file":
+		requireArgs(3, "undelete_file <filename>")
+		postJSON(host+"/core/files/undelete/"+os.Args[2], filesPassword, nil, nil)
+	case "refilter_file":
+		requireArgs(3, "refilter_file <filename>")
+		postJSON(host+"/core/files/refilter/"+os.Args[2], filesPassword, nil, nil)
 	case "upload":
 		requireArgs(3, "upload <path> [field=value ...]")
 		meta := parseMetadata(os.Args[3:])

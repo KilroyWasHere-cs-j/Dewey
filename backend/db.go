@@ -167,6 +167,27 @@ func (dm *DatabaseManager) pullRecordByFilename(fileName string) (string, error)
 	return filepath, nil
 }
 
+// pullFileRecord retrieves a file's full record as a DBEntry — filename,
+// acts_id, sha256 hash, filepath, and barcode — matching the same fields
+// idAndSort populates before its own OnFilter call at upload time. Used to
+// rerun the filter pipeline against an already-stored file (issue #324).
+func (dm *DatabaseManager) pullFileRecord(filename string) (DBEntry, error) {
+	var entry DBEntry
+	var barcode sql.NullString
+
+	query := "SELECT filename, acts_id, sha256_hash, filepath, barcode FROM files WHERE filename = ? AND is_deleted = 0 LIMIT 1"
+	err := dm.db.QueryRow(query, filename).Scan(&entry.Filename, &entry.Act, &entry.Hash, &entry.Path, &barcode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DBEntry{}, fmt.Errorf("no record found for filename: %s", filename)
+		}
+		return DBEntry{}, err
+	}
+	entry.Barcode = barcode
+
+	return entry, nil
+}
+
 // pullMetaByFilename retrieves the metadata record linked to the given filename.
 // Joins files and meta on files.id = meta.file_id (issue #228) — a real
 // foreign key populated at insert time — rather than the client-suppliable
@@ -256,6 +277,86 @@ func (dm *DatabaseManager) updateFilePath(filename, newPath string) error {
 	}
 
 	return nil
+}
+
+// pullFileStatus retrieves a file's id, filepath, and soft-delete flag by
+// filename. Unlike pullRecordByFilename, this deliberately doesn't filter
+// on is_deleted = 0 — the point is to check a record's status regardless
+// of whether it's currently marked deleted.
+func (dm *DatabaseManager) pullFileStatus(filename string) (struct {
+	ID        int64  `json:"id"`
+	Filename  string `json:"filename"`
+	Filepath  string `json:"filepath"`
+	IsDeleted bool   `json:"is_deleted"`
+}, error) {
+	var s struct {
+		ID        int64  `json:"id"`
+		Filename  string `json:"filename"`
+		Filepath  string `json:"filepath"`
+		IsDeleted bool   `json:"is_deleted"`
+	}
+
+	query := "SELECT id, filename, filepath, is_deleted FROM files WHERE filename = ? LIMIT 1"
+	err := dm.db.QueryRow(query, filename).Scan(&s.ID, &s.Filename, &s.Filepath, &s.IsDeleted)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return s, fmt.Errorf("no record found for filename: %s", filename)
+		}
+		return s, err
+	}
+
+	return s, nil
+}
+
+// undeleteFileRecord reverses deleteFileRecord's soft delete, clearing the
+// is_deleted flag so the record is visible again to the is_deleted = 0
+// filter every other read/update query in this file applies.
+func (dm *DatabaseManager) undeleteFileRecord(filename string) error {
+	query := "UPDATE files SET is_deleted = 0 WHERE filename = ?"
+	result, err := dm.db.Exec(query, filename)
+	if err != nil {
+		return fmt.Errorf("failed to undelete file record: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no record found to undelete with filename: %s", filename)
+	}
+
+	return nil
+}
+
+// getDeletedFilenames returns every filename currently soft-deleted, so
+// listFiles (routes.go) can filter them back out of its disk-walk results —
+// deleteStoredFile leaves the physical file in place (issue #324) so
+// undeleteFileRecord can actually restore it, which means disk presence
+// alone can no longer be trusted to mean "still active."
+func (dm *DatabaseManager) getDeletedFilenames() ([]string, error) {
+	query := "SELECT filename FROM files WHERE is_deleted = 1"
+	rows, err := dm.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve deleted filenames: %w", err)
+	}
+	defer rows.Close()
+
+	var filenames []string
+	for rows.Next() {
+		var f string
+		if err := rows.Scan(&f); err != nil {
+			return nil, fmt.Errorf("failed to scan filename row: %w", err)
+		}
+		filenames = append(filenames, f)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return filenames, nil
 }
 
 // debugPrintAllRecords dumps every row of the files table to stdout —
@@ -605,3 +706,4 @@ func isDuplicateConstraintError(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "1826") || strings.Contains(msg, "Duplicate foreign key constraint")
 }
+

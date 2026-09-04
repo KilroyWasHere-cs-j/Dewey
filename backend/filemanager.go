@@ -388,9 +388,13 @@ func saveFile(filename string, file multipart.File) error {
 	return nil
 }
 
-// deleteStoredFile removes filename's DB record, on-disk store copy, and
-// cache copy, after giving OnDelete plugins a chance to veto the deletion
+// deleteStoredFile soft-deletes filename's DB record and removes its cache
+// copy, after giving OnDelete plugins a chance to veto the deletion
 // synchronously (unlike OnFilter/OnUpload, no response has been sent yet).
+// The on-disk store copy is deliberately left in place (issue #324) so
+// undeleteFileRecord can restore an actual file, not just a DB pointer with
+// nothing behind it — listFiles (routes.go) filters is_deleted=1 filenames
+// out of its disk-walk results so they don't reappear in the file list.
 func deleteStoredFile(filename string, pm *PluginManger, dbm *DatabaseManager) error {
 	storeRelPath, err := dbm.pullRecordByFilename(filename)
 	if err != nil {
@@ -406,12 +410,6 @@ func deleteStoredFile(filename string, pm *PluginManger, dbm *DatabaseManager) e
 	if _, err := pm.runByHook("OnDelete", entry); err != nil {
 		Warn("deletion vetoed by plugin: " + err.Error())
 		return newAPIError(http.StatusForbidden, "Deletion blocked by plugin: "+err.Error(), err)
-	}
-
-	storePath := filepath.Join(fileSystemBaseDir, storeRelPath)
-	if err := os.Remove(storePath); err != nil && !os.IsNotExist(err) {
-		Warn("failed to delete file from store: " + err.Error())
-		return newAPIError(http.StatusInternalServerError, "Failed to delete file", err)
 	}
 
 	// Cache copy may already be gone (dumpCache runs independently) — not an error either way.
@@ -442,19 +440,87 @@ func openFile(fileHeader *multipart.FileHeader) (multipart.File, error) {
 	return file, nil
 }
 
-// moveStoredFile renames the file on disk and updates its DB path record to
-// match, so the two stay in sync.
+// moveStoredFile copies the file on disk to newPath and updates its DB path
+// record to match, so the two stay in sync. Refuses to move a record that's
+// currently soft-deleted (issue #324) — a deleted file staying deleted is
+// assumed intentional, so a move shouldn't silently resurrect it.
 func moveStoredFile(currentPath string, newPath string, dbm *DatabaseManager) error {
-	if err := os.Rename(currentPath, newPath); err != nil {
+	filename := filepath.Base(currentPath)
+
+	status, err := dbm.pullFileStatus(filename)
+	if err != nil {
+		Warn("Failed to look up file status before move: " + err.Error())
+		return err
+	}
+	if status.IsDeleted {
+		return fmt.Errorf("cannot move %q: record is marked deleted", filename)
+	}
+
+	old_path, err := resolveStorePath(fileSystemBaseDir, currentPath)
+	if err != nil {
+		Warn("Rejected supplied path escaping store directory: " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
 		return err
 	}
 
-	filename := filepath.Base(currentPath)
-	if err := dbm.updateFilePath(filename, newPath); err != nil {
+	new_path, err := resolveStorePath(fileSystemBaseDir, newPath)
+	if err != nil {
+		Warn("Rejected supplied path escaping store directory: " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
 		return err
+	}
+
+	if err := copyFile(old_path, new_path); err != nil {
+		Warn("Failed to copy file to store: " + err.Error())
+		return err
+	}
+
+	// Update the DB pointer before removing the old copy — if updateFilePath
+	// fails, this leaves a harmless duplicate on disk rather than a DB
+	// record pointing at a file that no longer exists anywhere.
+	if err := dbm.updateFilePath(filename, newPath); err != nil {
+		Warn("Failed to update file path: " + err.Error())
+		return err
+	}
+
+	// Best-effort: the move already succeeded from the DB/caller's
+	// perspective at this point, so a cleanup failure here is logged, not
+	// returned as an error.
+	if err := os.Remove(old_path); err != nil {
+		Warn("Failed to remove old file after move: " + err.Error())
 	}
 
 	return nil
+}
+
+// rerunFilters re-invokes the OnFilter hook against an already-stored
+// file's existing record, then relocates it to whatever Path the filter
+// pipeline decides this time — useful for reclassifying a file after
+// plugin filter logic changes, without re-uploading it (issue #324).
+// Deliberately skips OnUpload: that hook is a one-time upload notification,
+// not part of classification, so replaying it here wouldn't make sense.
+func rerunFilters(filename string, pm *PluginManger, dbm *DatabaseManager) error {
+	entry, err := dbm.pullFileRecord(filename)
+	if err != nil {
+		Warn("Failed to look up file record before rerunning filters: " + err.Error())
+		return err
+	}
+	oldPath := entry.Path
+
+	atomic.AddInt64(&PluginRuns, 1)
+	entry, err = pm.runByHook("OnFilter", entry)
+	if err != nil {
+		Warn("Failed to rerun filter: " + err.Error())
+		atomic.AddInt64(&PluginErrors, 1)
+		return err
+	}
+
+	// Filter pipeline decided the file already lives where it should.
+	if entry.Path == oldPath {
+		return nil
+	}
+
+	return moveStoredFile(oldPath, entry.Path, dbm)
 }
 
 func listFilesInDir(baseDir string) (int64, []string, error) {
