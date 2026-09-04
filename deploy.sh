@@ -100,12 +100,14 @@ KEEP_DATA=false
 KEEP_DATA_SET=false
 WIPE_DATA_SET=false
 CLEAN_SLATE=false
+APP_ONLY=false
 for arg in "$@"; do
   case "$arg" in
     --reset-db) RESET_DB=true ;;
     --keep-data) KEEP_DATA=true; KEEP_DATA_SET=true ;;
     --wipe-data) WIPE_DATA_SET=true ;;
     --clean-slate) CLEAN_SLATE=true ;;
+    --app-only) APP_ONLY=true ;;
   esac
 done
 
@@ -132,6 +134,37 @@ if [ "$CLEAN_SLATE" = true ]; then
   fi
 fi
 
+# --app-only skips recreating dewey-pod entirely and only swaps the backend/
+# frontend containers in place, leaving dewey-mysql/dewey-prometheus and all
+# of their data (mysql-data, prometheus-data, dewey-store, dewey-cache,
+# dewey-backup, dewey-logs, dewey-plugin-scratch) completely untouched — for
+# the common case of redeploying updated code with nothing else changed
+# (issue #385). Incompatible with the data-reset flags above since those all
+# require touching the exact containers/volumes this flag exists to leave
+# alone.
+if [ "$APP_ONLY" = true ]; then
+  if [ "$RESET_DB" = true ] || [ "$WIPE_DATA_SET" = true ] || [ "$CLEAN_SLATE" = true ]; then
+    log "error" "--app-only can't be combined with --reset-db/--wipe-data/--clean-slate — those require touching the containers/volumes --app-only leaves alone. Run a full deploy (without --app-only) instead."
+    exit 1
+  fi
+  # Force KEEP_DATA so the interactive wipe prompt and the store/cache/backup/
+  # logs wipe further down (Backend section) are skipped too — an app-only
+  # redeploy is meant to be a no-op for every container and volume except the
+  # two actually being updated.
+  KEEP_DATA=true
+  KEEP_DATA_SET=true
+
+  if ! podman pod exists dewey-pod; then
+    log "error" "--app-only requires dewey-pod to already be running. Run a full deploy first (without --app-only)."
+    exit 1
+  fi
+  if [ "$(podman inspect -f '{{.State.Running}}' dewey-mysql 2>/dev/null)" != "true" ] || \
+     [ "$(podman inspect -f '{{.State.Running}}' dewey-prometheus 2>/dev/null)" != "true" ]; then
+    log "error" "--app-only requires dewey-mysql and dewey-prometheus to already be running. Run a full deploy first (without --app-only)."
+    exit 1
+  fi
+fi
+
 # Prefer the machine's primary LAN IP so the frontend is reachable from other
 # devices on the network, not just this host — falls back to localhost if
 # none is found (e.g. an isolated CI runner). Computed early (rather than
@@ -151,11 +184,16 @@ POD_MEMORY="${DEWEY_POD_MEMORY:-4g}"
 
 # --- CLEANUP ---
 section "Cleanup"
-log "info" "Removing existing pod..."
-podman pod rm -f dewey-pod 2>/dev/null || true
-log "success" "Clean slate ready"
+if [ "$APP_ONLY" = true ]; then
+  log "info" "App-only redeploy: leaving dewey-pod, dewey-mysql, and dewey-prometheus untouched"
+else
+  log "info" "Removing existing pod..."
+  podman pod rm -f dewey-pod 2>/dev/null || true
+  log "success" "Clean slate ready"
+fi
 
 # --- POD CREATION ---
+if [ "$APP_ONLY" = false ]; then
 section "Pod Creation"
 log "info" "Creating dewey-pod..."
 log "info" "Resource limits: ${POD_CPUS} CPUs, ${POD_MEMORY} memory (override via DEWEY_POD_CPUS/DEWEY_POD_MEMORY)"
@@ -177,6 +215,7 @@ podman pod create --infra=true \
   -p 8080:8080 \
   -p 3000:3000 \
   dewey-pod
+fi
 
 # Per-container limits (issue #211): the pod-level cap above (issue #168)
 # only bounds the aggregate, so a heavy container could still consume the
@@ -187,13 +226,17 @@ podman pod create --infra=true \
 
 # ---------------- MYSQL ----------------
 section "MySQL"
-log "info" "Deploying MySQL..."
-
-if [ "$RESET_DB" = true ]; then
-  log "warn" "Resetting mysql-data volume (--reset-db passed)..."
-  podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data
+if [ "$APP_ONLY" = true ]; then
+  log "info" "Using existing dewey-mysql container (--app-only)"
 else
-  log "info" "Keeping existing mysql-data volume (pass --reset-db to wipe)"
+  log "info" "Deploying MySQL..."
+
+  if [ "$RESET_DB" = true ]; then
+    log "warn" "Resetting mysql-data volume (--reset-db passed)..."
+    podman volume inspect mysql-data &>/dev/null && podman volume rm mysql-data
+  else
+    log "info" "Keeping existing mysql-data volume (pass --reset-db to wipe)"
+  fi
 fi
 
 # Root password used to be hardcoded (issue #200), meaning "dewey" was the
@@ -215,57 +258,63 @@ else
   MYSQL_ROOT_PASSWORD="$(cat "$MYSQL_PASSWORD_FILE")"
 fi
 
-# Pinned rather than :latest (issue #207) — package.sh bundles whatever tag
-# is actually running so offline deploys get the exact version this was
-# tested against, instead of silently pulling a different one later.
-podman run -d --pod dewey-pod \
-  --name dewey-mysql \
-  --cpus 1 --memory 1g \
-  -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
-  -e MYSQL_DATABASE=deweyRecords \
-  -v mysql-data:/var/lib/mysql:Z \
-  docker.io/library/mysql:9.7.0
+if [ "$APP_ONLY" = false ]; then
+  # Pinned rather than :latest (issue #207) — package.sh bundles whatever tag
+  # is actually running so offline deploys get the exact version this was
+  # tested against, instead of silently pulling a different one later.
+  podman run -d --pod dewey-pod \
+    --name dewey-mysql \
+    --cpus 1 --memory 1g \
+    -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
+    -e MYSQL_DATABASE=deweyRecords \
+    -v mysql-data:/var/lib/mysql:Z \
+    docker.io/library/mysql:9.7.0
 
-# Critical: database must be ready before the backend starts since it depends on it
-(while ! podman exec dewey-mysql mysqladmin ping -h localhost --silent 2>/dev/null; do
-  sleep 3
-done) &
-WAIT_PID=$!
-spinner "$WAIT_PID" "Waiting for database to accept connections..."
-log "success" "Database is up!"
+  # Critical: database must be ready before the backend starts since it depends on it
+  (while ! podman exec dewey-mysql mysqladmin ping -h localhost --silent 2>/dev/null; do
+    sleep 3
+  done) &
+  WAIT_PID=$!
+  spinner "$WAIT_PID" "Waiting for database to accept connections..."
+  log "success" "Database is up!"
+fi
 
 # ---------------- PROMETHEUS ----------------
 section "Prometheus"
-log "info" "Pulling Prometheus image..."
-# Pinned rather than :latest — see the mysql image note above (issue #207).
-podman pull docker.io/prom/prometheus:v3.13.1
-
-log "info" "Starting Prometheus container..."
-# prometheus-data persists Prometheus's own TSDB (/prometheus) across pod
-# recreations the same way mysql-data does (issue #306) — without it, every
-# redeploy's `podman pod rm -f dewey-pod` above wiped all metrics history
-# even though the scrape config itself was already correct. Unlike
-# store/cache/backup/logs, this volume isn't touched by --keep-data/
-# --wipe-data/--clean-slate: those flags exist to keep the DB and on-disk
-# files in sync with each other, and Prometheus's history has no such
-# cross-reference to anything else that a stale copy could contradict.
-podman run -d --pod dewey-pod \
-  --name dewey-prometheus \
-  --cpus 0.5 --memory 512m \
-  -v "$(pwd)/backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
-  -v prometheus-data:/prometheus:Z \
-  docker.io/prom/prometheus:v3.13.1
-
-# Brief pause to let Prometheus spin up internal networking before healthcheck
-sleep 2
-log "info" "Checking Prometheus health..."
-# 9090 isn't published to the LAN (issue #204), so curling an HTTP endpoint
-# from the host isn't an option anymore either — check the container's own
-# running state via podman instead.
-if [ "$(podman inspect -f '{{.State.Running}}' dewey-prometheus 2>/dev/null)" = "true" ]; then
-  log "success" "Prometheus is healthy!"
+if [ "$APP_ONLY" = true ]; then
+  log "info" "Using existing dewey-prometheus container (--app-only)"
 else
-  log "warn" "Prometheus container did not start."
+  log "info" "Pulling Prometheus image..."
+  # Pinned rather than :latest — see the mysql image note above (issue #207).
+  podman pull docker.io/prom/prometheus:v3.13.1
+
+  log "info" "Starting Prometheus container..."
+  # prometheus-data persists Prometheus's own TSDB (/prometheus) across pod
+  # recreations the same way mysql-data does (issue #306) — without it, every
+  # redeploy's `podman pod rm -f dewey-pod` above wiped all metrics history
+  # even though the scrape config itself was already correct. Unlike
+  # store/cache/backup/logs, this volume isn't touched by --keep-data/
+  # --wipe-data/--clean-slate: those flags exist to keep the DB and on-disk
+  # files in sync with each other, and Prometheus's history has no such
+  # cross-reference to anything else that a stale copy could contradict.
+  podman run -d --pod dewey-pod \
+    --name dewey-prometheus \
+    --cpus 0.5 --memory 512m \
+    -v "$(pwd)/backend/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
+    -v prometheus-data:/prometheus:Z \
+    docker.io/prom/prometheus:v3.13.1
+
+  # Brief pause to let Prometheus spin up internal networking before healthcheck
+  sleep 2
+  log "info" "Checking Prometheus health..."
+  # 9090 isn't published to the LAN (issue #204), so curling an HTTP endpoint
+  # from the host isn't an option anymore either — check the container's own
+  # running state via podman instead.
+  if [ "$(podman inspect -f '{{.State.Running}}' dewey-prometheus 2>/dev/null)" = "true" ]; then
+    log "success" "Prometheus is healthy!"
+  else
+    log "warn" "Prometheus container did not start."
+  fi
 fi
 
 # ---------------- BACKEND ----------------
@@ -350,6 +399,9 @@ log "info" "Starting backend container..."
 # work at all.
 # Largest share of the four per-container limits (issue #211): this is the
 # burst source (uploads/barcode processing) they exist to contain.
+# rm -f first (harmless no-op after a full pod teardown above) since
+# --app-only leaves this container's old instance running under this name.
+podman rm -f cross-doc-tool-dev 2>/dev/null || true
 podman run -d --pod dewey-pod --name cross-doc-tool-dev \
   --read-only --tmpfs /tmp \
   --cpus 2 --memory 2g \
@@ -376,6 +428,8 @@ log "info" "Starting Svelte frontend container..."
 # it, adapter-node rejects multipart uploads whose Origin header doesn't match
 # what the server expects, which is what every client hits by default since
 # ORIGIN is unset otherwise (issue #197).
+# rm -f first — see the same note on the backend's podman run above.
+podman rm -f svelte-container 2>/dev/null || true
 podman run -d --pod dewey-pod --name svelte-container \
   --cpus 0.5 --memory 512m \
   -e BODY_SIZE_LIMIT=52428800 \
