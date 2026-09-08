@@ -1,3 +1,5 @@
+use kryptos::{encrypt, decrypt};
+
 fn main() {
-    println!("Hello, world!");
+    encrypt();
 }
