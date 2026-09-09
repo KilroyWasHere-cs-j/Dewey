@@ -1,5 +1,6 @@
 use kryptos::{encrypt, decrypt};
 
-fn main() {
-    encrypt();
+
+fn main() { 
+    //encrypt();
 }

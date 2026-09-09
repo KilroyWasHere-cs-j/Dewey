@@ -4,7 +4,7 @@ use aes_gcm::{
 };
 use aes_gcm::aead::consts::U12;
 
-use crate::KryptosError;
+use crate::error::KryptosError;
 
 pub struct AESKeyNounce {
     pub key: Key<Aes256Gcm>,
