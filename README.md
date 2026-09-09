@@ -18,6 +18,8 @@ A backend file sorting and storage service with a RESTful API, built for stable 
 - [Testing](#testing)
 - [Deployment & Packaging](#deployment--packaging)
   - [Data Persistence](#data-persistence)
+  - [Networking Gotchas & Troubleshooting](#networking-gotchas--troubleshooting)
+- [Repo Stats](#repo-stats)
 - [Roadmap](#roadmap)
 
 ## Overview
@@ -275,12 +277,19 @@ Both `deploy.sh` and a bundle's `run.sh` recreate `dewey-pod` from scratch on ev
 - No flags, run interactively: prompted `Wipe store/cache/backup/logs volumes before this deploy? [Y/n]` (default: wipe).
 - `--clean-slate` — forces both a full `mysql-data` wipe and a `dewey-store`/`dewey-cache`/`dewey-backup`/`dewey-logs`/`dewey-plugin-scratch` wipe together, overriding any `--reset-db`/`--keep-data`/`--wipe-data` also passed. Exists because those two resets are otherwise independent: running one without the other leaves the DB pointing at files that no longer exist, or files on disk with no DB record — exactly the drift this flag is meant to rule out (issue #296). Requires an interactive TTY and typing `yes` at a dedicated confirmation prompt; refuses to run at all non-interactively, since this permanently destroys every stored file and its metadata in one shot.
 - `--app-only` — skips recreating `dewey-pod` entirely and only swaps the backend and frontend containers in place, leaving `dewey-mysql`/`dewey-prometheus` and all of their data (`mysql-data`, `prometheus-data`, and the backend data volumes too) completely untouched. For the common case of redeploying updated code with nothing else changed, so the database and Prometheus's metrics history don't restart every time (issue #385). Requires `dewey-pod` to already be running with MySQL and Prometheus up; refuses to combine with `--reset-db`/`--wipe-data`/`--clean-slate` since those require touching what `--app-only` promises to leave alone.
+- `DEWEY_POD_CPUS` and `DEWEY_POD_MEMORY` (environment variables) — override the CPU and memory resource limits assigned to `dewey-pod` on creation (defaults: `4` CPUs, `4g` memory). For example: `DEWEY_POD_CPUS=8 DEWEY_POD_MEMORY=8g ./deploy.sh`.
 
-**Bundled `run.sh` flags** (from a `package.sh` bundle): the same `--keep-data` / `--wipe-data` / `--app-only` set as `deploy.sh` (`--app-only` there bypasses the normal `podman play kube` full-pod apply and does individual `podman rm`/`podman run` calls for just the backend/frontend containers instead, for the same reason `--app-only` can't risk applying a partial pod manifest against `dewey-mysql`/`dewey-prometheus`) — but no `--reset-db` equivalent. `run.sh` never touches `mysql-data` outside of `--app-only`'s own scope, so the database always persists across a bundle's redeploys regardless of flags; wiping it requires `podman volume rm mysql-data` by hand.
+**Bundled `run.sh` flags** (from a `package.sh` bundle): the same `--keep-data` / `--wipe-data` / `--app-only` set as `deploy.sh` (`--app-only` there bypasses the normal `podman play kube` full-pod apply and does individual `podman rm`/`podman run` calls for just the backend/frontend containers instead, for the same reason `--app-only` can't risk applying a partial pod manifest against `dewey-mysql`/`dewey-prometheus`) — but neither `--reset-db` nor `--clean-slate` has a `run.sh` equivalent. `run.sh` never touches `mysql-data` outside of `--app-only`'s own scope, so the database always persists across a bundle's redeploys regardless of flags; wiping it requires `podman volume rm mysql-data` by hand.
 
 **To guarantee nothing is lost across a redeploy:** don't pass `--reset-db`, and either pass `--keep-data` or answer `n` to the prompt (or pass `--keep-data` up front to skip the prompt entirely in a non-interactive context).
 
 **To guarantee a fully clean, consistent state instead:** pass `--clean-slate` rather than combining `--reset-db` with a store/cache wipe by hand — it's the only path that keeps both sides in sync, since the individual flags don't warn you if they end up wiping just one.
+
+### Networking Gotchas & Troubleshooting
+
+- **`HOST_IP` fallback to literal `"localhost"`**: When `hostname -I` returns no IP address (e.g. on an isolated host or minimal container runner), `deploy.sh` falls back to `HOST_IP="localhost"` and inserts `'localhost'` into `known_machines`. Because incoming connections are parsed into numeric IP addresses (`127.0.0.1` or `::1`), `'localhost'` is a dead allowlist entry that will never match incoming traffic. If clients hit `403 Forbidden`, manually register the host's actual network IP address or loopback (`127.0.0.1`) in `known_machines`.
+- **Podman NAT source-IP mismatch**: Podman's rootless networking backends (such as `netavark` or `pasta`) can translate host-to-published-port connections so they reach the backend container under an internal bridge or gateway IP rather than `HOST_IP` or `127.0.0.1`. If health checks or API requests fail with `403 Forbidden`, inspect the backend container logs (`podman logs cross-doc-tool-dev`) for the "unregistered machine" log line to identify the exact IP Podman presented, and register that address via `dewey-cli add_machine <ip> <label>`.
+- **IPv4 vs. IPv6 `localhost` resolution**: On dual-stack operating systems, requests directed to `http://localhost:8080` often resolve to the IPv6 loopback address (`::1`) before trying IPv4 (`127.0.0.1`). If only `127.0.0.1` is allowlisted in `known_machines`, connections to `localhost` will be rejected with `403 Forbidden`. Ensure both `127.0.0.1` and `::1` are registered in `known_machines`, or connect directly via `http://127.0.0.1:8080`.
 
 ## Repo Stats
 

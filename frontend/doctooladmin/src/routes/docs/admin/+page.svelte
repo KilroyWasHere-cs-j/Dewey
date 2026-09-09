@@ -359,8 +359,11 @@
 							causes: [
 								'The request came from an IP address that has not been added to the Known Machines list.',
 								'The machine\'s IP changed (e.g. DHCP reassignment) since it was registered.',
+								'On dual-stack systems, requests to localhost resolved to IPv6 ::1 when only IPv4 127.0.0.1 was registered.',
+								'Podman NAT translated the connection so it arrived under a virtual bridge or gateway IP.',
+								'deploy.sh fell back to literal "localhost" because hostname -I returned nothing, creating a non-matching allowlist entry.',
 							],
-							fix: 'From an already-registered machine, open Known Machines in the sidebar and add the new IP with a label. If this is the very first machine being set up, it must be registered directly against the database instead.'
+							fix: 'From an already-registered machine, open Known Machines in the sidebar and add the new IP with a label. If connecting via localhost, ensure both 127.0.0.1 and ::1 are registered. If Podman\'s NAT altered the source IP, check "podman logs cross-doc-tool-dev" for the "unregistered machine" line to see the actual address received. If this is the very first machine being set up, it must be registered directly against the database instead.'
 						},
 						{
 							problem: 'Plugin Errors showing in Analytics',
