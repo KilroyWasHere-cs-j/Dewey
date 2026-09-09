@@ -28,7 +28,8 @@
 		{ href: '#daemon', label: 'Daemon' },
 		{ href: '#logging', label: 'Logging' },
 		{ href: '#config', label: 'Configuration' },
-		{ href: '#deployment', label: 'Deployment' }
+		{ href: '#deployment', label: 'Deployment' },
+		{ href: '#troubleshooting', label: 'Troubleshooting' }
 	];
 </script>
 
@@ -903,6 +904,14 @@ end</code></pre>
 								<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">DB_DSN</td>
 								<td class="py-1.5 text-gray-600 dark:text-gray-400">MySQL data source name. If unset, defaults to the local dev DSN.</td>
 							</tr>
+							<tr>
+								<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">DEWEY_POD_CPUS</td>
+								<td class="py-1.5 text-gray-600 dark:text-gray-400">Pod CPU resource limit override for <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> (default: <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">4</code>).</td>
+							</tr>
+							<tr>
+								<td class="py-1.5 pr-4 font-mono text-gray-700 dark:text-gray-300">DEWEY_POD_MEMORY</td>
+								<td class="py-1.5 text-gray-600 dark:text-gray-400">Pod memory resource limit override for <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> (default: <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">4g</code>).</td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
@@ -964,6 +973,18 @@ bash deploy.sh --reset-db</code></pre>
 					volumes untouched, so data carries over between deploys there too.
 				</p>
 
+				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Deploy flags & resource limits</h3>
+				<ul class="mb-4 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--reset-db</code> — wipes <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">mysql-data</code> before starting MySQL (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> only).</li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--keep-data</code> / <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--wipe-data</code> — controls wiping store, cache, backup, and log volumes.</li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--clean-slate</code> — interactive full wipe of both database and data volumes (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> only; requires typed confirmation).</li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--app-only</code> — swaps backend and frontend containers in place without restarting MySQL or Prometheus.</li>
+					<li><code class="rounded bg-gray-100 px-1 dark:bg-gray-700">DEWEY_POD_CPUS</code> / <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">DEWEY_POD_MEMORY</code> — environment variable overrides for pod resource limits (defaults: <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">4</code> CPUs, <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">4g</code> memory).</li>
+				</ul>
+				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
+					Bundled <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">run.sh</code> supports <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--keep-data</code>, <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--wipe-data</code>, and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--app-only</code>, but neither <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--reset-db</code> nor <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">--clean-slate</code> has a <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">run.sh</code> equivalent because it never touches <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">mysql-data</code>. Wiping the database on a bundled deployment requires running <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">podman volume rm mysql-data</code> manually.
+				</p>
+
 				<h3 class="mb-2 mt-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Manual build — backend</h3>
 				<pre class="overflow-x-auto rounded-lg bg-gray-50 p-4 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">podman build \
   --build-arg CGO_CFLAGS="-Wno-discarded-qualifiers" \
@@ -983,6 +1004,44 @@ podman run -d --pod dewey-pod --name dewey-frontend dewey-frontend</code></pre>
 					and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">./backup</code> to be writable.
 					Mount these as volumes if you need data to persist across container restarts.
 				</p>
+			</section>
+
+			<!-- ── Troubleshooting ── -->
+			<section id="troubleshooting" transition:fade={{ duration: 300 }} class="scroll-mt-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-gray-800">
+				<h2 class="mb-4 text-xs font-semibold tracking-wider uppercase {headingClass}">Troubleshooting</h2>
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Deployment & Networking Gotchas</h3>
+				<div class="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+					<div>
+						<p class="font-semibold text-gray-800 dark:text-gray-200">1. HOST_IP fallback to literal "localhost"</p>
+						<p class="mt-1">
+							When <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">hostname -I</code> returns nothing (e.g. an isolated host or CI container),
+							<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">deploy.sh</code> defaults <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">HOST_IP</code> to the literal string
+							<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">"localhost"</code> and inserts it into <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">known_machines</code>.
+							Because client requests are evaluated against parsed numeric IP addresses (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.1</code> or <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">::1</code>),
+							<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">"localhost"</code> is a dead allowlist entry that will never match incoming traffic.
+							Register the host's actual IP address or loopback (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.1</code>) in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">known_machines</code> manually.
+						</p>
+					</div>
+					<div>
+						<p class="font-semibold text-gray-800 dark:text-gray-200">2. Podman NAT source-IP mismatch</p>
+						<p class="mt-1">
+							Rootless Podman networking backends (such as netavark or pasta) can translate connections from the host to published container ports under an internal bridge or gateway IP rather than <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">HOST_IP</code>.
+							If health checks or client requests return <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code>, inspect the backend logs:
+						</p>
+						<pre class="my-2 overflow-x-auto rounded-lg bg-gray-50 p-3 text-xs dark:bg-gray-900"><code class="text-gray-800 dark:text-gray-200">podman logs cross-doc-tool-dev</code></pre>
+						<p>
+							Look for the "unregistered machine" log line to find the exact source IP received by the server, and register that address via <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">dewey-cli add_machine &lt;ip&gt; &lt;label&gt;</code>.
+						</p>
+					</div>
+					<div>
+						<p class="font-semibold text-gray-800 dark:text-gray-200">3. IPv4 vs. IPv6 localhost resolution</p>
+						<p class="mt-1">
+							On dual-stack operating systems, connecting to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">http://localhost:8080</code> may resolve to IPv6 loopback (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">::1</code>) before trying IPv4 (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.1</code>).
+							If only <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.1</code> is allowlisted, requests to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">localhost</code> will be blocked with <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">403 Forbidden</code>.
+							Ensure both <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">127.0.0.1</code> and <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">::1</code> are present in <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">known_machines</code>, or explicitly connect to <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">http://127.0.0.1:8080</code>.
+						</p>
+					</div>
+				</div>
 			</section>
 
 		</main>
