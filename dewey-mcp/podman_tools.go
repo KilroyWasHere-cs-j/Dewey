@@ -1,37 +1,59 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
+	"bytes"
 )
 
 func GetPodmanHealth() (error, string) {
-	out, err := exec.Command("podman", "pod", "ps", "--filter", "name=dewey-pod").Output()
-	if err != nil {
-		return err, ""
+	cmd := exec.Command("podman", "pod", "ps", "--filter", "name=dewey-pod")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String()), ""
 	}
-	return nil, string(out)
+	return nil, stdout.String()
 }
 
 func GetPodmanContainers() (error, string) {
-	out, err := exec.Command("podman", "ps").Output()
-	if err != nil {
-		return err, ""
+	cmd := exec.Command("podman", "ps")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String()), ""
 	}
-	return nil, string(out)
+	return nil, stdout.String()
 }
 
 func GetPodmanContainerLogs(containerID string) (error, string) {
-	out, err := exec.Command("podman", "logs", containerID).Output()
-	if err != nil {
-		return err, ""
+	cmd := exec.Command("podman", "logs", containerID)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String()), ""
 	}
-	return nil, string(out)
+	return nil, stdout.String()
 }
 
 func RestartPodmanContainer(containerID string) (error, string) {
-	out, err := exec.Command("podman", "restart", containerID).Output()
-	if err != nil {
-		return err, ""
+	cmd := exec.Command("podman", "restart", containerID)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String()), ""
 	}
-	return nil, string(out)
+	return nil, stdout.String()	
 }
