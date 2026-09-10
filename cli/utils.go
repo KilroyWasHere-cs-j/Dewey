@@ -100,25 +100,3 @@ func YesNoPrompt(label string, def bool) bool {
 	}
 }
 
-// askYesNo prompts the user and loops until they give a valid y/n answer.
-func askYesNo(prompt string) bool {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Printf("%s [y/n]: ", prompt)
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error reading input:", err)
-			os.Exit(1)
-		}
-
-		switch strings.ToLower(strings.TrimSpace(input)) {
-		case "y", "yes":
-			return true
-		case "n", "no":
-			return false
-		default:
-			fmt.Println("Please answer y or n.")
-		}
-	}
-}
-

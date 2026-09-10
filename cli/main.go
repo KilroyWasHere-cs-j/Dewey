@@ -85,13 +85,13 @@ func main() {
 		}
 		fmt.Println(createPDF(os.Args[2], withJS, withOpenAction))
 	case "reset_db":
-		if askYesNo("You are about to reset the database. This is high risk action. Are you sure you want to reset the database? There is no rollback...") {
+		if YesNoPrompt("You are about to reset the database. This is high risk action. Are you sure you want to reset the database? There is no rollback...", false) {
 			reset_db()
 		} else {
 			fmt.Println("Cool cool cool, not resetting.")
 		}
 	case "clean_slate":
-		if askYesNo("You are about to reset the system to a clean slate. This is high risk action. Are you sure you want to reset to a clean slate? There is no rollback...") {
+		if YesNoPrompt("You are about to reset the system to a clean slate. This is high risk action. Are you sure you want to reset to a clean slate? There is no rollback...", false) {
 			clean_slate()
 		} else {
 			fmt.Println("Grovy, not cleaning.")
