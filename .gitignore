@@ -59,6 +59,11 @@ cli/embedded_docs/
 # Release bundles produced by package.sh
 build-images/
 
+# Stray AI-tool files, not part of the project
+AGENTS.md
+GEMINI.md
+kryptos-cli/
+
 # Mac file
 .DS_Store
 
