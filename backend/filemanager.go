@@ -94,33 +94,13 @@ func fileSystemInit() {
 	Debug("filesystem initialization complete")
 }
 
-// postProcessingSem bounds concurrent idAndSort work to
-// maxConcurrentPostProcessing (issue #217). Sized in load() (consts.go)
-// once the config file has actually been read, not here — see the
-// comment there for why a static initializer referencing
-// maxConcurrentPostProcessing directly would be wrong now that it's a
-// runtime-loaded var instead of a compile-time const.
-var postProcessingSem chan struct{}
-
-// queueIdAndSort runs idAndSort in a background goroutine without blocking
-// the caller (the upload response is already sent before this is called),
-// but bounds how many run at once via postProcessingSem — excess uploads
-// queue behind the semaphore instead of every one running its Lua filter
-// plugins and disk copy concurrently.
-func queueIdAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) {
-	go func() {
-		postProcessingSem <- struct{}{}
-		defer func() { <-postProcessingSem }()
-		defer func() {
-			if r := recover(); r != nil {
-				Warn("Recovered from panic in post-processing goroutine: " + fmt.Sprintf("%v", r))
-			}
-		}()
-		err := idAndSort(pm, dbm, path, hash, filename, metaData)
-		if err != nil {
-			Warn("Post-processing failed: " + err.Error())
-		}
-	}()
+// isValidDate reports whether s matches the given layout.
+// Go's reference time is "Mon Jan 2 15:04:05 MST 2006" — the layout
+// string is written using that exact reference date/time, not tokens
+// like "YYYY-MM-DD".
+func isValidDate(s, layout string) bool {
+	_, err := time.Parse(layout, s)
+	return err == nil
 }
 
 func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string, filename string, metaData MetaData) error {
@@ -131,6 +111,12 @@ func idAndSort(pm *PluginManger, dbm *DatabaseManager, path string, hash string,
 		Path:     path,
 		Meta:     "0000000000000000000000000000000",
 		Barcode:  sql.NullString{},
+	}
+
+	isDateOfInjuryValid := isValidDate(metaData.DateOfInjury, dateLayout)
+	if !isDateOfInjuryValid {
+		Warn("Invalid date_of_injury: " + metaData.DateOfInjury)
+		return errors.New("Invalid date_of_injury")
 	}
 
 	if barcodeCandidateExt.MatchString(filename) {

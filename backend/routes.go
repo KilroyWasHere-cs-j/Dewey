@@ -405,6 +405,16 @@ func uploadFile(c *gin.Context) {
 	}
 	uploadCounter.record()
 
+	err = idAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
+	if err != nil {
+		Warn("Post-processing failed: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Post-processing failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
 	// -------------------------
 	// Response
 	// -------------------------
@@ -414,12 +424,8 @@ func uploadFile(c *gin.Context) {
 		"original": fileHeader.Filename,
 		"size":     fileHeader.Size,
 		"sha256":   hashString,
+		"error":    "",
 	})
-
-	// -------------------------
-	// Post-processing
-	// -------------------------
-	queueIdAndSort(pm, dbm, safeFilename, hashString, safeFilename, metadata)
 }
 
 // deleteFile removes a file from upload storage by filename.
