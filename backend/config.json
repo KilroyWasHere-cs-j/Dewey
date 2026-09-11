@@ -28,8 +28,5 @@
 	"plugin": {
 		"plugin_dir": "./plugins",
 		"plugin_scratch_dir": "./plugin-scratch"
-	},
-	"post_processing": {
-		"max_concurrent": 4
 	}
 }

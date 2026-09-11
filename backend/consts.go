@@ -10,18 +10,22 @@ import (
 // (./cache, ./store, etc.).
 const configFile = "./config.json"
 
+// dateLayout is Go's reference-time layout string for "YYYY-MM-DD" —
+// time.Parse/time.Format take this exact reference date
+// ("Mon Jan 2 15:04:05 MST 2006"), not strftime-style tokens.
+const dateLayout = "2006-01-02"
+
 // Config mirrors config.json's shape. Field names match the const names
 // this file used to declare (issue #256) so callers throughout the
 // codebase keep referencing the same package-level identifiers below —
 // only this file and the handful of call sites that needed a type change
 // for the switch from untyped consts to typed vars were touched.
 type Config struct {
-	FileSystem     FileSystemConfig     `json:"file_system"`
-	Server         ServerConfig         `json:"server"`
-	RateLimit      RateLimitConfig      `json:"rate_limit"`
-	Database       DatabaseConfig       `json:"database"`
-	Plugin         PluginConfig         `json:"plugin"`
-	PostProcessing PostProcessingConfig `json:"post_processing"`
+	FileSystem FileSystemConfig `json:"file_system"`
+	Server     ServerConfig     `json:"server"`
+	RateLimit  RateLimitConfig  `json:"rate_limit"`
+	Database   DatabaseConfig   `json:"database"`
+	Plugin     PluginConfig     `json:"plugin"`
 }
 
 // FileSystem specific config
@@ -75,16 +79,6 @@ type PluginConfig struct {
 	PluginScratchDir string `json:"plugin_scratch_dir"`
 }
 
-// Post-processing config (issue #217) — bounds how many idAndSort
-// goroutines (barcode scan + Lua filter plugins + disk copy) can run at
-// once. Without this, a burst of uploads accepted just under the rate
-// limiter could each spin up a full Lua-plugin-running goroutine
-// concurrently with no ceiling, letting them pile up faster than a slow
-// filesystem can drain them.
-type PostProcessingConfig struct {
-	MaxConcurrent int `json:"max_concurrent"`
-}
-
 // Package-level vars populated by load() — same identifiers every other
 // file in this package already references, so this is the only file that
 // needed to know config.json exists.
@@ -113,17 +107,15 @@ var (
 
 	pluginDir        string
 	pluginScratchDir string
-
-	maxConcurrentPostProcessing int
 )
 
 // load reads configFile and populates every package-level config var
 // above. Called first thing in main(), before anything (plugins, the
-// rate limiter, the DB pool, postProcessingSem) that depends on these
-// values. Fails fast on a missing or malformed config file rather than
-// silently falling back to defaults — same reasoning as DB_DSN's required
-// env var (issue #200): a config error should stop startup loudly, not
-// get masked by a fallback that happens to still work most of the time.
+// rate limiter, the DB pool) that depends on these values. Fails fast on
+// a missing or malformed config file rather than silently falling back
+// to defaults — same reasoning as DB_DSN's required env var (issue
+// #200): a config error should stop startup loudly, not get masked by a
+// fallback that happens to still work most of the time.
 func load() {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
@@ -159,13 +151,4 @@ func load() {
 
 	pluginDir = cfg.Plugin.PluginDir
 	pluginScratchDir = cfg.Plugin.PluginScratchDir
-
-	maxConcurrentPostProcessing = cfg.PostProcessing.MaxConcurrent
-
-	// postProcessingSem (filemanager.go) can only be sized correctly once
-	// maxConcurrentPostProcessing is known — it used to be a package-level
-	// var initializer, which would have run before load() with this value
-	// still at its zero value, permanently deadlocking every post-processing
-	// goroutine on a zero-capacity channel.
-	postProcessingSem = make(chan struct{}, maxConcurrentPostProcessing)
 }
