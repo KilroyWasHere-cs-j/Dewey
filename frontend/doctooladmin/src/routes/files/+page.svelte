@@ -56,6 +56,10 @@
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) {
+				// A rotated backend password (issue #414) means the cached value
+				// is permanently wrong — clear it so the next attempt re-prompts
+				// instead of resending the same stale password forever.
+				if (res.status === 401) credentials.resetFilesPassword();
 				// Prefer the backend's own error message over a bare status code
 				let message = `HTTP ${res.status}`;
 				try {
@@ -103,7 +107,12 @@
 			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=true`, {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetFilesPassword();
+				throw new Error(`HTTP ${res.status}`);
+			}
 			metaState = { ...metaState, [filename]: await res.json() };
 		} catch {
 			metaState = { ...metaState, [filename]: 'error' };
@@ -125,6 +134,9 @@
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetFilesPassword();
 				// Prefer the backend's own error message over a bare status code
 				let message = `HTTP ${res.status}`;
 				try {
@@ -163,6 +175,9 @@
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetFilesPassword();
 				// Prefer the backend's own error message over a bare status code
 				let message = `HTTP ${res.status}`;
 				try {
@@ -207,6 +222,9 @@
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetFilesPassword();
 				let message = `HTTP ${res.status}`;
 				try {
 					const body = await res.json();
@@ -306,6 +324,9 @@
 				return;
 			}
 			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetFilesPassword();
 				uploadError = body.error ?? `HTTP ${res.status}`;
 				toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 				return;

@@ -38,7 +38,12 @@
 			const res = await fetch('/api/machines', {
 				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetMachinesPassword();
+				throw new Error(`HTTP ${res.status}`);
+			}
 			const data = await res.json();
 			machines = data.machines ?? [];
 			backendVerified = true;
@@ -102,6 +107,9 @@
 			});
 			const body = await res.json();
 			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetMachinesPassword();
 				addError = body.error ?? `HTTP ${res.status}`;
 				toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
 				return;
@@ -147,7 +155,12 @@
 				method: 'DELETE',
 				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			if (!res.ok) {
+				// Rotated password (issue #414) — clear the cache so the next
+				// attempt re-prompts instead of resending the stale value.
+				if (res.status === 401) credentials.resetMachinesPassword();
+				throw new Error(`HTTP ${res.status}`);
+			}
 			machines = machines.filter((m) => m.ip !== target);
 			pendingRemove = null;
 		} catch (e) {
