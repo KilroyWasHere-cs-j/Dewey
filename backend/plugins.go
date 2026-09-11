@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -130,7 +131,15 @@ var pluginHTTPClient = &http.Client{
 // deliberately going through pluginHTTPClient rather than http.Get, so
 // every request a plugin makes is subject to the SSRF check above.
 func (pm *PluginManger) httpGet(url string) (string, error) {
-	resp, err := pluginHTTPClient.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(pluginHTTPTimeoutMultiplier)*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := pluginHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -145,10 +154,14 @@ func (pm *PluginManger) httpGet(url string) (string, error) {
 // httpPost is the Go-side implementation behind the Lua "http.post" global.
 // Same pluginHTTPClient as httpGet, same SSRF check applied.
 func (pm *PluginManger) httpPost(url string, body string) (string, error) {
-	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(pluginHTTPTimeoutMultiplier)*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
+
 	resp, err := pluginHTTPClient.Do(req)
 	if err != nil {
 		return "", err
@@ -430,6 +443,21 @@ func (pm *PluginManger) runByHook(sig string, entry DBEntry) (DBEntry, error) {
 func (pm *PluginManger) callHook(sig string, entry DBEntry, plugin Plugin) (DBEntry, error) {
 	L := plugin.pool.Get().(*lua.LState)
 	defer plugin.pool.Put(L)
+
+	// Bounds the whole hook invocation (issue #404) — not just the
+	// http.get/http.post calls inside httpGet/httpPost, which already have
+	// their own shorter per-call timeout. gopher-lua's context-aware VM loop
+	// checks ctx.Done() on every bytecode instruction, so this also catches
+	// a plugin hanging via pure-Lua means (an infinite loop, say) that never
+	// touches http.get at all. RemoveContext must run before this LState
+	// goes back into the pool (deferred Put above runs after these, since
+	// defers unwind LIFO) — otherwise a state cancelled by an expired
+	// deadline would carry that same expired context into its next reuse
+	// and fail every future call on it instantly.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(pluginHookTimeoutMultiplier)*time.Second)
+	defer cancel()
+	L.SetContext(ctx)
+	defer L.RemoveContext()
 
 	t := L.NewTable()
 	L.SetField(t, "Filename", lua.LString(entry.Filename))

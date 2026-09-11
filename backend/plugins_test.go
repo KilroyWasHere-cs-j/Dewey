@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // newTestManager returns a PluginManger pointed at a fresh temp directory
@@ -538,5 +539,41 @@ end
 	}
 	if _, err := pm.runByHook("OnFilter", DBEntry{}); err != nil {
 		t.Fatalf("runByHook: %v", err)
+	}
+}
+
+// TestCallHookTimesOutOnInfiniteLoop proves the issue #404 fix actually
+// interrupts a plugin that hangs via pure Lua execution — not just one
+// stuck inside an http.get/http.post call, which already had its own
+// separate, shorter timeout. Overrides the package-level multiplier to
+// keep the test fast rather than waiting out the real configured value.
+func TestCallHookTimesOutOnInfiniteLoop(t *testing.T) {
+	original := pluginHookTimeoutMultiplier
+	pluginHookTimeoutMultiplier = 1
+	t.Cleanup(func() { pluginHookTimeoutMultiplier = original })
+
+	pm := newTestManager(t)
+	pm.registerHook("OnFilter")
+	writePlugin(t, pm.dir, "hang.lua", `
+Salience = 1
+function WhoAmI() return Salience end
+function OnFilter(entry)
+    while true do end
+    return entry
+end
+`)
+	if err := pm.loadPlugins(); err != nil {
+		t.Fatalf("loadPlugins: %v", err)
+	}
+
+	start := time.Now()
+	_, err := pm.runByHook("OnFilter", DBEntry{})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected the infinite loop to be interrupted, got a nil error")
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("hook call took %v to return — the timeout doesn't appear to be interrupting execution", elapsed)
 	}
 }

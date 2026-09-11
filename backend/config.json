@@ -27,6 +27,8 @@
 	},
 	"plugin": {
 		"plugin_dir": "./plugins",
-		"plugin_scratch_dir": "./plugin-scratch"
+		"plugin_scratch_dir": "./plugin-scratch",
+		"http_timeout_multiplier_seconds": 5,
+		"hook_timeout_multiplier_seconds": 30
 	}
 }

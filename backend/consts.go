@@ -77,6 +77,15 @@ type PluginConfig struct {
 	// a plugin's file access — kept separate from store/cache/backup so a
 	// plugin can never reach documents a user actually uploaded.
 	PluginScratchDir string `json:"plugin_scratch_dir"`
+	// HTTPTimeoutMultiplier bounds how long a plugin's http.get/http.post
+	// call (issue #404) is allowed to run before it's cancelled.
+	HTTPTimeoutMultiplier int `json:"http_timeout_multiplier_seconds"` // in seconds
+	// HookTimeoutMultiplier bounds an entire hook invocation (issue #404) —
+	// larger than HTTPTimeoutMultiplier since one hook call can legitimately
+	// make several sequential http.get/http.post calls, each already bounded
+	// on its own; this is the outer ceiling on the whole call, including any
+	// pure-Lua work (loops, string processing) that isn't an HTTP call at all.
+	HookTimeoutMultiplier int `json:"hook_timeout_multiplier_seconds"` // in seconds
 }
 
 // Package-level vars populated by load() — same identifiers every other
@@ -105,8 +114,10 @@ var (
 	maxIdleDBConnections          int
 	dbConnectionTimeoutMultiplier int
 
-	pluginDir        string
-	pluginScratchDir string
+	pluginDir                   string
+	pluginScratchDir            string
+	pluginHTTPTimeoutMultiplier int
+	pluginHookTimeoutMultiplier int
 )
 
 // load reads configFile and populates every package-level config var
@@ -151,4 +162,6 @@ func load() {
 
 	pluginDir = cfg.Plugin.PluginDir
 	pluginScratchDir = cfg.Plugin.PluginScratchDir
+	pluginHTTPTimeoutMultiplier = cfg.Plugin.HTTPTimeoutMultiplier
+	pluginHookTimeoutMultiplier = cfg.Plugin.HookTimeoutMultiplier
 }
