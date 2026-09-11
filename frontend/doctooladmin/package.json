@@ -18,10 +18,6 @@
 	"devDependencies": {
 		"@eslint/compat": "^2.0.4",
 		"@eslint/js": "^10.0.1",
-		"@flowbite-svelte-plugins/chart": "^0.2.4",
-		"@flowbite-svelte-plugins/datatable": "^0.4.1",
-		"@skeletonlabs/skeleton": "^4.15.2",
-		"@skeletonlabs/skeleton-svelte": "^4.15.2",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.70.2",
@@ -33,9 +29,6 @@
 		"eslint": "^10.2.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
-		"flowbite": "^4.0.1",
-		"flowbite-svelte": "^1.33.1",
-		"flowbite-svelte-icons": "^3.1.0",
 		"globals": "^17.4.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",
@@ -49,7 +42,14 @@
 		"vitest": "^4.1.11"
 	},
 	"dependencies": {
+		"@flowbite-svelte-plugins/chart": "^0.2.4",
+		"@flowbite-svelte-plugins/datatable": "^0.4.1",
+		"@skeletonlabs/skeleton": "^4.15.2",
+		"@skeletonlabs/skeleton-svelte": "^4.15.2",
 		"@skeletonlabs/tw-plugin": "^0.4.1",
+		"flowbite": "^4.0.1",
+		"flowbite-svelte": "^1.33.1",
+		"flowbite-svelte-icons": "^3.1.0",
 		"svelte-dnd-action": "^0.9.79"
 	},
 	"overrides": {
