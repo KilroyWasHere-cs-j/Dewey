@@ -509,30 +509,6 @@ func rerunFilters(filename string, pm *PluginManger, dbm *DatabaseManager) error
 	return moveStoredFile(oldPath, entry.Path, dbm)
 }
 
-func listFilesInDir(baseDir string) (int64, []string, error) {
-	var count int64
-	var files []string
-	err := filepath.WalkDir(baseDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			count++
-			fileRelPath, err := filepath.Rel(baseDir, path)
-			if err != nil {
-				return err
-			}
-			files = append(files, fileRelPath)
-		}
-		return nil
-	})
-	if err != nil {
-		Warn(err.Error())
-		return 0, nil, err
-	}
-	return count, files, nil
-}
-
 func validateMetaData(m MetaData) error {
 	if strings.TrimSpace(m.DateOfInjury) == "" {
 		return errors.New("date_of_injury is required")

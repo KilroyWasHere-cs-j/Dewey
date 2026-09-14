@@ -335,28 +335,56 @@ func (dm *DatabaseManager) undeleteFileRecord(filename string) error {
 // deleteStoredFile leaves the physical file in place (issue #324) so
 // undeleteFileRecord can actually restore it, which means disk presence
 // alone can no longer be trusted to mean "still active."
-func (dm *DatabaseManager) getDeletedFilenames() ([]string, error) {
-	query := "SELECT filename FROM files WHERE is_deleted = 1"
-	rows, err := dm.db.Query(query)
+// FileListEntry is one row of listActiveFiles' result — id is the cursor
+// value a caller pages from, filepath is the store-relative path
+// listFiles has always returned to clients (issue #456).
+type FileListEntry struct {
+	ID       int64
+	Filepath string
+}
+
+// listActiveFiles returns active (non-deleted) files with id > afterID,
+// ordered by id ascending — id-cursor pagination rather than OFFSET, so a
+// concurrent insert can't shift what "the next page" means for a client
+// already paging through results (issue #456). limit <= 0 means
+// unbounded: every remaining active file is returned in one query, used
+// when the Files page needs the complete list to search over rather than
+// one page to browse.
+//
+// Queries the files table directly instead of walking the store
+// directory (the previous approach, replaced by this issue) — the table
+// already carries is_deleted and an indexed, auto-increment id perfectly
+// suited to cursor pagination, and one indexed query beats a full
+// filesystem walk plus a separate deleted-filenames cross-reference on
+// every request.
+func (dm *DatabaseManager) listActiveFiles(afterID int64, limit int) ([]FileListEntry, error) {
+	query := "SELECT id, filepath FROM files WHERE is_deleted = 0 AND id > ? ORDER BY id"
+	args := []any{afterID}
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	rows, err := dm.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve deleted filenames: %w", err)
+		return nil, fmt.Errorf("failed to retrieve active files: %w", err)
 	}
 	defer rows.Close()
 
-	var filenames []string
+	var files []FileListEntry
 	for rows.Next() {
-		var f string
-		if err := rows.Scan(&f); err != nil {
-			return nil, fmt.Errorf("failed to scan filename row: %w", err)
+		var f FileListEntry
+		if err := rows.Scan(&f.ID, &f.Filepath); err != nil {
+			return nil, fmt.Errorf("failed to scan file row: %w", err)
 		}
-		filenames = append(filenames, f)
+		files = append(files, f)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("row iteration error: %w", err)
 	}
 
-	return filenames, nil
+	return files, nil
 }
 
 // debugPrintAllRecords dumps every row of the files table to stdout —

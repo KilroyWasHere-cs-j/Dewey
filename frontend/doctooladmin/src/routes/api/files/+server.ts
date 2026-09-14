@@ -3,9 +3,14 @@ import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
 import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ request }) => {
+// url.search is forwarded as-is so limit/after (issue #456) reach the
+// backend unchanged — this route doesn't need to know the pagination
+// contract itself, just pass whatever query string the client sent.
+export const GET: RequestHandler = async ({ request, url }) => {
 	try {
-		const res = await fetch(`${backendUrl()}/core/files`, { headers: forwardAuthHeader(request) });
+		const res = await fetch(`${backendUrl()}/core/files${url.search}`, {
+			headers: forwardAuthHeader(request)
+		});
 		if (!res.ok) {
 			const message = await backendErrorMessage(res, 'Failed to list files');
 			return json({ error: message }, { status: res.status });
