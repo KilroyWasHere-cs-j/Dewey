@@ -4,6 +4,7 @@
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
 	import { toasts } from '$lib/stores/toasts.svelte';
+	import { ApiError, apiFetch, fetchJson } from '$lib/fetchJson';
 
 	interface Machine {
 		ip: string;
@@ -35,20 +36,16 @@
 		listLoading = true;
 		listError = null;
 		try {
-			const res = await fetch('/api/machines', {
+			const data = await fetchJson<{ machines?: Machine[] }>('/api/machines', {
 				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetMachinesPassword();
-				throw new Error(`HTTP ${res.status}`);
-			}
-			const data = await res.json();
 			machines = data.machines ?? [];
 			backendVerified = true;
 		} catch (e) {
-			listError = String(e);
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
+			listError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to load machines', detail: listError });
 		} finally {
 			listLoading = false;
@@ -97,7 +94,7 @@
 		adding = true;
 
 		try {
-			const res = await fetch('/api/machines', {
+			await fetchJson('/api/machines', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -105,20 +102,14 @@
 				},
 				body: JSON.stringify(addFields)
 			});
-			const body = await res.json();
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetMachinesPassword();
-				addError = body.error ?? `HTTP ${res.status}`;
-				toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
-				return;
-			}
 			addFields = { ip: '', label: '' };
 			addOpen = false;
 			await loadMachines();
 		} catch (e) {
-			addError = String(e);
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
+			addError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
 		} finally {
 			adding = false;
@@ -151,23 +142,20 @@
 		removeError = null;
 		const target = pendingRemove;
 		try {
-			const res = await fetch(`/api/machines/${encodeURIComponent(target)}`, {
+			await apiFetch(`/api/machines/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
 				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
 			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetMachinesPassword();
-				throw new Error(`HTTP ${res.status}`);
-			}
 			machines = machines.filter((m) => m.ip !== target);
 			pendingRemove = null;
 		} catch (e) {
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
 			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
 			// matching addError/listError elsewhere on this page instead of a
 			// blocking native alert().
-			removeError = String(e);
+			removeError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to remove machine', detail: removeError });
 		} finally {
 			removing = false;

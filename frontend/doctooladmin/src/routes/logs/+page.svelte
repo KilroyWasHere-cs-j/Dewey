@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { toasts } from '$lib/stores/toasts.svelte';
+	import { apiFetch, fetchJson } from '$lib/fetchJson';
 
 	// ── Log file list (populated from /fileview/viewLogDir) ────────────────────
 
@@ -13,15 +14,10 @@
 		logFilesLoading = true;
 		logFilesError = null;
 		try {
-			const res = await fetch('/api/fileview/dir');
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error ?? `HTTP ${res.status}`);
-			}
-			const data = await res.json();
+			const data = await fetchJson<{ files?: string[] }>('/api/fileview/dir');
 			logFiles = data.files ?? [];
 		} catch (e) {
-			logFilesError = String(e);
+			logFilesError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to list log files', detail: logFilesError });
 		} finally {
 			logFilesLoading = false;
@@ -68,18 +64,14 @@
 		contentLoading = true;
 		contentError = null;
 		try {
-			const res = await fetch(
+			const res = await apiFetch(
 				`/api/fileview/${encodeURIComponent(fileType)}/${encodeURIComponent(selectedFile)}`
 			);
-			if (!res.ok) {
-				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error ?? `HTTP ${res.status}`);
-			}
 			const text = await res.text();
 			contentCache.set(cacheKey, text);
 			content = text;
 		} catch (e) {
-			contentError = String(e);
+			contentError = e instanceof Error ? e.message : String(e);
 			content = null;
 			toasts.push({ kind: 'error', title: 'Failed to load file', detail: contentError });
 		} finally {
