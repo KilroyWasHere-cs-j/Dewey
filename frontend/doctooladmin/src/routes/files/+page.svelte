@@ -4,6 +4,7 @@
 	import AppShell from '$lib/components/AppShell.svelte';
 	import { credentials } from '$lib/stores/credentials.svelte';
 	import { toasts } from '$lib/stores/toasts.svelte';
+	import { ApiError, apiFetch, fetchJson } from '$lib/fetchJson';
 
 	interface MetaData {
 		claim_number: string;
@@ -52,27 +53,17 @@
 		listLoading = true;
 		listError = null;
 		try {
-			const res = await fetch('/api/files', {
+			const data = await fetchJson<{ files?: string[] }>('/api/files', {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) {
-				// A rotated backend password (issue #414) means the cached value
-				// is permanently wrong — clear it so the next attempt re-prompts
-				// instead of resending the same stale password forever.
-				if (res.status === 401) credentials.resetFilesPassword();
-				// Prefer the backend's own error message over a bare status code
-				let message = `HTTP ${res.status}`;
-				try {
-					const body = await res.json();
-					message = body.error ?? message;
-				} catch {}
-				throw new Error(message);
-			}
-			const data = await res.json();
 			files = data.files ?? [];
 			backendVerified = true;
 		} catch (e) {
-			listError = String(e);
+			// A rotated backend password (issue #414) means the cached value is
+			// permanently wrong — clear it so the next attempt re-prompts
+			// instead of resending the same stale password forever.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			listError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to load files', detail: listError });
 		} finally {
 			listLoading = false;
@@ -104,17 +95,15 @@
 
 		metaState = { ...metaState, [filename]: 'loading' };
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=true`, {
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
-			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetFilesPassword();
-				throw new Error(`HTTP ${res.status}`);
-			}
-			metaState = { ...metaState, [filename]: await res.json() };
-		} catch {
+			const meta = await fetchJson<MetaData>(
+				`/api/files/${encodeURIComponent(filename)}?meta=true`,
+				{ headers: { 'X-Dewey-Password': await credentials.getFilesPassword() } }
+			);
+			metaState = { ...metaState, [filename]: meta };
+		} catch (e) {
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
 			metaState = { ...metaState, [filename]: 'error' };
 		}
 	}
@@ -130,21 +119,9 @@
 	async function downloadFile(filename: string) {
 		downloadError = null;
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
+			const res = await apiFetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetFilesPassword();
-				// Prefer the backend's own error message over a bare status code
-				let message = `HTTP ${res.status}`;
-				try {
-					const body = await res.json();
-					message = body.error ?? message;
-				} catch {}
-				throw new Error(message);
-			}
 			const blob = await res.blob();
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
@@ -153,7 +130,10 @@
 			a.click();
 			URL.revokeObjectURL(url);
 		} catch (e) {
-			downloadError = String(e);
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			downloadError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to download file', detail: downloadError });
 		}
 	}
@@ -170,22 +150,10 @@
 		deleteError = null;
 		const target = pendingDelete;
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(target)}`, {
+			await apiFetch(`/api/files/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetFilesPassword();
-				// Prefer the backend's own error message over a bare status code
-				let message = `HTTP ${res.status}`;
-				try {
-					const body = await res.json();
-					message = body.error ?? message;
-				} catch {}
-				throw new Error(message);
-			}
 			files = files.filter((f) => f !== target);
 			// Clean up any cached metadata for the deleted file
 			const next = { ...metaState };
@@ -202,10 +170,13 @@
 				action: { label: 'Undo', onClick: () => undeleteFile(target) }
 			});
 		} catch (e) {
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
 			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
 			// matching uploadError/listError elsewhere on this page instead of a
 			// blocking native alert().
-			deleteError = String(e);
+			deleteError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to delete file', detail: deleteError });
 		} finally {
 			deleting = false;
@@ -217,25 +188,21 @@
 	// refreshes the list so the restored file reappears.
 	async function undeleteFile(filename: string) {
 		try {
-			const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+			await apiFetch(`/api/files/${encodeURIComponent(filename)}`, {
 				method: 'POST',
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetFilesPassword();
-				let message = `HTTP ${res.status}`;
-				try {
-					const body = await res.json();
-					message = body.error ?? message;
-				} catch {}
-				throw new Error(message);
-			}
 			await loadFiles();
 			toasts.push({ kind: 'info', title: 'File restored', detail: filename });
 		} catch (e) {
-			toasts.push({ kind: 'error', title: 'Failed to undo delete', detail: String(e) });
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			toasts.push({
+				kind: 'error',
+				title: 'Failed to undo delete',
+				detail: e instanceof Error ? e.message : String(e)
+			});
 		}
 	}
 
@@ -308,36 +275,25 @@
 		}
 
 		try {
-			const res = await fetch('/api/files', {
+			// Body-size-limit rejections (and similar) return a non-JSON
+			// response — fetchJson's error-body parsing already guards
+			// against that on the failure path, so no special-casing needed
+			// here.
+			const body = await fetchJson<{ filename?: string }>('/api/files', {
 				method: 'POST',
 				body: form,
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
-			// Body-size-limit rejections (and similar) return a non-JSON response,
-			// so .json() must be guarded rather than called unconditionally.
-			let body: any = null;
-			try {
-				body = await res.json();
-			} catch {
-				uploadError = `HTTP ${res.status}: server returned a non-JSON response`;
-				toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
-				return;
-			}
-			if (!res.ok) {
-				// Rotated password (issue #414) — clear the cache so the next
-				// attempt re-prompts instead of resending the stale value.
-				if (res.status === 401) credentials.resetFilesPassword();
-				uploadError = body.error ?? `HTTP ${res.status}`;
-				toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
-				return;
-			}
 			const uploadedFilename = body.filename ?? 'File uploaded successfully.';
 			resetUploadForm();
 			uploadSuccess = uploadedFilename;
 			// Refresh list to include the new file
 			await loadFiles();
 		} catch (e) {
-			uploadError = String(e);
+			// Rotated password (issue #414) — clear the cache so the next
+			// attempt re-prompts instead of resending the stale value.
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			uploadError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 		} finally {
 			uploading = false;
