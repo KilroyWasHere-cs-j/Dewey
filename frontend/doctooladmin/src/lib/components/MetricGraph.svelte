@@ -12,6 +12,11 @@
 		maxHistory?: number;
 		// Optional custom formatter for the displayed value and tooltip
 		formatter?: (v: number) => string;
+		// Whether the chart should animate when its data updates — disabled
+		// at fast poll intervals (issue #427) since ~20 tiles animating in
+		// lockstep every second is real CPU/GPU cost for values that mostly
+		// change slowly.
+		animate?: boolean;
 	}
 
 	let {
@@ -20,19 +25,30 @@
 		unit = '',
 		color = '#3b82f6',
 		maxHistory = 40,
-		formatter
+		formatter,
+		animate = true
 	}: Props = $props();
 
 	let history = $state<number[]>([]);
 	let timestamps = $state<string[]>([]);
 
-	// Push each new reading into the rolling window.
+	// Push each new reading into the rolling window — but only when it
+	// actually differs from the last one (issue #427). A poll tick whose
+	// value hasn't moved (e.g. a steady goroutine count) would otherwise
+	// still append a duplicate point and force a full chart redraw for no
+	// visible change. This does mean the sparkline reads as "last N actual
+	// changes" rather than "last N poll ticks" — a flat metric shows fewer,
+	// older points instead of a row of identical dots, which better reflects
+	// what's actually happening.
 	// untrack() is used to read history/timestamps without creating a dependency —
 	// otherwise this effect would re-trigger itself every time it writes.
 	$effect(() => {
 		if (typeof value !== 'number' || isNaN(value)) return;
 
 		const v = value;
+		const lastValue = untrack(() => history[history.length - 1]);
+		if (lastValue === v) return;
+
 		const now = new Date().toLocaleTimeString([], {
 			hour: '2-digit',
 			minute: '2-digit',
@@ -56,7 +72,7 @@
 			height: 80,
 			sparkline: { enabled: true },
 			animations: {
-				enabled: true,
+				enabled: animate,
 				speed: 300,
 				animateGradually: { enabled: false }
 			}

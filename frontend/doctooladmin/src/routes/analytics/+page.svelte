@@ -108,6 +108,11 @@
 	// Convenience shortcuts into the current theme's color array
 	let colors = $derived(CHART_THEMES[settings.value.chartColorTheme]);
 
+	// Below this poll interval, ~20 chart tiles animating in lockstep every
+	// tick is real CPU/GPU cost for values that mostly change slowly
+	// (issue #427) — animation only helps at slower, more relaxed intervals.
+	let chartAnimationsEnabled = $derived(settings.value.pollIntervalMs >= 2000);
+
 	// Alert conditions derived from live metrics + user thresholds
 	let ramAlert = $derived((metrics.app_ram_usage ?? 0) > settings.value.ramAlertThresholdMb);
 	let retrievalAlert = $derived(
@@ -606,7 +611,7 @@
 								>
 									⠿
 								</div>
-								<tile.component {...tile.props} />
+								<tile.component {...tile.props} animate={chartAnimationsEnabled} />
 							{/if}
 						</div>
 					{/each}

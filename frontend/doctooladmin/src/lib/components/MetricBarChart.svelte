@@ -9,6 +9,9 @@
 		colors?: string[];
 		unit?: string;
 		class?: string;
+		// Whether the chart should animate when its data updates — disabled
+		// at fast poll intervals (issue #427), same reasoning as MetricGraph.
+		animate?: boolean;
 	}
 
 	let {
@@ -16,7 +19,8 @@
 		data,
 		colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
 		unit = '',
-		class: className = ''
+		class: className = '',
+		animate = true
 	}: Props = $props();
 
 	// Recomputes whenever `data` prop changes — the Chart action calls updateOptions().
@@ -26,7 +30,7 @@
 			type: 'bar',
 			height: 160,
 			toolbar: { show: false },
-			animations: { enabled: true, speed: 300 }
+			animations: { enabled: animate, speed: 300 }
 		},
 		plotOptions: {
 			bar: {
