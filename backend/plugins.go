@@ -127,6 +127,23 @@ var pluginHTTPClient = &http.Client{
 	Transport: &http.Transport{DialContext: dialBlockingPrivateIPs},
 }
 
+// readLimitedBody reads resp.Body but refuses to return more than
+// maxPluginDownloadSize bytes (issue #448) — shared by httpGet and
+// httpPost so both plugin download paths enforce the same cap. Reads one
+// byte past the limit so an oversized body is detected (and rejected)
+// rather than silently truncated into a success.
+func readLimitedBody(resp *http.Response) (string, error) {
+	limited := io.LimitReader(resp.Body, maxPluginDownloadSize+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return "", err
+	}
+	if int64(len(data)) > maxPluginDownloadSize {
+		return "", fmt.Errorf("response exceeds maximum allowed download size of %d bytes", maxPluginDownloadSize)
+	}
+	return string(data), nil
+}
+
 // httpGet is the Go-side implementation behind the Lua "http.get" global —
 // deliberately going through pluginHTTPClient rather than http.Get, so
 // every request a plugin makes is subject to the SSRF check above.
@@ -144,15 +161,12 @@ func (pm *PluginManger) httpGet(url string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(body), nil
+	return readLimitedBody(resp)
 }
 
 // httpPost is the Go-side implementation behind the Lua "http.post" global.
-// Same pluginHTTPClient as httpGet, same SSRF check applied.
+// Same pluginHTTPClient as httpGet, same SSRF check and download-size cap
+// applied.
 func (pm *PluginManger) httpPost(url string, body string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(pluginHTTPTimeoutMultiplier)*time.Second)
 	defer cancel()
@@ -167,11 +181,7 @@ func (pm *PluginManger) httpPost(url string, body string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(respBody), nil
+	return readLimitedBody(resp)
 }
 
 // luaHTTPGet and luaHTTPPost adapt httpGet/httpPost to gopher-lua's
@@ -222,6 +232,9 @@ func (pm *PluginManger) fileRead(name string) (string, error) {
 }
 
 func (pm *PluginManger) fileWrite(name string, data string) error {
+	if int64(len(data)) > maxPluginFileSize {
+		return fmt.Errorf("file exceeds maximum allowed size of %d bytes", maxPluginFileSize)
+	}
 	path, err := resolveStorePath(pluginScratchDir, name)
 	if err != nil {
 		return err

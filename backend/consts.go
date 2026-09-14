@@ -86,6 +86,12 @@ type PluginConfig struct {
 	// on its own; this is the outer ceiling on the whole call, including any
 	// pure-Lua work (loops, string processing) that isn't an HTTP call at all.
 	HookTimeoutMultiplier int `json:"hook_timeout_multiplier_seconds"` // in seconds
+	// MaxPluginFileSize caps how large a file a plugin can write via
+	// files.write (issue #448).
+	MaxPluginFileSize int64 `json:"max_plugin_file_size_bytes"` // maximum file size a plugin can write, in bytes
+	// MaxPluginDownloadSize caps how much a plugin's http.get/http.post
+	// (issue #448) can pull down in a single response.
+	MaxPluginDownloadSize int64 `json:"max_plugin_download_size_bytes"` // maximum response size a plugin can download, in bytes
 }
 
 // Package-level vars populated by load() — same identifiers every other
@@ -118,6 +124,8 @@ var (
 	pluginScratchDir            string
 	pluginHTTPTimeoutMultiplier int
 	pluginHookTimeoutMultiplier int
+	maxPluginFileSize           int64
+	maxPluginDownloadSize       int64
 )
 
 // load reads configFile and populates every package-level config var
@@ -164,4 +172,6 @@ func load() {
 	pluginScratchDir = cfg.Plugin.PluginScratchDir
 	pluginHTTPTimeoutMultiplier = cfg.Plugin.HTTPTimeoutMultiplier
 	pluginHookTimeoutMultiplier = cfg.Plugin.HookTimeoutMultiplier
+	maxPluginFileSize = cfg.Plugin.MaxPluginFileSize
+	maxPluginDownloadSize = cfg.Plugin.MaxPluginDownloadSize
 }

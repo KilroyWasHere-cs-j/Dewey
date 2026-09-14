@@ -29,6 +29,8 @@
 		"plugin_dir": "./plugins",
 		"plugin_scratch_dir": "./plugin-scratch",
 		"http_timeout_multiplier_seconds": 5,
-		"hook_timeout_multiplier_seconds": 30
+		"hook_timeout_multiplier_seconds": 30,
+		"max_plugin_file_size_bytes": 52428800,
+		"max_plugin_download_size_bytes": 52428800
 	}
 }
