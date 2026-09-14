@@ -123,6 +123,11 @@
 			// attempt re-prompts instead of resending the stale value.
 			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
 			metaState = { ...metaState, [filename]: 'error' };
+			toasts.push({
+				kind: 'error',
+				title: 'Failed to load metadata',
+				detail: e instanceof Error ? e.message : String(e)
+			});
 		}
 	}
 
