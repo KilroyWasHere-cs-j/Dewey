@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
+import { backendUrl, forwardSessionHeader } from '$lib/server/backend';
 import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
@@ -9,7 +9,7 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	try {
 		const res = await fetch(`${backendUrl()}/core/machines/${encodeURIComponent(ip)}`, {
 			method: 'DELETE',
-			headers: forwardAuthHeader(request)
+			headers: forwardSessionHeader(request)
 		});
 
 		if (!res.ok) {

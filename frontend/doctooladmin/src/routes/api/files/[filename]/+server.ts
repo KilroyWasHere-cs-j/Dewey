@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
+import { backendUrl, forwardSessionHeader } from '$lib/server/backend';
 import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, url, request }) => {
 		// (category-nested paths from listFiles, e.g. "Swedish/image/foo.png").
 		const res = await fetch(
 			`${backendUrl()}/core/files/${encodeURIComponent(filename)}?meta=${meta}`,
-			{ headers: forwardAuthHeader(request) }
+			{ headers: forwardSessionHeader(request) }
 		);
 
 		if (!res.ok) {
@@ -50,7 +50,7 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	try {
 		const res = await fetch(`${backendUrl()}/core/files/${encodeURIComponent(filename)}`, {
 			method: 'DELETE',
-			headers: forwardAuthHeader(request)
+			headers: forwardSessionHeader(request)
 		});
 
 		if (!res.ok) {
@@ -72,7 +72,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	try {
 		const res = await fetch(
 			`${backendUrl()}/core/files/undelete/${encodeURIComponent(filename)}`,
-			{ method: 'POST', headers: forwardAuthHeader(request) }
+			{ method: 'POST', headers: forwardSessionHeader(request) }
 		);
 
 		if (!res.ok) {

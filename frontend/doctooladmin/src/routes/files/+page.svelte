@@ -36,7 +36,7 @@
 	// timeout (issue #351) that clears the cached password immediately
 	// re-locks this page behind the prompt screen, instead of leaving stale
 	// content visible until the next manual action happens to notice.
-	let authorized = $derived(backendVerified && credentials.hasFilesPassword);
+	let authorized = $derived(backendVerified && credentials.hasFilesToken);
 
 	// ── Search ────────────────────────────────────────────────────────────────
 
@@ -105,7 +105,7 @@
 		try {
 			const query = searching ? '' : `?limit=${FILES_PAGE_SIZE}`;
 			const data = await fetchJson<FilesResponse>(`/api/files${query}`, {
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() }
 			});
 			files = data.files ?? [];
 			nextAfter = data.next_after ?? null;
@@ -115,7 +115,7 @@
 			// A rotated backend password (issue #414) means the cached value is
 			// permanently wrong — clear it so the next attempt re-prompts
 			// instead of resending the same stale password forever.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			listError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to load files', detail: listError });
 		} finally {
@@ -132,13 +132,13 @@
 		try {
 			const data = await fetchJson<FilesResponse>(
 				`/api/files?limit=${FILES_PAGE_SIZE}&after=${nextAfter}`,
-				{ headers: { 'X-Dewey-Password': await credentials.getFilesPassword() } }
+				{ headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() } }
 			);
 			files = [...files, ...(data.files ?? [])];
 			nextAfter = data.next_after ?? null;
 			hasMorePages = data.has_more ?? false;
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			toasts.push({
 				kind: 'error',
 				title: 'Failed to load more files',
@@ -169,7 +169,7 @@
 	// Clears the cached (wrong/cancelled) password so the prompt reappears,
 	// then retries — used by the "Enter Password" button on the blocked screen.
 	function retryAuth() {
-		credentials.resetFilesPassword();
+		credentials.resetFilesToken();
 		loadFiles();
 	}
 
@@ -191,13 +191,13 @@
 		try {
 			const meta = await fetchJson<MetaData>(
 				`/api/files/${encodeURIComponent(filename)}?meta=true`,
-				{ headers: { 'X-Dewey-Password': await credentials.getFilesPassword() } }
+				{ headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() } }
 			);
 			metaState = { ...metaState, [filename]: meta };
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			metaState = { ...metaState, [filename]: 'error' };
 			toasts.push({
 				kind: 'error',
@@ -219,7 +219,7 @@
 		downloadError = null;
 		try {
 			const res = await apiFetch(`/api/files/${encodeURIComponent(filename)}?meta=false`, {
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() }
 			});
 			const blob = await res.blob();
 			const url = URL.createObjectURL(blob);
@@ -231,7 +231,7 @@
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			downloadError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to download file', detail: downloadError });
 		}
@@ -251,7 +251,7 @@
 		try {
 			await apiFetch(`/api/files/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() }
 			});
 			files = files.filter((f) => f !== target);
 			// Clean up any cached metadata for the deleted file
@@ -271,7 +271,7 @@
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
 			// matching uploadError/listError elsewhere on this page instead of a
 			// blocking native alert().
@@ -289,14 +289,14 @@
 		try {
 			await apiFetch(`/api/files/${encodeURIComponent(filename)}`, {
 				method: 'POST',
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() }
 			});
 			await loadFiles();
 			toasts.push({ kind: 'info', title: 'File restored', detail: filename });
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			toasts.push({
 				kind: 'error',
 				title: 'Failed to undo delete',
@@ -381,7 +381,7 @@
 			const body = await fetchJson<{ filename?: string }>('/api/files', {
 				method: 'POST',
 				body: form,
-				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getFilesToken() }
 			});
 			const uploadedFilename = body.filename ?? 'File uploaded successfully.';
 			resetUploadForm();
@@ -391,7 +391,7 @@
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesToken();
 			uploadError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to upload file', detail: uploadError });
 		} finally {

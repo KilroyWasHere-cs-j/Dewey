@@ -215,11 +215,19 @@ func main() {
 		c.Next()
 	})
 
+	// Password exchange endpoints (issue #409) — each sits directly on
+	// core, not behind requireSession, since checking the password is
+	// their entire job. A client calls one of these once per login and
+	// uses the returned token for every subsequent request instead of
+	// resending the actual password.
+	core.POST("/files/session", exchangeForSession("files"))
+	core.POST("/machines/session", exchangeForSession("machines"))
+
 	// Separate passwords per capability (issue #332) — deleting stored
 	// documents and altering who can reach the server at all are different
 	// enough risks that one shared secret for both didn't make sense.
 	files := core.Group("")
-	files.Use(requirePassword("files"))
+	files.Use(requireSession("files"))
 	{
 		files.POST("/upload", uploadFile)
 		files.GET("/files/*filename", getFile)
@@ -233,7 +241,7 @@ func main() {
 	}
 
 	machines := core.Group("")
-	machines.Use(requirePassword("machines"))
+	machines.Use(requireSession("machines"))
 	{
 		machines.GET("/machines", listMachines)
 		machines.POST("/machines", addMachine)

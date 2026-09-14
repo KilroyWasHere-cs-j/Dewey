@@ -30,21 +30,21 @@
 	// idle timeout (issue #351) that clears the cached password immediately
 	// re-locks this page behind the prompt screen, instead of leaving stale
 	// content visible until the next manual action happens to notice.
-	let authorized = $derived(backendVerified && credentials.hasMachinesPassword);
+	let authorized = $derived(backendVerified && credentials.hasMachinesToken);
 
 	async function loadMachines() {
 		listLoading = true;
 		listError = null;
 		try {
 			const data = await fetchJson<{ machines?: Machine[] }>('/api/machines', {
-				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getMachinesToken() }
 			});
 			machines = data.machines ?? [];
 			backendVerified = true;
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesToken();
 			listError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to load machines', detail: listError });
 		} finally {
@@ -57,7 +57,7 @@
 	// Clears the cached (wrong/cancelled) password so the prompt reappears,
 	// then retries — used by the "Enter Password" button on the blocked screen.
 	function retryAuth() {
-		credentials.resetMachinesPassword();
+		credentials.resetMachinesToken();
 		loadMachines();
 	}
 
@@ -98,7 +98,7 @@
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-Dewey-Password': await credentials.getMachinesPassword()
+					'X-Dewey-Session-Token': await credentials.getMachinesToken()
 				},
 				body: JSON.stringify(addFields)
 			});
@@ -108,7 +108,7 @@
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesToken();
 			addError = e instanceof Error ? e.message : String(e);
 			toasts.push({ kind: 'error', title: 'Failed to add machine', detail: addError });
 		} finally {
@@ -144,14 +144,14 @@
 		try {
 			await apiFetch(`/api/machines/${encodeURIComponent(target)}`, {
 				method: 'DELETE',
-				headers: { 'X-Dewey-Password': await credentials.getMachinesPassword() }
+				headers: { 'X-Dewey-Session-Token': await credentials.getMachinesToken() }
 			});
 			machines = machines.filter((m) => m.ip !== target);
 			pendingRemove = null;
 		} catch (e) {
 			// Rotated password (issue #414) — clear the cache so the next
 			// attempt re-prompts instead of resending the stale value.
-			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesPassword();
+			if (e instanceof ApiError && e.status === 401) credentials.resetMachinesToken();
 			// Inline alert next to the row's Confirm/Cancel buttons (issue #241),
 			// matching addError/listError elsewhere on this page instead of a
 			// blocking native alert().

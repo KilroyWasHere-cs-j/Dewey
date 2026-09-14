@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
+import { backendUrl, forwardSessionHeader } from '$lib/server/backend';
 import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
@@ -9,7 +9,7 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ request, url }) => {
 	try {
 		const res = await fetch(`${backendUrl()}/core/files${url.search}`, {
-			headers: forwardAuthHeader(request)
+			headers: forwardSessionHeader(request)
 		});
 		if (!res.ok) {
 			const message = await backendErrorMessage(res, 'Failed to list files');
@@ -30,7 +30,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			body: request.body,
 			headers: {
 				'Content-Type': request.headers.get('Content-Type') ?? '',
-				...forwardAuthHeader(request)
+				...forwardSessionHeader(request)
 			},
 			// @ts-expect-error — Node fetch needs duplex for streamed bodies
 			duplex: 'half'
