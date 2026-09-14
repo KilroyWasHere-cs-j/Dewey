@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@import "@skeletonlabs/skeleton";
-@import "@skeletonlabs/skeleton/themes/cerberus";
 
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
@@ -16,22 +14,6 @@
 /* Sources */
 @source "../../node_modules/flowbite-svelte/dist";
 @source "../../node_modules/flowbite-svelte-icons/dist";
-@source "../node_modules/simple-datatables/dist";
-@source "../node_modules/@flowbite-svelte-plugins/datatable/dist";
-
-.datatable-pagination .datatable-active a,
-.datatable-pagination .datatable-active a:focus,
-.datatable-pagination .datatable-active a:hover,
-.datatable-pagination .datatable-active button,
-.datatable-pagination .datatable-active button:focus,
-.datatable-pagination .datatable-active button:hover {
-  background-color: #ffe4de;
-  cursor: default;
-}
-
-.datatable-wrapper .datatable-table tbody tr.selected {
-  background-color: #fff1ee !important;
-}
 
 @layer base {
   input[type="search"]::-webkit-search-cancel-button {
