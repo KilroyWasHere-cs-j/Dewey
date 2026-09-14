@@ -60,21 +60,56 @@
 		return () => clearTimeout(timer);
 	});
 
-	// Case-insensitive substring match against filename
+	// Whether search is active — drives both filtering below and which mode
+	// loadFiles() fetches in (issue #456).
+	let searching = $derived(debouncedQuery.trim() !== '');
+
+	// Case-insensitive substring match against filename. While searching,
+	// `files` holds the complete store (loadFiles fetches everything in
+	// that mode) so this filters over all of it; while browsing, `files`
+	// is just the current page and this is a no-op passthrough.
 	let filteredFiles = $derived(
-		debouncedQuery.trim() === ''
-			? files
-			: files.filter((f) => f.toLowerCase().includes(debouncedQuery.trim().toLowerCase()))
+		searching
+			? files.filter((f) => f.toLowerCase().includes(debouncedQuery.trim().toLowerCase()))
+			: files
 	);
 
+	// ── Pagination (issue #456) ─────────────────────────────────────────────
+	// GET /api/files returns one page by default; the id cursor for the next
+	// page comes back as next_after. Only meaningful while browsing — search
+	// mode always holds the complete list, so there's never a "next page" to
+	// load while searching.
+
+	const FILES_PAGE_SIZE = 50;
+	let nextAfter = $state<number | null>(null);
+	let hasMorePages = $state(false);
+	// Separate from listLoading so "Load More" shows its own inline pending
+	// state instead of replacing the whole list with the full-page spinner.
+	let loadingMore = $state(false);
+
+	interface FilesResponse {
+		files?: string[];
+		next_after?: number | null;
+		has_more?: boolean;
+	}
+
+	// Fetches the list from scratch: one page (FILES_PAGE_SIZE) while
+	// browsing, or the complete store while searching — search filters
+	// entirely client-side (issue #428) and needs everything to search
+	// over. Used for the initial load, the Refresh button, the search
+	// mode transition below, and every post-mutation refresh elsewhere on
+	// this page.
 	async function loadFiles() {
 		listLoading = true;
 		listError = null;
 		try {
-			const data = await fetchJson<{ files?: string[] }>('/api/files', {
+			const query = searching ? '' : `?limit=${FILES_PAGE_SIZE}`;
+			const data = await fetchJson<FilesResponse>(`/api/files${query}`, {
 				headers: { 'X-Dewey-Password': await credentials.getFilesPassword() }
 			});
 			files = data.files ?? [];
+			nextAfter = data.next_after ?? null;
+			hasMorePages = data.has_more ?? false;
 			backendVerified = true;
 		} catch (e) {
 			// A rotated backend password (issue #414) means the cached value is
@@ -88,7 +123,48 @@
 		}
 	}
 
+	// Appends the next page using the cursor from the last loadFiles()/
+	// loadMore() call — the "Load More" button only renders while browsing,
+	// so this never runs during search mode.
+	async function loadMore() {
+		if (nextAfter === null || loadingMore) return;
+		loadingMore = true;
+		try {
+			const data = await fetchJson<FilesResponse>(
+				`/api/files?limit=${FILES_PAGE_SIZE}&after=${nextAfter}`,
+				{ headers: { 'X-Dewey-Password': await credentials.getFilesPassword() } }
+			);
+			files = [...files, ...(data.files ?? [])];
+			nextAfter = data.next_after ?? null;
+			hasMorePages = data.has_more ?? false;
+		} catch (e) {
+			if (e instanceof ApiError && e.status === 401) credentials.resetFilesPassword();
+			toasts.push({
+				kind: 'error',
+				title: 'Failed to load more files',
+				detail: e instanceof Error ? e.message : String(e)
+			});
+		} finally {
+			loadingMore = false;
+		}
+	}
+
 	onMount(loadFiles);
+
+	// Refetches on every transition between browsing and searching:
+	// entering search needs the complete store (not just whatever page
+	// happens to be loaded so far), leaving search goes back to a fresh
+	// first page (issue #456). Compares against the last-seen value rather
+	// than reacting to every effect run, so this only fires on an actual
+	// transition — onMount already covers the initial load, and searching
+	// starts false (searchQuery/debouncedQuery both start empty) same as
+	// this initial snapshot, so the first run is naturally a no-op.
+	let previousSearching = searching;
+	$effect(() => {
+		if (searching === previousSearching) return;
+		previousSearching = searching;
+		loadFiles();
+	});
 
 	// Clears the cached (wrong/cancelled) password so the prompt reappears,
 	// then retries — used by the "Enter Password" button on the blocked screen.
@@ -480,8 +556,10 @@
 
 				{#if !listLoading}
 					<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
-						{#if searchQuery.trim()}
+						{#if searching}
 							{filteredFiles.length} of {files.length}
+						{:else if hasMorePages}
+							{files.length}+ files
 						{:else}
 							{files.length} {files.length === 1 ? 'file' : 'files'}
 						{/if}
@@ -630,6 +708,20 @@
 						</tbody>
 					</table>
 				</div>
+
+				<!-- Only reachable while browsing — search mode already holds the
+				     complete store, so there's never a next page to load. -->
+				{#if hasMorePages && !searching}
+					<div class="flex justify-center border-t border-gray-100 py-4 dark:border-gray-700">
+						<button
+							disabled={loadingMore}
+							onclick={loadMore}
+							class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+						>
+							{loadingMore ? 'Loading…' : 'Load More'}
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</section>
 	{/if}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -153,66 +154,112 @@ func getViewLogFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"files": dirs})
 }
 
-// listFiles returns all files stored in the upload directory.
+// listFiles returns active files, either as one page (for the Files
+// page's normal browse view) or the complete list in one response (for
+// its search mode, which needs everything to filter client-side — pass
+// limit=0, or omit it, for this).
 //
 // Args:
 //   - c (*gin.Context): Gin request context
 //
+// Query params:
+//   - after: id cursor — only files with id > after are returned (default 0)
+//   - limit: page size; 0 or omitted means unbounded/everything — there's
+//     no server-side default page size, the caller always states one
+//     explicitly when it wants a page rather than everything
+//
 // Behavior:
-//   - Reads the upload directory
-//   - Filters out subdirectories (only returns files)
-//   - Returns a JSON list of filenames
+//   - Queries the files table for active (non-deleted) rows, id > after,
+//     ordered by id, id-cursor paginated rather than OFFSET so a
+//     concurrent insert can't shift an in-progress page (issue #456)
 //
 // Returns (HTTP JSON):
-//   - 200 OK: list of filenames
-//   - 500 Internal Server Error: unable to read directory
+//   - 200 OK, paginated (limit > 0): {"files": [...], "next_after": <id or null>, "has_more": bool}
+//   - 200 OK, unbounded (limit == 0): {"files": [...]}
+//   - 400 Bad Request: after/limit isn't a valid non-negative integer
+//   - 500 Internal Server Error: query failure
 func listFiles(c *gin.Context) {
 	Debug("listFiles")
 
 	dbm := c.MustGet("db").(*DatabaseManager)
 
-	_, filenames, err := listFilesInDir(fileSystemBaseDir)
+	after, err := parseNonNegativeIntParam(c, "after", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "after must be a non-negative integer"})
+		return
+	}
+	// limit absent means unbounded, not "use the default page size" — the
+	// Files page's search mode relies on omitting limit entirely to get
+	// everything to filter client-side; a page size is only ever applied
+	// when the caller asks for one explicitly (issue #456).
+	limit, err := parseNonNegativeIntParam(c, "limit", 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be a non-negative integer"})
+		return
+	}
+
+	// Fetch one extra row (when paginated) purely to answer "is there a
+	// next page" without a second COUNT query — trimmed back off below
+	// before the response is built.
+	queryLimit := limit
+	if limit > 0 {
+		queryLimit = limit + 1
+	}
+
+	files, err := dbm.listActiveFiles(int64(after), queryLimit)
 	if err != nil {
 		Warn("failed to list files: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to list files",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to list files"})
 		return
 	}
 
-	// deleteStoredFile leaves the physical file in place on delete (issue
-	// #324, so undeleteFileRecord has something to restore), so the disk
-	// walk above no longer implies "still active" — cross-reference against
-	// the DB and drop anything marked is_deleted=1.
-	deletedFilenames, err := dbm.getDeletedFilenames()
-	if err != nil {
-		Warn("failed to look up deleted filenames: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Unable to list files",
-		})
+	Debug("files found: " + fmt.Sprintf("%d", len(files)))
+
+	if limit == 0 {
+		c.JSON(http.StatusOK, gin.H{"files": filepaths(files)})
 		return
 	}
-	deletedSet := make(map[string]struct{}, len(deletedFilenames))
-	for _, f := range deletedFilenames {
-		deletedSet[f] = struct{}{}
-	}
 
-	var activeFilenames []string
-	for _, f := range filenames {
-		// f is the store-relative path (e.g. "2024/claim.pdf"); the DB's
-		// filename column holds just the base name, same key deleteFileRecord
-		// and pullRecordByFilename use.
-		if _, isDeleted := deletedSet[filepath.Base(f)]; !isDeleted {
-			activeFilenames = append(activeFilenames, f)
-		}
+	hasMore := len(files) > limit
+	if hasMore {
+		files = files[:limit]
 	}
-
-	Debug("files found: " + fmt.Sprintf("%d", len(activeFilenames)))
+	var nextAfter *int64
+	if hasMore {
+		nextAfter = &files[len(files)-1].ID
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"files": activeFilenames,
-		"count": len(activeFilenames),
+		"files":      filepaths(files),
+		"next_after": nextAfter,
+		"has_more":   hasMore,
 	})
+}
+
+// filepaths extracts just the Filepath field from a []FileListEntry —
+// what clients of listFiles have always received under "files".
+func filepaths(entries []FileListEntry) []string {
+	paths := make([]string, len(entries))
+	for i, e := range entries {
+		paths[i] = e.Filepath
+	}
+	return paths
+}
+
+// parseNonNegativeIntParam reads query param name as a non-negative int,
+// falling back to def when the param is absent (an empty string is
+// treated as absent, not an error, since that's what a param present in
+// the URL with no value would otherwise parse as).
+func parseNonNegativeIntParam(c *gin.Context, name string, def int) (int, error) {
+	raw := c.Query(name)
+	if raw == "" {
+		return def, nil
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < 0 {
+		return 0, fmt.Errorf("invalid %s: %q", name, raw)
+	}
+	return v, nil
 }
 
 // uploadFile handles file uploads via multipart/form-data.
