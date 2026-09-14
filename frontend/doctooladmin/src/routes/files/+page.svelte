@@ -40,13 +40,31 @@
 
 	// ── Search ────────────────────────────────────────────────────────────────
 
+	// searchQuery drives the input directly, so typing always feels
+	// immediate. debouncedQuery only catches up 200ms after the user
+	// pauses, so filteredFiles isn't recomputed on every keystroke — a
+	// full array .filter() on each keystroke is wasted work once the file
+	// count grows past trivial (issue #428).
 	let searchQuery = $state('');
+	let debouncedQuery = $state('');
+
+	const SEARCH_DEBOUNCE_MS = 200;
+
+	$effect(() => {
+		const query = searchQuery;
+		const timer = setTimeout(() => {
+			debouncedQuery = query;
+		}, SEARCH_DEBOUNCE_MS);
+		// Cancels the pending update if searchQuery changes again (or the
+		// component unmounts) before the timer fires.
+		return () => clearTimeout(timer);
+	});
 
 	// Case-insensitive substring match against filename
 	let filteredFiles = $derived(
-		searchQuery.trim() === ''
+		debouncedQuery.trim() === ''
 			? files
-			: files.filter((f) => f.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+			: files.filter((f) => f.toLowerCase().includes(debouncedQuery.trim().toLowerCase()))
 	);
 
 	async function loadFiles() {
