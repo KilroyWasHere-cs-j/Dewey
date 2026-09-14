@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { backendUrl, forwardAuthHeader } from '$lib/server/backend';
-import { proxyError } from '$lib/server/apiError';
+import { proxyError, backendErrorMessage } from '$lib/server/apiError';
 import type { RequestHandler } from './$types';
 
 export const DELETE: RequestHandler = async ({ params, request }) => {
@@ -13,7 +13,8 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 		});
 
 		if (!res.ok) {
-			return json({ error: 'Delete failed' }, { status: res.status });
+			const message = await backendErrorMessage(res, 'Delete failed');
+			return json({ error: message }, { status: res.status });
 		}
 
 		return json({ ok: true });
