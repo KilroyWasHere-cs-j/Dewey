@@ -9,13 +9,12 @@ import (
 	"strings"
 )
 
-func pullFile(podfilepath string, hostfilepath string) {
+func pullFile(podfilepath string, hostfilepath string) (string, error) {
 	// podfilepath is "<container>:<path>" (podman cp's source syntax) — split
 	// off the container name before validating the path itself.
 	container, path, ok := strings.Cut(podfilepath, ":")
 	if !ok {
-		fmt.Printf("error: expected <container>:<path>, got %q\n", podfilepath)
-		return
+		return "", fmt.Errorf("expected <container>:<path>, got %q", podfilepath)
 	}
 
 	// path is already absolute inside the container (e.g. "/app/store/x").
@@ -26,8 +25,7 @@ func pullFile(podfilepath string, hostfilepath string) {
 	baseClean := filepath.Clean("/app/store")
 
 	if full != baseClean && !strings.HasPrefix(full, baseClean+string(os.PathSeparator)) {
-		fmt.Printf("error: path %q escapes base directory %q\n", path, "/app/store")
-		return
+		return "", fmt.Errorf("path escapes base directory")
 	}
 
 	// hostfilepath isn't confined to a fixed directory (any writable path is
@@ -35,8 +33,7 @@ func pullFile(podfilepath string, hostfilepath string) {
 	// this, someone could pre-plant a symlink pointing elsewhere and have
 	// podman cp silently write through it to an unintended location.
 	if info, err := os.Lstat(hostfilepath); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		fmt.Printf("error: hostfilepath %q is a symlink, refusing to write through it\n", hostfilepath)
-		return
+		return "", fmt.Errorf("refusing to overwrite symlink at %q", hostfilepath)
 	}
 
 	cmd := exec.Command("podman", "cp", container+":"+full, hostfilepath)
@@ -46,13 +43,12 @@ func pullFile(podfilepath string, hostfilepath string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("command failed: %v\nstderr: %s", err, stderr.String())
+		return "", fmt.Errorf("command failed: %v\nstderr: %s", err, stderr.String())
 	}
-
-	fmt.Println(stdout.String())
+	return stdout.String(), nil
 }
 
-func listFilesOnDisk() {
+func listFilesOnDisk() (string, error) {
 	cmd := exec.Command("podman", "exec", "cross-doc-tool-dev", "ls", "-la", "/app/store")
 
 	var stdout, stderr bytes.Buffer
@@ -60,10 +56,9 @@ func listFilesOnDisk() {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("command failed: %v\nstderr: %s", err, stderr.String())
+		return "", fmt.Errorf("command failed: %v\nstderr: %s", err, stderr.String())
 	}
-
-	fmt.Println(stdout.String())
+	return stdout.String(), nil
 }
 
 func viewLogList(host string) {

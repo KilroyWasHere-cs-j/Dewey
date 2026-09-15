@@ -38,29 +38,33 @@ var docxFiles = map[string]string{
 }
 
 func createDocx(filename string) error {
-	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+	_, err := os.Stat(filename)
+	switch {
+	case err == nil:
+		return fmt.Errorf("file exists")
+	case errors.Is(err, os.ErrNotExist):
 		f, err := os.Create(filename)
 		if err != nil {
-			return err
+			return fmt.Errorf("creating docx file: %w", err)
 		}
-		defer f.Close()
-
+	 	defer f.Close()
 		zw := zip.NewWriter(f)
 		for name, content := range docxFiles {
 			w, err := zw.Create(name)
 			if err != nil {
-				return err
+				return fmt.Errorf("creating in zip file: %w", err)
 			}
 			if _, err := w.Write([]byte(content)); err != nil {
-				return err
+				return fmt.Errorf("writing to zip file: %w", err)
 			}
 		}
-		if err := zw.Close(); err != nil {
-			return err
-		}
-		return nil
+	if err := zw.Close(); err != nil {
+		return fmt.Errorf("closing zip file: %w", err)
 	}
 	return nil
+	default:
+		return fmt.Errorf("perms error")
+	}
 }
 
 func createExe(filename string) error {
@@ -141,7 +145,7 @@ func createExe(filename string) error {
 	buf.Write(make([]byte, 0x200-3)) // pad section to its declared raw size
 
 	if err := os.WriteFile(filename, buf.Bytes(), 0755); err != nil {
-		return err
+		return fmt.Errorf("writing exe file: %w", err)
 	}
 	return nil
 }
@@ -216,7 +220,7 @@ func createPDF(filename string, withJS, withOpenAction bool) error {
 	fmt.Fprintf(buf, "startxref\n%d\n%%%%EOF", xrefStart)
 
 	if err := os.WriteFile(filename, buf.Bytes(), 0644); err != nil {
-		return err
+		return fmt.Errorf("writing pdf file: %w", err)
 	}
 	fmt.Println("wrote", filename)
 	return nil

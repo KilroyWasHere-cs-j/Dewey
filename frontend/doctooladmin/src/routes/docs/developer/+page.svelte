@@ -264,6 +264,15 @@ go build -o dewey-cli .
 
 # Defaults to http://localhost:8080 — override with DEWEY_HOST
 DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-cli health</code></pre>
+				<div class="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+					<strong>Gotcha:</strong> a bare <code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">go build</code> in <code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">cli/</code> fails with
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">pattern embedded_docs/admin_readme.md: no matching files found</code>
+					unless <code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">package.sh</code> has run at least once first. The <code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">docs</code> command's
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">go:embed</code> directive can't reach files outside its own module directory, so
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">package.sh</code> stages copies of the root README and this admin README into
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">cli/embedded_docs/</code> right before building. Run <code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">package.sh</code> first, or stage them by hand:
+					<code class="rounded bg-yellow-100 px-1 dark:bg-yellow-900">mkdir -p cli/embedded_docs && cp README.md cli/embedded_docs/readme.md && cp frontend/doctooladmin/README.md cli/embedded_docs/admin_readme.md</code>.
+				</div>
 
 				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">Commands</h3>
 				<div class="mb-4 overflow-x-auto">
