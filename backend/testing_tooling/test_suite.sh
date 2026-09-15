@@ -6,6 +6,10 @@ set -uo pipefail
 # so it's already set when this runs as BITs. Running it manually against a
 # different host needs it passed explicitly, e.g.
 # `FILES_PASSWORD=$(cat .files-password) ./test_suite.sh`.
+#
+# The password itself is only ever sent once, below, to exchange it for a
+# session token (issue #409) — every actual test request sends
+# X-Dewey-Session-Token instead, same as the real frontend does.
 
 BASE="${1:-http://localhost:8080}"
 BASE="${BASE%/}"
@@ -36,6 +40,18 @@ LOG_FILE="$LOG_DIR/test_suite-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2)
 echo >&2 "Logging output to $LOG_FILE"
 
+# --- AUTH ---
+# Exchange FILES_PASSWORD for a session token once (issue #409), same as
+# the frontend does — every test below sends the token, never the raw
+# password again. Failing fast here with a clear message beats letting
+# every single test in the suite fail with a confusing 401.
+SESSION_TOKEN=$(curl -s -X POST -H "X-Dewey-Password: ${FILES_PASSWORD:-}" \
+    "$BASE/core/files/session" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+if [ -z "$SESSION_TOKEN" ]; then
+    echo >&2 "Failed to exchange FILES_PASSWORD for a session token against $BASE — check FILES_PASSWORD and that the backend is reachable."
+    exit 1
+fi
+
 PASS=0
 FAIL=0
 SKIP=0
@@ -54,7 +70,7 @@ cleanup() {
     # #347). Errors are ignored — a file run_delete_tests already removed
     # will just 404 here, which is fine, and this must never fail the trap.
     for f in "${UPLOADED_FILES[@]:-}"; do
-        [ -n "$f" ] && curl -s -o /dev/null -H "X-Dewey-Password: ${FILES_PASSWORD:-}" \
+        [ -n "$f" ] && curl -s -o /dev/null -H "X-Dewey-Session-Token: ${SESSION_TOKEN:-}" \
             -X DELETE "$BASE/core/files/$f" --max-time 10 2>/dev/null
     done
     rm -rf "$DOWNLOAD_DIR"
@@ -128,7 +144,7 @@ rand_date()   { date -d "2024-01-01 + $((RANDOM % 730)) days" +%Y-%m-%d 2>/dev/n
 upload_file() {
     local src="$1"
     pace
-    curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -X POST "$BASE/core/upload" \
+    curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=$(rand_claim)" \
         -F "claimant_name=$(rnd FIRST_NAMES) $(rnd LAST_NAMES)" \
@@ -160,7 +176,7 @@ run_health_checks() {
         info "  Testing $label ..."
         pace
         local code
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null)
+        code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null)
         if [ $? -ne 0 ] || [ "$code" = "000" ]; then
             result_fail "$label" "connection failed"
         elif [ "$code" -lt 400 ]; then
@@ -179,7 +195,7 @@ run_json_upload_test() {
     info "  Testing POST /upload with application/json ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 10 \
+    body=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -w "\n%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -H "Content-Type: application/json" \
         -d '{"name":"json-test","data":"hello"}' 2>/dev/null)
@@ -203,7 +219,7 @@ run_json_upload_test() {
 
     info "  Testing POST /upload with invalid JSON ..."
     pace
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -H "Content-Type: application/json" \
         -d 'not json at all' 2>/dev/null)
@@ -261,7 +277,7 @@ run_upload_error_tests() {
     info "  Testing invalid content-type ..."
     pace
     local code
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -H "Content-Type: text/plain" \
         -d "invalid" 2>/dev/null)
@@ -276,7 +292,7 @@ run_upload_error_tests() {
 
     info "  Testing empty multipart (no file field) ..."
     pace
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -F "claim_number=CLM-00000" 2>/dev/null)
 
@@ -294,7 +310,7 @@ run_upload_error_tests() {
     if [ ! -f "$doi_src" ]; then
         result_skip "POST /upload [blank date_of_injury]" "source file not found"
     else
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+        code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
             -X POST "$BASE/core/upload" \
             -F "file=@$doi_src" \
             -F "claim_number=$(rand_claim)" \
@@ -330,7 +346,7 @@ run_bad_extension_test() {
     info "  Uploading .sh file (should be rejected) ..."
     pace
     local code
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -F "file=@$tmpfile" \
         -F "claim_number=CLM-00000" \
@@ -358,7 +374,7 @@ run_bad_extension_test() {
 
     info "  Uploading .exe file (should be rejected) ..."
     pace
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X POST "$BASE/core/upload" \
         -F "file=@$tmpexe" \
         -F "claim_number=CLM-00000" \
@@ -397,7 +413,7 @@ run_elf_rejection_test() {
     info "  Uploading renamedELF.txt (ELF binary disguised as .txt) ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 30 \
+    body=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -w "\n%{http_code}" --max-time 30 \
         -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-00000" \
@@ -438,7 +454,7 @@ run_path_traversal_tests() {
         info "  Testing GET /files/$tp/false ..."
         pace
         local code
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+        code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
             "$BASE/core/files/$tp/false" 2>/dev/null)
 
         if [ "$code" = "000" ]; then
@@ -455,7 +471,7 @@ run_path_traversal_tests() {
     info "  Testing DELETE with traversal path ..."
     pace
     local code
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X DELETE "$BASE/core/files/../../etc/passwd" 2>/dev/null)
 
     if [ "$code" = "000" ]; then
@@ -566,7 +582,7 @@ run_roundtrip_tests() {
         info "  Uploading $f for roundtrip ..."
         pace
         local resp
-        resp=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -X POST "$BASE/core/upload" \
+        resp=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -X POST "$BASE/core/upload" \
             -F "file=@$src" \
             -F "claim_number=CLM-99999" \
             -F "claimant_name=Roundtrip Test" \
@@ -595,7 +611,7 @@ run_roundtrip_tests() {
         pace
         local dst="$DOWNLOAD_DIR/$server_file"
         local code
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/core/files/$server_file?meta=false" 2>/dev/null)
+        code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o "$dst" -w "%{http_code}" --max-time 30 "$BASE/core/files/$server_file?meta=false" 2>/dev/null)
 
         if [ "$code" != "200" ]; then
             result_fail "ROUNDTRIP [$f] download" "HTTP $code"
@@ -710,7 +726,7 @@ run_metadata_tests() {
     info "  Uploading lenna.jpg with fixed metadata ..."
     pace
     local resp
-    resp=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -X POST "$BASE/core/upload" \
+    resp=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-META-01" \
         -F "claimant_name=Meta Tester" \
@@ -739,7 +755,7 @@ run_metadata_tests() {
     info "  Fetching metadata for $server_file ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 10 "$BASE/core/files/$server_file?meta=true" 2>/dev/null)
+    body=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -w "\n%{http_code}" --max-time 10 "$BASE/core/files/$server_file?meta=true" 2>/dev/null)
     code=$(echo "$body" | tail -1)
     body=$(echo "$body" | sed '$d')
 
@@ -773,7 +789,7 @@ run_metadata_tests() {
     # Unknown meta flag should return 400
     info "  Testing unknown meta flag ..."
     pace
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         "$BASE/core/files/$server_file?meta=maybe" 2>/dev/null)
     if [ "$code" = "400" ]; then
         result_pass "GET /files/$server_file?meta=maybe -> HTTP 400 (bad flag rejected)"
@@ -787,7 +803,7 @@ run_metadata_tests() {
     info "  Testing meta=true for non-existent file ..."
     pace
     local ghost="ghost_$(printf '%08x' $RANDOM$RANDOM).jpg"
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         "$BASE/core/files/$ghost?meta=true" 2>/dev/null)
     if [ "$code" = "404" ]; then
         result_pass "GET /files/$ghost?meta=true -> HTTP 404"
@@ -806,7 +822,7 @@ run_catalog_test() {
     info "  Fetching file index ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 10 "$BASE/core/files" 2>/dev/null)
+    body=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -w "\n%{http_code}" --max-time 10 "$BASE/core/files" 2>/dev/null)
     code=$(echo "$body" | tail -1)
     body=$(echo "$body" | sed '$d')
 
@@ -838,7 +854,7 @@ run_delete_tests() {
         info "  Deleting $target ..."
         pace
         local code
-        code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+        code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
             -X DELETE "$BASE/core/files/$target" 2>/dev/null)
 
         if [ "$code" = "000" ]; then
@@ -849,7 +865,7 @@ run_delete_tests() {
             info "  Verifying file removed from cache ..."
             pace
             local verify_code
-            verify_code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+            verify_code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
                 "$BASE/core/files/$target?meta=false" 2>/dev/null)
             if [ "$verify_code" -ge 400 ]; then
                 result_pass "DELETE verify $target gone -> HTTP $verify_code"
@@ -871,7 +887,7 @@ run_delete_tests() {
     info "  Deleting non-existent file $ghost ..."
     pace
     local code
-    code=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -o /dev/null -w "%{http_code}" --max-time 10 \
+    code=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -o /dev/null -w "%{http_code}" --max-time 10 \
         -X DELETE "$BASE/core/files/$ghost" 2>/dev/null)
 
     if [ "$code" = "404" ]; then
@@ -1002,7 +1018,7 @@ run_pdf_javascript_test() {
     info "  Uploading js_test.pdf (PDF with an /OpenAction JavaScript trigger) ..."
     pace
     local body code
-    body=$(curl -s -H "X-Dewey-Password: $FILES_PASSWORD" -w "\n%{http_code}" --max-time 30 \
+    body=$(curl -s -H "X-Dewey-Session-Token: $SESSION_TOKEN" -w "\n%{http_code}" --max-time 30 \
         -X POST "$BASE/core/upload" \
         -F "file=@$src" \
         -F "claim_number=CLM-00000" \
@@ -1075,3 +1091,10 @@ echo "# PASSED=$PASS FAILED=$FAIL SKIPPED=$SKIP TOTAL=$TOTAL"
 if [ "$FAIL" -gt 0 ]; then
     exit 1
 fi
+
+# Without this, the script's exit code falls through to whatever the `if`
+# condition above last evaluated to — [ "$FAIL" -gt 0 ] is false when there
+# are no failures, and a false test's own exit status (1) becomes the
+# script's exit status since its body never ran. That reported every clean
+# BITs run to main.go as a failure, with no real test failure behind it.
+exit 0
