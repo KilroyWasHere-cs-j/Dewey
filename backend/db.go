@@ -69,6 +69,13 @@ func newDatabaseManager() (*DatabaseManager, error) {
 	return &DatabaseManager{db: db}, nil
 }
 
+// Close shuts down the connection pool. Only safe to call once request
+// draining has finished — closing it earlier would break any in-flight
+// request still waiting on a query.
+func (dbm *DatabaseManager) Close() error {
+	return dbm.db.Close()
+}
+
 // createNewFileRecord manages writing a new record safely within a database transaction.
 // Returns the row's auto-generated id so the caller can link a MetaData
 // record to this exact file via a real foreign key (issue #228), instead of
