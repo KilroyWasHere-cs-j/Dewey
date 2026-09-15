@@ -101,9 +101,19 @@ func main() {
 		showDoc(os.Args[2])
 	case "pull_file":
 		requireArgs(2, "pull_file <podfilepath> <hostfilepath>")
-		pullFile(os.Args[2], os.Args[3])
+		stdout, err := pullFile(os.Args[2], os.Args[3])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		fmt.Println(stdout)
 	case "list_files_on_disk":
-		listFilesOnDisk()
+		stdout, err := listFilesOnDisk()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		fmt.Println(stdout)
 	case "view_log_list":
 		viewLogList(host)
 	case "view_log":
@@ -112,7 +122,7 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
-		os.Exit(1)
+		os.Exit(0)
 	}
 }
 
