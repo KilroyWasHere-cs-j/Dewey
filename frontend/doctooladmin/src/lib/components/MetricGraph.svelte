@@ -55,8 +55,15 @@
 			second: '2-digit'
 		});
 
-		history = [...untrack(() => history).slice(-(maxHistory - 1)), v];
-		timestamps = [...untrack(() => timestamps).slice(-(maxHistory - 1)), now];
+		// maxHistory is read via untrack() too (issue #417) — otherwise it's
+		// an unintended reactive dependency of this effect, and a change to
+		// it alone (no new value) would re-run the effect and push a
+		// phantom duplicate point. Only an actual change to `value` should
+		// ever trigger a push; maxHistory just needs its current value at
+		// push time, not to be watched for changes.
+		const currentMaxHistory = untrack(() => maxHistory);
+		history = [...untrack(() => history).slice(-(currentMaxHistory - 1)), v];
+		timestamps = [...untrack(() => timestamps).slice(-(currentMaxHistory - 1)), now];
 	});
 
 	function fmt(v: number): string {
