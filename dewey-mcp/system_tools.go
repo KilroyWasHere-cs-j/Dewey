@@ -17,6 +17,7 @@ func CreateFile(contents string, path string) error {
 	}
 
 	file, err := os.Create(safePath)
+	defer file.Close()
 	if err != nil {
 		return err
 	}
