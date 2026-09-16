@@ -320,7 +320,15 @@ func randomSuffix(n int) (string, error) {
 
 // createTimestamp prefixes filename with the current Unix timestamp so
 // concurrent uploads of the same name can't collide in the store.
+//
+// filename is stripped to its base name first (issue #403) — it comes
+// straight from the client-supplied multipart filename, and without this a
+// name like "../../../../etc/cron.d/pwn.txt" gets embedded as-is, letting
+// filepath.Join's traversal collapse later write the file outside
+// uploadDir entirely.
 func createTimestamp(filename string) (string, error) {
+	filename = filepath.Base(filename)
+
 	timestamp := time.Now().Unix()
 	suff, err := randomSuffix(10)
 	if err != nil {
@@ -349,7 +357,16 @@ func saveFile(filename string, file multipart.File) error {
 		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
 	}
 
-	dst := filepath.Join(uploadDir, filename)
+	// Defense in depth alongside createTimestamp's stripping (issue #403):
+	// reject outright if filename resolves outside uploadDir, the same
+	// resolveStorePath containment check already used for the store-tier
+	// copy, rather than trusting the caller sanitized it correctly.
+	dst, err := resolveStorePath(uploadDir, filename)
+	if err != nil {
+		Warn("Rejected upload destination outside uploadDir: " + err.Error())
+		uploadRejections.WithLabelValues("path_traversal").Inc()
+		return newAPIError(http.StatusBadRequest, "Invalid filename", err)
+	}
 
 	exists, err := exists(dst)
 	if err != nil {

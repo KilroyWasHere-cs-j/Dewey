@@ -462,4 +462,5 @@ func init() {
 	uploadRejections.WithLabelValues("elf_blocked")
 	uploadRejections.WithLabelValues("content_mismatch")
 	uploadRejections.WithLabelValues("pdf_js_blocked")
+	uploadRejections.WithLabelValues("path_traversal")
 }
