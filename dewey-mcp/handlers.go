@@ -8,7 +8,7 @@ import (
 )
 
 func IsUpHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	err, body := IsUp()
+	body, err := IsUp()
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -17,7 +17,7 @@ func IsUpHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToo
 }
 
 func VersionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	err, body := Version()
+	body, err := Version()
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -26,7 +26,7 @@ func VersionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func GetPodmanContainersHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	err, body := GetPodmanContainers()
+	body, err := GetPodmanContainers()
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -39,7 +39,7 @@ func RestartPodmanContainerHandler(ctx context.Context, request mcp.CallToolRequ
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	err, out := RestartPodmanContainer(containerID)
+	out, err := RestartPodmanContainer(containerID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -52,7 +52,7 @@ func GetPodmanContainerLogsHandler(ctx context.Context, request mcp.CallToolRequ
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	err, out := GetPodmanContainerLogs(containerID)
+	out, err := GetPodmanContainerLogs(containerID)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -61,7 +61,7 @@ func GetPodmanContainerLogsHandler(ctx context.Context, request mcp.CallToolRequ
 }
 
 func GetPodmanHealthHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	err, out := GetPodmanHealth()
+	out, err := GetPodmanHealth()
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -90,7 +90,7 @@ func ReadFileHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
-	err, contents := ReadFile(path)
+	contents, err := ReadFile(path)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}

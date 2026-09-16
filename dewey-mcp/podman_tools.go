@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
-	"bytes"
 )
 
-func GetPodmanHealth() (error, string) {
+func GetPodmanHealth() (string, error) {
 	cmd := exec.Command("podman", "pod", "ps", "--filter", "name=dewey-pod")
 
 	var stdout, stderr bytes.Buffer
@@ -14,12 +14,12 @@ func GetPodmanHealth() (error, string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%w: %s", err, stderr.String()), ""
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	return nil, stdout.String()
+	return stdout.String(), nil
 }
 
-func GetPodmanContainers() (error, string) {
+func GetPodmanContainers() (string, error) {
 	cmd := exec.Command("podman", "ps")
 
 	var stdout, stderr bytes.Buffer
@@ -27,12 +27,12 @@ func GetPodmanContainers() (error, string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%w: %s", err, stderr.String()), ""
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	return nil, stdout.String()
+	return stdout.String(), nil
 }
 
-func GetPodmanContainerLogs(containerID string) (error, string) {
+func GetPodmanContainerLogs(containerID string) (string, error) {
 	cmd := exec.Command("podman", "logs", containerID)
 
 	var stdout, stderr bytes.Buffer
@@ -40,12 +40,12 @@ func GetPodmanContainerLogs(containerID string) (error, string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%w: %s", err, stderr.String()), ""
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	return nil, stdout.String()
+	return stdout.String(), nil
 }
 
-func RestartPodmanContainer(containerID string) (error, string) {
+func RestartPodmanContainer(containerID string) (string, error) {
 	cmd := exec.Command("podman", "restart", containerID)
 
 	var stdout, stderr bytes.Buffer
@@ -53,7 +53,7 @@ func RestartPodmanContainer(containerID string) (error, string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("%w: %s", err, stderr.String()), ""
+		return "", fmt.Errorf("%w: %s", err, stderr.String())
 	}
-	return nil, stdout.String()	
+	return stdout.String(), nil
 }
