@@ -71,7 +71,7 @@ func TestReadFile(t *testing.T) {
 		t.Fatalf("writing fixture file: %v", err)
 	}
 
-	err, got := ReadFile("note.txt")
+	got, err := ReadFile("note.txt")
 	if err != nil {
 		t.Fatalf("ReadFile() unexpected error: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestReadFile(t *testing.T) {
 func TestReadFile_MissingFile(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	err, got := ReadFile("missing.txt")
+	got, err := ReadFile("missing.txt")
 	if err == nil {
 		t.Fatalf("ReadFile(%q) = %q, want error", "missing.txt", got)
 	}
@@ -108,7 +108,7 @@ func TestReadFile_PathTraversal(t *testing.T) {
 	}
 	t.Chdir(workDir)
 
-	err, got := ReadFile("../secret.txt")
+	got, err := ReadFile("../secret.txt")
 	if err == nil {
 		t.Fatalf("ReadFile(%q) = %q, want error escaping working directory", "../secret.txt", got)
 	}

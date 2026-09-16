@@ -52,16 +52,16 @@ func resolveSafePath(rel string) (string, error) {
 }
 
 // ReadFile returns the full contents of the file at path as a string.
-func ReadFile(path string) (error, string) {
+func ReadFile(path string) (string, error) {
 	safePath, err := resolveSafePath(path)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	data, err := os.ReadFile(safePath)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
-	return nil, string(data)
+	return string(data), nil
 }
 
 // MoveFile renames src to dst. If dst already exists, the move is skipped

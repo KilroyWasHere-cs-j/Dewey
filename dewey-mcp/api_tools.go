@@ -25,28 +25,28 @@ var uploadMetaFields = []string{
 
 const defaultHost = "http://localhost:8080"
 
-func IsUp() (error, string) {
+func IsUp() (string, error) {
 	host := os.Getenv("DEWEY_HOST")
 	if host == "" {
 		host = defaultHost
 	}
-	err, body := get(host + "/")
+	body, err := get(host + "/")
 	if err != nil {
-		return err, ""
+		return "", err
 	}
-	return nil, body
+	return body, nil
 }
 
-func Version() (error, string) {
+func Version() (string, error) {
 	host := os.Getenv("DEWEY_HOST")
 	if host == "" {
 		host = defaultHost
 	}
-	err, body := get(host + "/version")
+	body, err := get(host + "/version")
 	if err != nil {
-		return err, ""
+		return "", err
 	}
-	return nil, body
+	return body, nil
 }
 
 // doRequest fires req and prints the response body. On success (status <
@@ -54,54 +54,54 @@ func Version() (error, string) {
 // if formatter is nil; error bodies always print as indented JSON in red.
 // It's shared by every request-shaped command so output stays consistent
 // across GET/POST/DELETE.
-func doRequest(req *http.Request) (error, string) {
+func doRequest(req *http.Request) (string, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("status code: %d", resp.StatusCode), ""
+		return "", fmt.Errorf("status code: %d", resp.StatusCode)
 	}
-	return nil, string(body)
+	return string(body), nil
 }
 
-func get(url string) (error, string) {
+func get(url string) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
-	err, body := doRequest(req)
-	return err, body
+	body, err := doRequest(req)
+	return body, err
 }
 
-func del(url string) (error, string) {
+func del(url string) (string, error) {
 	req, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
-	err, body := doRequest(req)
-	return err, body
+	body, err := doRequest(req)
+	return body, err
 }
 
-func postJSON(url string, payload any) (error, string) {
+func postJSON(url string, payload any) (string, error) {
 	buf, err := json.Marshal(payload)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(buf))
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	err, body := doRequest(req)
-	return err, body
+	body, err := doRequest(req)
+	return body, err
 }
 
 // upload sends filePath to the backend's /upload route as multipart/form-data
@@ -143,7 +143,7 @@ func upload(url, filePath string, meta map[string]string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	err, _ = doRequest(req)
+	_, err = doRequest(req)
 	return err
 }
 
@@ -154,10 +154,10 @@ func upload(url, filePath string, meta map[string]string) error {
 // rootless port-forwarding NAT rewrites the source address in transit), so
 // treat this as a starting point when deciding what to register in the
 // backend's known_machines allowlist, not a guarantee.
-func selfIP(host string) (error, string) {
+func selfIP(host string) (string, error) {
 	u, err := url.Parse(host)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 
 	target := u.Host
@@ -167,10 +167,10 @@ func selfIP(host string) (error, string) {
 
 	conn, err := net.Dial("udp", target)
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return nil, localAddr.IP.String()
+	return localAddr.IP.String(), nil
 }
