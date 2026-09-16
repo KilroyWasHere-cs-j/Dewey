@@ -1,8 +1,10 @@
 {
 	"file_system": {
+		"app_dir": "/app",
 		"upload_dir": "./cache",
 		"file_system_base_dir": "./store",
 		"backup_dir": "./backup",
+		"logs_dir": "/logs",
 		"daemon_tick_time_minutes": 1,
 		"alpha": 1,
 		"beta": 1,

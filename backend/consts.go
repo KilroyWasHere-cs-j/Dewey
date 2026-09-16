@@ -30,9 +30,11 @@ type Config struct {
 
 // FileSystem specific config
 type FileSystemConfig struct {
+	AppDir            string  `json:"app_dir"`                  // root directory the app and its data live under on the server
 	UploadDir         string  `json:"upload_dir"`               // temp dir for storing files after files post upload and for fast query access
 	FileSystemBaseDir string  `json:"file_system_base_dir"`     // base directory where all stored files start from
 	BackupDir         string  `json:"backup_dir"`               // directory where backup files are stored
+	LogsDir           string  `json:"logs_dir"`                 // directory where log files are stored
 	DaemonTickTime    int     `json:"daemon_tick_time_minutes"` // system tick interval in minutes
 	Alpha             float64 `json:"alpha"`                    // extra seconds added per active user in the tick-scaling formula (issue #305)
 	Beta              float64 `json:"beta"`                     // extra seconds added per unit of smoothed upload rate in the tick-scaling formula (issue #305)
@@ -98,9 +100,11 @@ type PluginConfig struct {
 // file in this package already references, so this is the only file that
 // needed to know config.json exists.
 var (
+	appDir                string
 	uploadDir             string
 	fileSystemBaseDir     string
 	backupDir             string
+	logsDir               string
 	daemonTickTime        int
 	alpha                 float64
 	beta                  float64
@@ -146,9 +150,11 @@ func load() {
 		Fatal("Failed to parse " + configFile + ": " + err.Error())
 	}
 
+	appDir = cfg.FileSystem.AppDir
 	uploadDir = cfg.FileSystem.UploadDir
 	fileSystemBaseDir = cfg.FileSystem.FileSystemBaseDir
 	backupDir = cfg.FileSystem.BackupDir
+	logsDir = cfg.FileSystem.LogsDir
 	daemonTickTime = cfg.FileSystem.DaemonTickTime
 	alpha = cfg.FileSystem.Alpha
 	beta = cfg.FileSystem.Beta
