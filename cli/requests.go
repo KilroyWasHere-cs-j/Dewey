@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"bytes"
-	"os"
-	"io"
-	"net/http"
 	"encoding/json"
+	"fmt"
+	"io"
 	"mime/multipart"
+	"net/http"
+	"os"
 	"path/filepath"
+	"time"
 )
 
 // doRequest fires req and prints the response body. On success (status <
@@ -16,8 +17,14 @@ import (
 // if formatter is nil; error bodies always print as indented JSON in red.
 // It's shared by every request-shaped command so output stays consistent
 // across GET/POST/DELETE.
-func doRequest(req *http.Request, formatter func([]byte) string) {
-	resp, err := http.DefaultClient.Do(req)
+//
+// timeout is per-call rather than a fixed value on a shared client because
+// upload needs much more headroom than a quick API call — a hung backend
+// should still fail fast for both, but "fail fast" means something
+// different for a multi-file upload than for a GET (issue #424).
+func doRequest(req *http.Request, formatter func([]byte) string, timeout time.Duration) {
+	client := http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"request failed:"+colorReset, err)
 		os.Exit(1)
@@ -58,7 +65,7 @@ func get(url string, password string, formatter func([]byte) string) {
 		os.Exit(1)
 	}
 	setAuthHeader(req, password)
-	doRequest(req, formatter)
+	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
 }
 
 func del(url string, password string, formatter func([]byte) string) {
@@ -68,7 +75,7 @@ func del(url string, password string, formatter func([]byte) string) {
 		os.Exit(1)
 	}
 	setAuthHeader(req, password)
-	doRequest(req, formatter)
+	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
 }
 
 func postJSON(url string, password string, payload any, formatter func([]byte) string) {
@@ -84,7 +91,7 @@ func postJSON(url string, password string, payload any, formatter func([]byte) s
 	}
 	req.Header.Set("Content-Type", "application/json")
 	setAuthHeader(req, password)
-	doRequest(req, formatter)
+	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
 }
 
 // upload sends filePath to the backend's /upload route as multipart/form-data
@@ -133,5 +140,5 @@ func upload(url, password, filePath string, meta map[string]string) {
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	setAuthHeader(req, password)
-	doRequest(req, nil)
+	doRequest(req, nil, time.Duration(uploadTimeout)*time.Second)
 }

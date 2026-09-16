@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // uploadMetaFields lists the multipart form fields uploadFile
@@ -24,6 +25,13 @@ var uploadMetaFields = []string{
 }
 
 const defaultHost = "http://localhost:8080"
+
+// requestTimeout bounds a quick API call (health, version, get/del/postJSON).
+// uploadTimeout is longer since upload sends a whole file in one request —
+// a timeout tuned for quick calls would false-positive-fail on a large or
+// slow upload (issue #424).
+const requestTimeout = 10 // In seconds
+const uploadTimeout = 120 // In seconds
 
 func IsUp() (string, error) {
 	host := os.Getenv("DEWEY_HOST")
@@ -54,8 +62,12 @@ func Version() (string, error) {
 // if formatter is nil; error bodies always print as indented JSON in red.
 // It's shared by every request-shaped command so output stays consistent
 // across GET/POST/DELETE.
-func doRequest(req *http.Request) (string, error) {
-	resp, err := http.DefaultClient.Do(req)
+//
+// timeout is per-call rather than a fixed value on a shared client because
+// upload needs much more headroom than a quick API call.
+func doRequest(req *http.Request, timeout time.Duration) (string, error) {
+	client := http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -77,7 +89,7 @@ func get(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	body, err := doRequest(req)
+	body, err := doRequest(req, time.Duration(requestTimeout)*time.Second)
 	return body, err
 }
 
@@ -86,7 +98,7 @@ func del(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	body, err := doRequest(req)
+	body, err := doRequest(req, time.Duration(requestTimeout)*time.Second)
 	return body, err
 }
 
@@ -100,7 +112,7 @@ func postJSON(url string, payload any) (string, error) {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	body, err := doRequest(req)
+	body, err := doRequest(req, time.Duration(requestTimeout)*time.Second)
 	return body, err
 }
 
@@ -143,7 +155,7 @@ func upload(url, filePath string, meta map[string]string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	_, err = doRequest(req)
+	_, err = doRequest(req, time.Duration(uploadTimeout)*time.Second)
 	return err
 }
 
