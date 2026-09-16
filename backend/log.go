@@ -216,7 +216,7 @@ func Banner() {
 	fmt.Println()
 	fmt.Printf("  %s╔══════════════════════════════════╗%s\n", c, r)
 	fmt.Printf("  %s║          D E W E Y               ║%s\n", c, r)
-	fmt.Printf("  %s║   document management system      ║%s\n", c, r)
+	fmt.Printf("  %s║   document management system     ║%s\n", c, r)
 	fmt.Printf("  %s╚══════════════════════════════════╝%s\n", c, r)
 	fmt.Println()
 }
@@ -231,4 +231,3 @@ func Section(title string) {
 func Ok(msg string) {
 	fmt.Printf("  %s✓%s  %s\n", ColorInfo, ColorReset, msg)
 }
-

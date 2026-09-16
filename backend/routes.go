@@ -71,7 +71,7 @@ func getViewFile(c *gin.Context) {
 	targetFile := c.Param("file")
 	switch fileType {
 	case "log":
-		baseDir := "/app/logs"
+		baseDir := appDir + logsDir
 		file, err := viewFile(baseDir, targetFile)
 		if err != nil {
 			Warn("getViewFile failed: " + err.Error())
@@ -80,7 +80,7 @@ func getViewFile(c *gin.Context) {
 		}
 		c.String(http.StatusOK, file)
 	case "config":
-		file, err := viewFile("/", "app/config.json")
+		file, err := viewFile(appDir, configFile)
 		if err != nil {
 			Warn("getViewFile failed: " + err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve config file"})
