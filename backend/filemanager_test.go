@@ -182,6 +182,24 @@ func TestCreateTimestampUnique(t *testing.T) {
 	}
 }
 
+// TestCreateTimestampStripsTraversal confirms a path-traversal filename is
+// reduced to its base name before being embedded, so the generated string
+// never contains "/" (issue #403) — without this, an upload named
+// "../../../../etc/cron.d/pwn.txt" would embed the whole path, and
+// filepath.Join's traversal collapse in saveFile would write outside
+// uploadDir entirely.
+func TestCreateTimestampStripsTraversal(t *testing.T) {
+	got, err := createTimestamp("../../../../etc/cron.d/pwn.txt")
+	if err != nil {
+		t.Fatalf("createTimestamp() unexpected error: %v", err)
+	}
+
+	want := regexp.MustCompile(`^\d+_pwn\.txt_[0-9a-f]{20}$`)
+	if !want.MatchString(got) {
+		t.Fatalf("createTimestamp(%q) = %q, want format <unix>_pwn.txt_<20 hex chars> with the path stripped", "../../../../etc/cron.d/pwn.txt", got)
+	}
+}
+
 // TestCreateFileHash confirms the extracted hashing step still computes the
 // same SHA-256 digest the original inline code did.
 func TestCreateFileHash(t *testing.T) {
@@ -232,6 +250,36 @@ func TestSaveFile(t *testing.T) {
 	}
 	if string(got) != string(content) {
 		t.Fatalf("saved content = %q, want %q", got, content)
+	}
+}
+
+// TestSaveFileRejectsTraversal confirms saveFile itself rejects a filename
+// that resolves outside uploadDir, independent of createTimestamp's
+// stripping — this is the defense-in-depth layer for issue #403, covering
+// any future call site that hands saveFile an unsanitized name directly.
+func TestSaveFileRejectsTraversal(t *testing.T) {
+	origUploadDir := uploadDir
+	uploadDir = t.TempDir()
+	t.Cleanup(func() { uploadDir = origUploadDir })
+
+	outside := t.TempDir()
+
+	fh := newUploadedFile(t, "note.txt", []byte("pwned"))
+	file, err := fh.Open()
+	if err != nil {
+		t.Fatalf("opening fixture file: %v", err)
+	}
+	defer file.Close()
+
+	traversal := filepath.Join("..", filepath.Base(outside), "pwn.txt")
+	err = saveFile(traversal, file)
+	if err == nil {
+		t.Fatalf("saveFile(%q) = nil error, want a rejection", traversal)
+	}
+	wantAPIErrorStatus(t, err, http.StatusBadRequest)
+
+	if _, statErr := os.Stat(filepath.Join(outside, "pwn.txt")); !os.IsNotExist(statErr) {
+		t.Fatalf("saveFile(%q) wrote outside uploadDir despite returning an error", traversal)
 	}
 }
 
