@@ -129,7 +129,10 @@ func aggregateByOp(byLabel map[string]float64) map[string]float64 {
 // #348's "Where" section), so no X-Dewey-Password header is needed here —
 // same as the health/version commands.
 func fetchMetrics(host string) metricsSnapshot {
-	resp, err := http.Get(host + "/metrics")
+	client := http.Client {
+		Timeout: time.Duration(requestTimeout) * time.Second,
+	}
+	resp, err := client.Get(host + "/metrics")
 	if err != nil {
 		return metricsSnapshot{err: err}
 	}
