@@ -382,9 +382,8 @@ func TestOpenFile(t *testing.T) {
 }
 
 // TestViewFile exercises the helper both getViewFile branches (log, config)
-// call — a plain baseDir+name join and read, with no boundary check of its
-// own (issue #389's fileview routes rely on gin's single-segment :file param
-// to keep a real "/" out of name, not on viewFile).
+// call — a baseDir+name join and read, with name stripped to its base
+// filename first so a ".."-bearing name can't escape baseDir (issue #410).
 func TestViewFile(t *testing.T) {
 	dir := t.TempDir()
 	content := "line one\nline two\n"
@@ -408,11 +407,10 @@ func TestViewFile(t *testing.T) {
 		}
 	})
 
-	t.Run("name escaping baseDir via .. is still joined and read", func(t *testing.T) {
-		// Documents current behavior rather than asserting a boundary that
-		// doesn't exist: viewFile itself has no resolveStorePath-style
-		// containment check, so a ".."-bearing name that filepath.Join can
-		// resolve to a real file outside dir is followed, not rejected.
+	t.Run("name escaping baseDir via .. is rejected", func(t *testing.T) {
+		// Confirms the path-traversal fix (issue #410): viewFile strips
+		// name to its base filename before joining, so a ".."-bearing name
+		// can no longer resolve to a real file outside dir.
 		outside := t.TempDir()
 		if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("outside"), 0600); err != nil {
 			t.Fatalf("writing outside fixture: %v", err)
@@ -423,12 +421,8 @@ func TestViewFile(t *testing.T) {
 			t.Fatalf("computing relative path: %v", err)
 		}
 
-		got, err := viewFile(dir, rel)
-		if err != nil {
-			t.Fatalf("viewFile() unexpected error: %v", err)
-		}
-		if got != "outside" {
-			t.Fatalf("viewFile() = %q, want %q — expected the traversal to be followed since viewFile does no containment check", got, "outside")
+		if _, err := viewFile(dir, rel); err == nil {
+			t.Fatalf("viewFile(%q) = nil error, want an error since the traversal should be stripped to a bare filename that doesn't exist in dir", rel)
 		}
 	})
 }
