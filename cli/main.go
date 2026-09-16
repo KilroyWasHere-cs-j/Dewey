@@ -1,19 +1,18 @@
 package main
 
-import (	
+import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 )
-
-
 
 func main() {
 	fmt.Print(colorGreen + "Welcome to Dewey CLI\n" + colorReset)
 
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, colorYellow+usage+colorReset)
-		os.Exit(1)
+		os.Exit(4)
 	}
 
 	host := os.Getenv("DEWEY_HOST")
@@ -37,24 +36,54 @@ func main() {
 		postJSON(host+"/core/machines", machinesPassword, map[string]string{"ip": os.Args[2], "label": os.Args[3]}, nil)
 	case "delete_machine":
 		requireArgs(3, "delete_machine <ip>")
-		del(host+"/core/machines/"+os.Args[2], machinesPassword, nil)
+		safePath, err := buildSafePath(host, "core", "machines", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		del(safePath, machinesPassword, nil)
 	case "list_files":
 		get(host+"/core/files", filesPassword, printFilesTable)
 	case "get_file":
 		requireArgs(3, "get_file <filename>")
-		get(host+"/core/files/"+os.Args[2]+"?meta=false", filesPassword, nil)
+		safePath, err := buildSafePath(host, "core", "files", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		get(safePath+"?meta=false", filesPassword, nil)
 	case "get_file_meta":
 		requireArgs(3, "get_file_meta <filename>")
-		get(host+"/core/files/"+os.Args[2]+"?meta=true", filesPassword, nil)
+		safePath, err := buildSafePath(host, "core", "files", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		get(safePath+"?meta=true", filesPassword, nil)
 	case "delete_file":
 		requireArgs(3, "delete_file <filename>")
-		del(host+"/core/files/"+os.Args[2], filesPassword, nil)
+		safePath, err := buildSafePath(host, "core", "files", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		del(safePath, filesPassword, nil)
 	case "undelete_file":
 		requireArgs(3, "undelete_file <filename>")
-		postJSON(host+"/core/files/undelete/"+os.Args[2], filesPassword, nil, nil)
+		safePath, err := buildSafePath(host, "core", "files", "undelete", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		postJSON(safePath, filesPassword, nil, nil)
 	case "refilter_file":
 		requireArgs(3, "refilter_file <filename>")
-		postJSON(host+"/core/files/refilter/"+os.Args[2], filesPassword, nil, nil)
+		safePath, err := buildSafePath(host, "core", "files", "refilter", os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, colorRed+"invalid host: "+err.Error()+colorReset)
+			os.Exit(1)
+		}
+		postJSON(safePath, filesPassword, nil, nil)
 	case "upload":
 		requireArgs(3, "upload <path> [field=value ...]")
 		meta := parseMetadata(os.Args[3:])
@@ -126,3 +155,16 @@ func main() {
 	}
 }
 
+// buildSafePath joins host with segments, escaping each one individually
+// before joining — so "/", "..", or "?" inside a user-supplied segment
+// (e.g. a filename or IP passed as an argument) can't be reinterpreted as
+// extra path segments or query syntax. Escaping a plain static segment
+// like "core" is a no-op, so it's safe to run every segment through this
+// the same way regardless of whether it's static or user-supplied.
+func buildSafePath(host string, segments ...string) (string, error) {
+	escaped := make([]string, len(segments))
+	for i, s := range segments {
+		escaped[i] = url.PathEscape(s)
+	}
+	return url.JoinPath(host, escaped...)
+}
