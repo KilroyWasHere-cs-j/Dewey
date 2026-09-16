@@ -518,6 +518,10 @@ func validateMetaData(m MetaData) error {
 }
 
 func viewFile(baseDir string, logname string) (string, error) {
+	// Strip to the base filename to prevent path traversal — matches the
+	// pattern locateFile already uses elsewhere in this file (issue #410).
+	logname = filepath.Base(logname)
+
 	filepath := filepath.Join(baseDir, logname)
 	file, err := os.ReadFile(filepath)
 	if err != nil {
