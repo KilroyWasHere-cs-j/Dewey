@@ -834,13 +834,6 @@ func SpinUp() error {
 		fileview.GET("/viewFile/:fileType/:file", getViewFile)
 	}
 
-	admin := r.Group("/admin")
-	admin.Use(logConnections(dbm, true))
-	{
-		admin.GET("/", func(c *gin.Context) { c.HTML(http.StatusOK, "adminportal.html", nil) })
-		admin.GET("/settings", func(c *gin.Context) { c.HTML(http.StatusOK, "settings.html", nil) })
-	}
-
 	core := r.Group("/core")
 	core.Use(logConnections(dbm, true))
 	core.Use(func(c *gin.Context) {
