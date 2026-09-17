@@ -1,0 +1,8 @@
+go 1.27.1
+
+use (
+	./backend
+	./cli
+	./dewey-mcp
+	./httpclient
+)
