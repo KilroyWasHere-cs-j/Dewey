@@ -2,13 +2,6 @@ package main
 
 const defaultHost = "http://localhost:8080"
 
-const requestTimeout = 10 // In seconds — quick API calls (health, version, list_files, etc.)
-
-// uploadTimeout is longer than requestTimeout since upload sends a whole
-// file in one request — a short timeout tuned for quick API calls would
-// false-positive-fail on a large or slow upload (issue #424).
-const uploadTimeout = 120 // In seconds
-
 const (
 	colorReset  = "\033[0m"
 	colorRed    = "\033[31m"
@@ -56,12 +49,3 @@ upload metadata fields (all optional, order doesn't matter):
   support claim_type jurisdiction policy_number acts_id
 
   example: dewey-cli upload report.pdf claim_number=CL-1 acts_id=A-1`
-
-// uploadMetaFields lists the multipart form fields uploadFile
-// (backend/routes.go) reads into MetaData, in the same order the backend
-// struct declares them — kept here so the CLI can validate field=value args
-// instead of silently dropping a typo'd key.
-var uploadMetaFields = []string{
-	"claim_number", "claimant_name", "date_of_injury", "employer", "adjuster",
-	"support", "claim_type", "jurisdiction", "policy_number", "acts_id",
-}

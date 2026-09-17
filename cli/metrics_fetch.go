@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dewey-httpclient"
 )
 
 // metricsSnapshot holds one parsed /metrics scrape: scalar metrics by name,
@@ -129,8 +131,8 @@ func aggregateByOp(byLabel map[string]float64) map[string]float64 {
 // #348's "Where" section), so no X-Dewey-Password header is needed here —
 // same as the health/version commands.
 func fetchMetrics(host string) metricsSnapshot {
-	client := http.Client {
-		Timeout: time.Duration(requestTimeout) * time.Second,
+	client := http.Client{
+		Timeout: httpclient.RequestTimeout,
 	}
 	resp, err := client.Get(host + "/metrics")
 	if err != nil {

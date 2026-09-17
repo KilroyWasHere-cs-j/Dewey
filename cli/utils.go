@@ -1,52 +1,33 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"strings"
-	"net"
-	"net/url"
 	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"dewey-httpclient"
 )
 
-// selfIP reports the local address the OS would use to reach host. A UDP
-// "connect" never sends a packet - it just asks the OS to resolve the route -
-// so this is the closest client-side guess at "what IP am I calling from".
-// It can still differ from what the server actually sees (e.g. Podman's
-// rootless port-forwarding NAT rewrites the source address in transit), so
-// treat this as a starting point when deciding what to register in the
-// backend's known_machines allowlist, not a guarantee.
+// selfIP prints the local address the OS would use to reach host, via
+// httpclient.SelfIP — see that function's doc comment for what this
+// actually measures and its limits.
 func selfIP(host string) {
-	u, err := url.Parse(host)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"invalid host:"+colorReset, err)
-		os.Exit(1)
-	}
-
-	target := u.Host
-	if !strings.Contains(target, ":") {
-		target += ":80"
-	}
-
-	conn, err := net.Dial("udp", target)
+	ip, err := httpclient.SelfIP(host)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"could not determine local IP:"+colorReset, err)
 		os.Exit(1)
 	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	fmt.Println(colorCyan + localAddr.IP.String() + colorReset)
+	fmt.Println(colorCyan + ip + colorReset)
 }
-
 
 // parseMetadata turns trailing "field=value" CLI args into the metadata map
 // upload attaches to the request, rejecting anything that isn't in
-// uploadMetaFields so a typo'd field name fails fast instead of being
-// silently dropped by the backend's PostForm lookup.
+// httpclient.UploadMetaFields so a typo'd field name fails fast instead of
+// being silently dropped by the backend's PostForm lookup.
 func parseMetadata(args []string) map[string]string {
-	valid := make(map[string]struct{}, len(uploadMetaFields))
-	for _, k := range uploadMetaFields {
+	valid := make(map[string]struct{}, len(httpclient.UploadMetaFields))
+	for _, k := range httpclient.UploadMetaFields {
 		valid[k] = struct{}{}
 	}
 
@@ -58,7 +39,7 @@ func parseMetadata(args []string) map[string]string {
 			os.Exit(1)
 		}
 		if _, ok := valid[key]; !ok {
-			fmt.Fprintf(os.Stderr, colorRed+"unknown metadata field %q, expected one of: %s\n"+colorReset, key, strings.Join(uploadMetaFields, ", "))
+			fmt.Fprintf(os.Stderr, colorRed+"unknown metadata field %q, expected one of: %s\n"+colorReset, key, strings.Join(httpclient.UploadMetaFields, ", "))
 			os.Exit(1)
 		}
 		meta[key] = value
@@ -99,4 +80,3 @@ func YesNoPrompt(label string, def bool) bool {
 		}
 	}
 }
-

@@ -1,45 +1,30 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"mime/multipart"
-	"net/http"
 	"os"
-	"path/filepath"
-	"time"
+
+	"dewey-httpclient"
 )
 
-// doRequest fires req and prints the response body. On success (status <
-// 400) it's handed to formatter for display, falling back to indented JSON
-// if formatter is nil; error bodies always print as indented JSON in red.
-// It's shared by every request-shaped command so output stays consistent
-// across GET/POST/DELETE.
-//
-// timeout is per-call rather than a fixed value on a shared client because
-// upload needs much more headroom than a quick API call — a hung backend
-// should still fail fast for both, but "fail fast" means something
-// different for a multi-file upload than for a GET (issue #424).
-func doRequest(req *http.Request, formatter func([]byte) string, timeout time.Duration) {
-	client := http.Client{Timeout: timeout}
-	resp, err := client.Do(req)
+// printResult renders body/err the way every CLI command already expects:
+// a *httpclient.StatusError (backend responded, just not with success)
+// prints the body in red and returns without exiting; any other error
+// (transport/read failure) prints and exits non-zero. Success is handed
+// to formatter for display, falling back to indented JSON in green if
+// formatter is nil. Kept here (rather than in httpclient) since
+// colored/exit-on-failure output is specific to this binary — dewey-mcp's
+// equivalent just returns (value, error) instead (issue #433).
+func printResult(body []byte, err error, formatter func([]byte) string) {
+	var statusErr *httpclient.StatusError
+	if errors.As(err, &statusErr) {
+		fmt.Println(colorRed + prettyJSON(statusErr.Body) + colorReset)
+		return
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colorRed+"request failed:"+colorReset, err)
 		os.Exit(1)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"reading response failed:"+colorReset, err)
-		os.Exit(1)
-	}
-
-	if resp.StatusCode >= 400 {
-		fmt.Println(colorRed + prettyJSON(body) + colorReset)
-		return
 	}
 
 	if formatter != nil {
@@ -49,96 +34,28 @@ func doRequest(req *http.Request, formatter func([]byte) string, timeout time.Du
 	fmt.Println(colorGreen + prettyJSON(body) + colorReset)
 }
 
-// setAuthHeader attaches the X-Dewey-Password header when a password was
-// configured (issue #332) — commands against the base group (health,
-// version) pass "" and skip it, since those routes aren't gated.
-func setAuthHeader(req *http.Request, password string) {
-	if password != "" {
-		req.Header.Set("X-Dewey-Password", password)
-	}
-}
-
 func get(url string, password string, formatter func([]byte) string) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
-		os.Exit(1)
-	}
-	setAuthHeader(req, password)
-	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
+	c := httpclient.Client{Password: password}
+	body, err := c.Get(url)
+	printResult(body, err, formatter)
 }
 
 func del(url string, password string, formatter func([]byte) string) {
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
-		os.Exit(1)
-	}
-	setAuthHeader(req, password)
-	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
+	c := httpclient.Client{Password: password}
+	body, err := c.Del(url)
+	printResult(body, err, formatter)
 }
 
 func postJSON(url string, password string, payload any, formatter func([]byte) string) {
-	buf, err := json.Marshal(payload)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"failed to encode request body:"+colorReset, err)
-		os.Exit(1)
-	}
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(buf))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
-		os.Exit(1)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	setAuthHeader(req, password)
-	doRequest(req, formatter, time.Duration(requestTimeout)*time.Second)
+	c := httpclient.Client{Password: password}
+	body, err := c.PostJSON(url, payload)
+	printResult(body, err, formatter)
 }
 
-// upload sends filePath to the backend's /upload route as multipart/form-data
-// under the "file" field, matching what uploadFile (backend/routes.go) reads.
-// meta entries are attached as additional form fields (claim_number, etc.) —
-// omitted entries are simply absent from the request, same as leaving a form
-// field blank in the admin portal's upload dialog.
+// upload sends filePath to the backend's /upload route as multipart/form-data,
+// delegating the actual request-building to httpclient.Client.Upload.
 func upload(url, password, filePath string, meta map[string]string) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"could not open file:"+colorReset, err)
-		os.Exit(1)
-	}
-	defer f.Close()
-
-	var buf bytes.Buffer
-	w := multipart.NewWriter(&buf)
-
-	for _, key := range uploadMetaFields {
-		if value, ok := meta[key]; ok {
-			if err := w.WriteField(key, value); err != nil {
-				fmt.Fprintln(os.Stderr, colorRed+"failed to build upload:"+colorReset, err)
-				os.Exit(1)
-			}
-		}
-	}
-
-	part, err := w.CreateFormFile("file", filepath.Base(filePath))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"failed to build upload:"+colorReset, err)
-		os.Exit(1)
-	}
-	if _, err := io.Copy(part, f); err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"failed to read file:"+colorReset, err)
-		os.Exit(1)
-	}
-	if err := w.Close(); err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"failed to build upload:"+colorReset, err)
-		os.Exit(1)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, colorRed+"bad request:"+colorReset, err)
-		os.Exit(1)
-	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	setAuthHeader(req, password)
-	doRequest(req, nil, time.Duration(uploadTimeout)*time.Second)
+	c := httpclient.Client{Password: password}
+	body, err := c.Upload(url, filePath, meta)
+	printResult(body, err, nil)
 }
