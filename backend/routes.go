@@ -626,11 +626,33 @@ func reloadPlugins(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Plugins reloaded"})
 }
 
+// parseMoveFileBody decodes moveFile's JSON body into current/new paths.
+// On failure it has already written the 400 response itself (ok=false),
+// so the caller just needs to return.
+func parseMoveFileBody(c *gin.Context) (currentPath, newPath string, ok bool) {
+	var body struct {
+		CurrentPath string `json:"current_path"`
+		NewPath     string `json:"new_path"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil || body.CurrentPath == "" || body.NewPath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "current_path and new_path are required"})
+		return "", "", false
+	}
+	return body.CurrentPath, body.NewPath, true
+}
+
+// moveFile takes current_path/new_path as a JSON body rather than route
+// params (issue #416) — both are store-relative paths that almost always
+// contain a subfolder (e.g. "image/somefile.png") once a file has gone
+// through OnFilter's routing, and gin :param segments can't carry a "/".
 func moveFile(c *gin.Context) {
+	currentPath, newPath, ok := parseMoveFileBody(c)
+	if !ok {
+		return
+	}
+
 	dbm := c.MustGet("db").(*DatabaseManager)
-	filepathname := c.Param("currentfilepathandname")
-	newfilepathname := c.Param("newfilepathandname")
-	if err := moveStoredFile(filepathname, newfilepathname, dbm); err != nil {
+	if err := moveStoredFile(currentPath, newPath, dbm); err != nil {
 		Warn("moveFile failed: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to move file"})
 		return
