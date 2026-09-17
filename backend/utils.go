@@ -886,12 +886,12 @@ func SpinUp() error {
 
 	// Run BITs in the background so they fire at startup after all init is complete,
 	// without blocking the server from starting. Explicitly pass the port this
-	// process is actually listening on — test_suite.sh defaults to :8080 when
+	// process is actually listening on — test_suite.py defaults to :8080 when
 	// called with no argument, which is wrong for any instance not bound to
 	// that exact port (e.g. a second backend running alongside the usual one).
 	go func() {
 		Section("BITs")
-		cmd := exec.Command("/bin/bash", "testing_tooling/test_suite.sh", "http://localhost:"+portNumber)
+		cmd := exec.Command("python3", "testing_tooling/test_suite.py", "http://localhost:"+portNumber)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {

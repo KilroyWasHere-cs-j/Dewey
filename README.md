@@ -249,7 +249,7 @@ The frontend admin portal is built with Svelte, giving a reactive UI with HTML-l
 Two layers of tests cover the backend:
 
 - **Go unit tests** (`go test ./...` from `backend/`) — cover the pure-logic pieces in isolation: `filevalidator_test.go` exercises PE/ELF binary sniffing and extension/content-type matching, and `plugins_test.go` exercises hook registration, plugin loading/attachment, salience ordering, `OnDelete`'s veto behavior, the runtime sandbox (dangerous globals and `os`/`io` absent), and the `http`/`files` capability API (successful round trips, plus the SSRF and path-traversal restrictions). These run in CI on every push/PR (`.github/workflows/go.yml`).
-- **BITs** (Built-In Tests, `backend/testing_tooling/test_suite.sh`) — a black-box HTTP suite that runs against a live server, hitting real endpoints (uploads with randomized metadata, error cases, health checks) rather than calling Go functions directly. The server launches this suite automatically in the background on every startup (see the `BITs` section in `main.go`) so a bad deploy fails loudly instead of silently; it can also be run manually against any base URL: `./test_suite.sh http://localhost:8080`.
+- **BITs** (Built-In Tests, `backend/testing_tooling/test_suite.py`) — a black-box HTTP suite that runs against a live server, hitting real endpoints (uploads with randomized metadata, error cases, health checks) rather than calling Go functions directly. The server launches this suite automatically in the background on every startup (see the `BITs` section in `main.go`) so a bad deploy fails loudly instead of silently; it can also be run manually against any base URL: `./test_suite.py http://localhost:8080`.
 
 ## Deployment & Packaging
 

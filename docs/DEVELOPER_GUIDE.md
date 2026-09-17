@@ -222,19 +222,19 @@ Point an MCP client's stdio transport at the built binary to connect — there's
 
 `backend/testing_tooling/` holds the BIT suite plus two load-generation scripts, all run from inside the backend container so their requests come from an already-allowlisted source:
 
-- **test_suite.sh** — the BIT (built-in test) suite: a black-box pass over the whole HTTP API, run automatically at every server startup.
+- **test_suite.py** — the BIT (built-in test) suite: a black-box pass over the whole HTTP API, run automatically at every server startup.
 - **load_test.sh** — a fixed-size burst of uploads (plus a retrieval pass) from a single source, done in seconds. Good for a quick sanity check.
 - **soak_test.sh** — sustained, multi-user, day/night-shaped traffic over a configurable duration (issue #311).
 
-### BIT suite (test_suite.sh)
+### BIT suite (test_suite.py)
 
 Runs automatically once the server finishes starting up — backgrounded (`main.go`'s BITs goroutine) so it doesn't block the server from listening. A failure only logs a `Warn`, it doesn't crash the server — this is a self-test, not a startup gate.
 
 ```bash
-bash backend/testing_tooling/test_suite.sh [base_url]  # defaults to http://localhost:8080
+python3 backend/testing_tooling/test_suite.py [base_url]  # defaults to http://localhost:8080
 
 # or, against a running deployment, from inside the backend container:
-podman exec cross-doc-tool-dev bash testing_tooling/test_suite.sh
+podman exec cross-doc-tool-dev python3 testing_tooling/test_suite.py
 ```
 
 Structured `PASS`/`FAIL`/`SKIP` lines go to stdout, human-readable progress to stderr — both are also teed into a timestamped log under `/app/logs/bits/`, a persisted volume that survives a container restart (issue #213).

@@ -29,9 +29,11 @@ RUN go build -trimpath -ldflags="-s -w -X main.GitBranch=${GIT_BRANCH}" -o app-b
 # server image deploy.sh runs.
 FROM debian:bookworm-slim
 
-# bash and curl are required by the BITs test suite.
+# bash and curl are required by the not-yet-migrated testing_tooling
+# scripts (issue #469); python3/python3-requests run the BITs test suite
+# itself, ported off bash to test_suite.py.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        bash curl ca-certificates gnupg \
+        bash curl ca-certificates gnupg python3 python3-requests \
     && curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 \
         | gpg --dearmor -o /usr/share/keyrings/mysql-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/mysql-archive-keyring.gpg] http://repo.mysql.com/apt/debian bookworm mysql-9.7-lts" \

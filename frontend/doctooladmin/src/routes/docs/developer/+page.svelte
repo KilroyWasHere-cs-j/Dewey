@@ -421,22 +421,22 @@ DEWEY_HOST=http://&lt;host&gt;:8080 ./dewey-mcp</code></pre>
 					requests come from an already-<a href="#access" class="underline">allowlisted</a> source:
 				</p>
 				<ul class="mb-6 space-y-1 text-sm text-gray-600 dark:text-gray-300">
-					<li><strong class="text-gray-700 dark:text-gray-200">test_suite.sh</strong> — the BIT (built-in test) suite: a black-box pass over the whole HTTP API, run automatically at every server startup. What the next subsection documents.</li>
+					<li><strong class="text-gray-700 dark:text-gray-200">test_suite.py</strong> — the BIT (built-in test) suite: a black-box pass over the whole HTTP API, run automatically at every server startup. What the next subsection documents.</li>
 					<li><strong class="text-gray-700 dark:text-gray-200">load_test.sh</strong> — a fixed-size burst of uploads (plus a retrieval pass) from a single source, done in seconds. Good for a quick sanity check.</li>
 					<li><strong class="text-gray-700 dark:text-gray-200">soak_test.sh</strong> — sustained, multi-user, day/night-shaped traffic over a configurable duration (issue #311).</li>
 				</ul>
 
-				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">BIT suite (test_suite.sh)</h3>
+				<h3 class="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">BIT suite (test_suite.py)</h3>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Runs automatically once the server finishes starting up — backgrounded (<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">main.go</code>'s
 					BITs goroutine) so it doesn't block the server from listening. A failure only logs a
 					<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">Warn</code>, it doesn't crash the server —
 					this is a self-test, not a startup gate. Run it manually the same way, against any target:
 				</p>
-				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs text-gray-100"><code>bash backend/testing_tooling/test_suite.sh [base_url]  # defaults to http://localhost:8080
+				<pre class="mb-4 overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs text-gray-100"><code>python3 backend/testing_tooling/test_suite.py [base_url]  # defaults to http://localhost:8080
 
 # or, against a running deployment, from inside the backend container:
-podman exec cross-doc-tool-dev bash testing_tooling/test_suite.sh</code></pre>
+podman exec cross-doc-tool-dev python3 testing_tooling/test_suite.py</code></pre>
 				<p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
 					Structured <code class="rounded bg-gray-100 px-1 dark:bg-gray-700">PASS</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">FAIL</code>/<code class="rounded bg-gray-100 px-1 dark:bg-gray-700">SKIP</code>
 					lines go to stdout, human-readable progress to stderr — both are also teed into a timestamped log

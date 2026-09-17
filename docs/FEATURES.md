@@ -89,7 +89,7 @@ A complete inventory of what Dewey does, organized by category. See [DEVELOPER_G
 ## Testing
 
 - **Go unit tests** (`go test ./...`) covering file validation (PE/ELF sniffing, extension/content-type matching) and the plugin system (hook registration, loading, salience ordering, `OnDelete` veto, sandbox restrictions, capability API round trips and restrictions). Run in CI on every push/PR.
-- **BITs (Built-In Tests)** — a black-box HTTP suite (`test_suite.sh`) run automatically on every server startup (non-blocking, non-fatal on failure) and runnable manually against any base URL. 15 checks covering endpoint health, upload validation (JSON and multipart, error cases, disallowed extensions, ELF/PDF-JS rejection, path traversal), hash integrity, duplicate handling, on-disk store verification, metadata retrieval, cataloging, and deletion.
+- **BITs (Built-In Tests)** — a black-box HTTP suite (`test_suite.py`) run automatically on every server startup (non-blocking, non-fatal on failure) and runnable manually against any base URL. 15 checks covering endpoint health, upload validation (JSON and multipart, error cases, disallowed extensions, ELF/PDF-JS rejection, path traversal), hash integrity, duplicate handling, on-disk store verification, metadata retrieval, cataloging, and deletion.
 - **load_test.sh** — a quick fixed-size burst of uploads plus a retrieval pass, for sanity-checking a deploy.
 - **soak_test.sh** — sustained, multi-user, diurnally-shaped traffic simulation over a configurable duration, with time compression for fast iteration and a CSV metrics log for long-run analysis. Simulates distinct users via loopback IP aliasing so allowlist/active-user logic is exercised realistically.
 
