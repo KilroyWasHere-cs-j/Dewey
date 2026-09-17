@@ -982,11 +982,10 @@ run_fileview_tests() {
         result_fail "GET /fileview/viewFile/log/$ghost" "expected 4xx/5xx, got HTTP $code"
     fi
 
-    # gin's :file param can't contain a literal "/" (same limitation the
-    # README documents for POST /files/move/...), so a real "../" traversal
-    # never reaches getViewFile at all — this confirms that routing-level
-    # block still holds rather than exercising any boundary check inside
-    # viewFile itself, which has none (see TestViewFile in
+    # gin's :file param can't contain a literal "/", so a real "../"
+    # traversal never reaches getViewFile at all — this confirms that
+    # routing-level block still holds rather than exercising any boundary
+    # check inside viewFile itself, which has none (see TestViewFile in
     # filemanager_test.go for what happens when a name with ".." *is*
     # actually joined).
     info "  Testing GET /fileview/viewFile/log/..%2F..%2F..%2Fetc%2Fpasswd (traversal) ..."
