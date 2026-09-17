@@ -71,7 +71,7 @@ func getViewFile(c *gin.Context) {
 	targetFile := c.Param("file")
 	switch fileType {
 	case "log":
-		baseDir := appDir + logsDir
+		baseDir := filepath.Join(appDir, logsDir)
 		file, err := viewFile(baseDir, targetFile)
 		if err != nil {
 			Warn("getViewFile failed: " + err.Error())
