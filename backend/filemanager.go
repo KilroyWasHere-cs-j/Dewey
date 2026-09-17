@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -227,18 +226,16 @@ func copyFile(src, dst string) error {
 		return err
 	}
 
-	exists, err := exists(dst)
+	// O_CREATE|O_EXCL atomically fails if dst already exists, instead of
+	// the previous separate exists()-then-os.Create() pair — two concurrent
+	// callers could both pass a check-then-create gap and the second write
+	// would silently clobber the first (issue #405).
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
-		return err
-	}
-	if exists {
-		return fmt.Errorf("destination file already exists")
-	}
-
-	// create destination file
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		Warn("Failed to create directory: " + err.Error())
+		if os.IsExist(err) {
+			return fmt.Errorf("destination file already exists")
+		}
+		Warn("Failed to create destination file: " + err.Error())
 		return err
 	}
 	defer dstFile.Close()
@@ -253,17 +250,6 @@ func copyFile(src, dst string) error {
 
 	// flush to disk
 	return dstFile.Sync()
-}
-
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	return false, err
 }
 
 // locateFile checks the cache first, then falls back to the DB record.
@@ -368,16 +354,16 @@ func saveFile(filename string, file multipart.File) error {
 		return newAPIError(http.StatusBadRequest, "Invalid filename", err)
 	}
 
-	exists, err := exists(dst)
+	// O_CREATE|O_EXCL atomically fails if dst already exists, instead of
+	// the previous separate exists()-then-os.Create() pair — two concurrent
+	// uploads generating the same timestamped filename could both pass a
+	// check-then-create gap and the second write would silently clobber
+	// the first (issue #405).
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
-		return err
-	}
-	if exists {
-		return fmt.Errorf("destination file already exists")
-	}
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("destination file already exists")
+		}
 		Warn("Failed to create destination file: " + err.Error())
 		return newAPIError(http.StatusInternalServerError, "Failed to save file", err)
 	}
