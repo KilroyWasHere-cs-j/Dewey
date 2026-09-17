@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -314,6 +315,51 @@ func TestSaveFileRejectsExistingDestination(t *testing.T) {
 	}
 	if string(got) != "original content" {
 		t.Fatalf("dst content = %q after rejected saveFile, want original content preserved", got)
+	}
+}
+
+// TestSaveFileConcurrentSameDestination confirms saveFile's check-then-write
+// race is actually closed (issue #405): two concurrent uploads generating
+// the same timestamped filename previously could both pass a
+// check-then-create gap and the second write would silently clobber the
+// first. Fires a batch of goroutines at the same destination simultaneously
+// (all released at once via a channel close, to maximize contention) and
+// asserts exactly one wins — the old exists()-then-os.Create() pattern was
+// non-atomic enough that this would intermittently let more than one
+// through.
+func TestSaveFileConcurrentSameDestination(t *testing.T) {
+	origUploadDir := uploadDir
+	uploadDir = t.TempDir()
+	t.Cleanup(func() { uploadDir = origUploadDir })
+
+	const n = 20
+	start := make(chan struct{})
+	results := make(chan error, n)
+
+	for i := 0; i < n; i++ {
+		fh := newUploadedFile(t, "note.txt", []byte(fmt.Sprintf("writer-%d", i)))
+		file, err := fh.Open()
+		if err != nil {
+			t.Fatalf("opening fixture file %d: %v", i, err)
+		}
+		defer file.Close()
+
+		go func(file multipart.File) {
+			<-start
+			results <- saveFile("contested.txt", file)
+		}(file)
+	}
+	close(start)
+
+	successes := 0
+	for i := 0; i < n; i++ {
+		if err := <-results; err == nil {
+			successes++
+		}
+	}
+
+	if successes != 1 {
+		t.Fatalf("saveFile() concurrent writers to the same destination: %d succeeded, want exactly 1", successes)
 	}
 }
 
