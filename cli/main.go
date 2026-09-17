@@ -95,10 +95,10 @@ func main() {
 	case "soak_test":
 		soakTest(os.Args[2:])
 	case "create_docx":
-		requireArgs(2, "create_docx <filename>")
+		requireArgs(3, "create_docx <filename>")
 		fmt.Println(createDocx(os.Args[2]))
 	case "create_exe":
-		requireArgs(2, "create_exe <filename>")
+		requireArgs(3, "create_exe <filename>")
 		fmt.Println(createExe(os.Args[2]))
 	case "create_pdf":
 		requireArgs(5, "create_pdf filename withJS withOpenAction")
@@ -129,7 +129,7 @@ func main() {
 		requireArgs(3, "docs <readme|admin>")
 		showDoc(os.Args[2])
 	case "pull_file":
-		requireArgs(2, "pull_file <podfilepath> <hostfilepath>")
+		requireArgs(4, "pull_file <podfilepath> <hostfilepath>")
 		stdout, err := pullFile(os.Args[2], os.Args[3])
 		if err != nil {
 			fmt.Fprintln(os.Stderr, colorRed+err.Error()+colorReset)
@@ -146,7 +146,7 @@ func main() {
 	case "view_log_list":
 		viewLogList(host)
 	case "view_log":
-		requireArgs(2, "view_log <logfile>")
+		requireArgs(3, "view_log <logfile>")
 		viewLog(os.Args[2], host)
 	default:
 		fmt.Fprintf(os.Stderr, colorRed+"unknown command: %s\n"+colorReset, os.Args[1])
